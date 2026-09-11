@@ -10,10 +10,7 @@ pixel_ui.py - 像素风 UI 组件库
 组件：
   - COLORS              16 色调色板（rgba 0-1）
   - PixelPanel          硬边框面板（替代原 Panel）
-  - PixelButton         像素风按钮（替代 Kivy Button）
   - PixelLabel          像素风标签（字体 hinting 关闭）
-  - PixelDivider        像素分割线
-  - wrap_pixel          把 widget 包进 PixelPanel（替代 wrap_with_bg）
 """
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.button import Button
@@ -152,61 +149,6 @@ class PixelPanel(FloatLayout):
         self._rebuild()
 
 
-def wrap_pixel(widget, bg=None, border_color=None, border_width=2):
-    """把 widget 包进 PixelPanel（替代原 wrap_with_bg）
-
-    用法：
-        panel = wrap_pixel(my_widget, bg=COLORS['panel'])
-    """
-    panel = PixelPanel(bg=bg, border_color=border_color, border_width=border_width)
-    widget.size_hint = (1, 1)
-    widget.pos_hint = {'x': 0, 'y': 0}
-    panel.add_widget(widget)
-    return panel
-
-
-# ============================================================
-# PixelButton - 像素风按钮
-# ============================================================
-class PixelButton(Button):
-    """像素风按钮：硬边框背景，关闭字体 hinting"""
-    def __init__(self, bg=None, fg=None, border_color=None,
-                 font_size=14, **kwargs):
-        super().__init__(**kwargs)
-        self.background_normal = ''
-        self.background_color = list(bg) if bg else list(COLORS['panel_2'])
-        self.color = fg if fg else COLORS['text']
-        self.font_name = PIXEL_FONT_NAME
-        self.font_hinting = None
-        self.font_size = font_size
-        self.markup = kwargs.get('markup', True)
-        self._border_color = list(border_color) if border_color else list(COLORS['border_2'])
-        self.bind(pos=self._draw_border, size=self._draw_border)
-        self._draw_border()
-
-    def _draw_border(self, *args):
-        self.canvas.after.clear()
-        with self.canvas.after:
-            Color(*self._border_color)
-            x, y = self.pos
-            w, h = self.size
-            if w >= 1 and h >= 1:
-                Line(
-                    points=[x, y, x+w, y, x+w, y+h, x, y+h],
-                    close=True, width=2
-                )
-
-    def update_color(self, bg=None, fg=None, border=None):
-        """运行时改色（背景/前景/边框）"""
-        if bg is not None:
-            self.background_color = list(bg)
-        if fg is not None:
-            self.color = fg
-        if border is not None:
-            self._border_color = list(border)
-            self._draw_border()
-
-
 # ============================================================
 # PixelLabel - 像素风标签
 # ============================================================
@@ -216,30 +158,6 @@ class PixelLabel(Label):
         kwargs.setdefault('font_name', PIXEL_FONT_NAME)
         kwargs.setdefault('font_hinting', None)   # Python None = 关闭 hinting
         super().__init__(**kwargs)
-
-
-# ============================================================
-# PixelDivider - 像素分割线
-# ============================================================
-class PixelDivider(Widget):
-    """1px 硬分割线"""
-    def __init__(self, color=None, vertical=False, **kwargs):
-        super().__init__(**kwargs)
-        self._color = list(color) if color else list(COLORS['border'])
-        self._vertical = vertical
-        self.bind(pos=self._draw, size=self._draw)
-        self._draw()
-
-    def _draw(self, *args):
-        self.canvas.clear()
-        with self.canvas:
-            Color(*self._color)
-            if self._vertical:
-                x = self.x + self.width / 2
-                Line(points=[x, self.y, x, self.y + self.height], width=1)
-            else:
-                y = self.y + self.height / 2
-                Line(points=[self.x, y, self.x + self.width, y], width=1)
 
 
 # ============================================================

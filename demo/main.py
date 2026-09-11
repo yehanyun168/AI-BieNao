@@ -109,16 +109,11 @@ def _register_fonts() -> None:
 _register_fonts()
 
 import i18n
-from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
-                  LANG_ZH, LANG_EN)
+from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
 from flag_draw import FlagWidget
 import world_map
 from world_map import WorldMap
-from pixel_ui import (
-    COLORS as PIXEL_COLORS, PixelPanel, wrap_pixel, hex_rgba, add_pixel_border,
-)
-from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
-from tech_tree import TECH_TREE, SLOT_MAP
+from pixel_ui import (hex_rgba, add_pixel_border)   # 只留本文件实际使用的符号
 
 import engine
 import tech_tree
@@ -131,10 +126,7 @@ import pixel_assets as PA
 import ui_v4 as U
 import ui_v4_screens as S
 import sfx  # 音效管理器（失败安全；tools/gen_sfx.py 合成的 CC0 WAV）
-from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
-                   MIN_TOUCH, fit_width)
+from ui_v4 import (LegendChip, SaveSlotRow, mk_label, fit_width)
 from tutorial import TutorialController   # P0-1 新手引导步骤机
 
 

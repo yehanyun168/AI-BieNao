@@ -54,7 +54,7 @@ TEXT_SCALE = 1.0                       # 全局字号微调系数（1.0 = 按下
 # 这是全项目字号的**单一来源**，改这里即可全局生效（调用点都引用常量）。
 #
 # v0.5 用户再次反馈「按钮文字要再大些、要清晰可读」→ 引入 FS_SCALE 统一放大，
-# 无需逐处改字号。所有字号常量、以及 fs() 都走这个系数。
+# 无需逐处改字号。所有字号常量都走这个系数。
 FS_SCALE = 1.15                       # 全局字号系数（1.0 = v0.4 基准）
 
 BASE_DISPLAY, BASE_H1, BASE_H2, BASE_H3 = 44, 34, 28, 24
@@ -76,15 +76,6 @@ FS_DISPLAY, FS_H1, FS_H2, FS_H3 = (_fs(BASE_DISPLAY), _fs(BASE_H1),
                                    _fs(BASE_H2), _fs(BASE_H3))
 FS_BODY, FS_SM, FS_CAP = _fs(BASE_BODY), _fs(BASE_SM), _fs(BASE_CAP)
 FS_TINY = _fs(BASE_TINY)
-
-
-def fs(v: float) -> float:
-    """按全局系数取字号（所有字号统一走这里，便于一处调全局）。
-
-    返回 float 便于随窗口缩放做连乘；若要写进 markup ``[size=…]``，
-    请用 ``int(fs(...))``。
-    """
-    return float(v) * FS_SCALE * TEXT_SCALE
 
 # 节奏（设计稿 --s1..--s12）
 S1, S2, S3, S4, S6 = 4, 8, 12, 16, 24

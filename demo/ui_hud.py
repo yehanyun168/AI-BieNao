@@ -14,7 +14,7 @@ from kivy.uix.widget import Widget
 from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
-from pixel_ui import (COLORS as PIXEL_COLORS, PixelPanel, wrap_pixel, hex_rgba,
+from pixel_ui import (COLORS as PIXEL_COLORS, PixelPanel, hex_rgba,
                       add_pixel_border)
 import i18n
 from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,

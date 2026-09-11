@@ -606,8 +606,10 @@ class DropPreview(StrokePanel):
         ft = BoxLayout(orientation='horizontal', spacing=6, size_hint_y=None,
                        height=36, padding=(8, 6))
         ft.add_widget(Widget())
-        ft.add_widget(self._small_btn(i18n.t('drop_cancel'), 'plain', self._cancel))
-        self.btn_ok = self._small_btn(i18n.t('drop_confirm'), 'primary', self._confirm)
+        ft.add_widget(InspectorPanel._small_btn(i18n.t('drop_cancel'), 'plain',
+                                                self._cancel))
+        self.btn_ok = InspectorPanel._small_btn(i18n.t('drop_confirm'), 'primary',
+                                                self._confirm)
         ft.add_widget(self.btn_ok)
         self.add_widget(ft)
 
@@ -618,10 +620,6 @@ class DropPreview(StrokePanel):
     def _confirm(self) -> None:
         if self._on_confirm:
             self._on_confirm()
-
-    @staticmethod
-    def _small_btn(text: str, tone: str, cb: Callable) -> Button:
-        return InspectorPanel._small_btn(text, tone, cb)
 
     def update(self, skill_id: str, skill_name: str, codes: Sequence[str],
                cost_each: float, compute: float, effects: Sequence[Tuple[str, str]],
@@ -1422,16 +1420,6 @@ def small_btn(text: str, tone: str = 'plain', cb: Callable = None,
     if cb:
         b.bind(on_release=lambda *_: cb())
     return b
-
-
-def head_group(*widgets) -> BoxLayout:
-    """把若干小控件打包成页面头部的一个横向组"""
-    box = BoxLayout(orientation='horizontal', spacing=6, size_hint_x=None,
-                    size_hint_y=None, height=30)
-    for w in widgets:
-        box.add_widget(w)
-    box.width = sum(getattr(w, 'width', 0) + 6 for w in widgets)
-    return box
 
 
 # ============================================================
