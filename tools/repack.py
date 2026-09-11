@@ -30,28 +30,33 @@ OUT_ZIP = os.path.join(
 #    等于测旧版，回收的反馈全部作废。现在每个包强制写入 VERSION.txt，
 #    任何一次解压都能立刻回答：这包是哪个 commit、干不干净、多少文件。
 def _git(*args):
-    """安全调用 git：任何失败都降级为 'unknown'，绝不让打包崩溃。
+    """安全调用 git：失败返回 None，成功返回**去除首尾空白的原文**（可能是空串）。
 
-    git 可能没装、可能不在 PATH、仓库可能是纯压缩包解开的（没 .git），
-    这些都不能成为「打不出包」的理由 —— 指纹降级，包照打，但要标出来。
+    ⚠️ 这里刻意用 None 表示失败、用 "" 表示「成功但无输出」——两者语义不同：
+    ``git status --porcelain`` 在**干净工作区**就返回空串，早期版本把空串
+    一律降级成 "unknown"，结果干净包被误报成"没有源码指纹"，还打印了吓人的
+    警告。任何调用方都必须区分这两种返回。
+
+    git 可能没装、可能不在 PATH、仓库可能是纯压缩包解开的（没 .git）——
+    这些都不能成为「打不出包」的理由：指纹降级，包照打，但要标出来。
     """
     try:
         r = subprocess.run(["git", *args], cwd=SRC_DIR,
                            capture_output=True, text=True, timeout=15)
         if r.returncode != 0:
-            return "unknown"
-        return (r.stdout or "").strip() or "unknown"
+            return None
+        return (r.stdout or "").strip()
     except Exception:
-        return "unknown"
+        return None
 
 
-_commit = _git("rev-parse", "HEAD")
-_commit_subject = _git("log", "-1", "--format=%s")
+_commit = _git("rev-parse", "HEAD") or "unknown"
+_commit_subject = _git("log", "-1", "--format=%s") or "unknown"
 _status_out = _git("status", "--porcelain")
-if _status_out == "":
-    _dirty = "no"
-elif _status_out == "unknown":
+if _status_out is None:          # git 不可用 → 真的不知道干不干净
     _dirty = "unknown"
+elif _status_out == "":          # 有输出且为空 → 工作区干净
+    _dirty = "no"
 else:
     _dirty = "yes"
 
@@ -252,8 +257,14 @@ if _dirty == "yes":
     print("   → 请勿用于真人测试 / 外发；先 git commit 再重新打包。")
     print("!" * 66)
 elif _dirty == "unknown":
-    print("\n⚠️ 警告：无法读取 git 状态（git 不可用或不在仓库中）")
-    print("   此包**没有**源码指纹，事后无法追溯。请确认 git 可用后重新打包。")
+    print("\n⚠️ 警告：无法读取 git 状态（git 不可用 / 不在仓库中 / 超时）")
+    # 只有当 commit 本身也没取到时才算「完全没有指纹」——
+    # git 部分可用（能取 HEAD、取不到 status）时，commit 字段仍然有效。
+    if _commit != "unknown":
+        print(f"   commit 已取到：{_commit}，但**无法判断工作区是否干净**，")
+        print("   请人工确认无未提交改动后再外发。")
+    else:
+        print("   此包**没有**源码指纹，事后无法追溯。请确认 git 可用后重新打包。")
 
 if absent:
     print(f"\n❌ 关键模块缺失 {len(absent)} 个 —— 分享包解压后可能无法运行：")
