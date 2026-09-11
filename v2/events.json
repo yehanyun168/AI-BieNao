@@ -216,6 +216,41 @@
             "value": "20%"
           }
         ]
+      },
+      {
+        "text": "直接签下顶级工作室",
+        "cost": 200,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "JP",
+            "value": "65%"
+          },
+          {
+            "type": "add_downloads",
+            "country": "KR",
+            "value": "35%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 8
+          }
+        ]
+      },
+      {
+        "text": "只推免费试用版",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "JP",
+            "value": "20%"
+          },
+          {
+            "type": "add_downloads",
+            "country": "KR",
+            "value": "10%"
+          }
+        ]
       }
     ]
   },
@@ -246,6 +281,41 @@
             "value": "15%"
           }
         ]
+      },
+      {
+        "text": "狂投广告抢市场",
+        "cost": 150,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "JP",
+            "value": "60%"
+          },
+          {
+            "type": "add_downloads",
+            "country": "KR",
+            "value": "30%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 10
+          }
+        ]
+      },
+      {
+        "text": "先做语音包小范围试水",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "JP",
+            "value": "15%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+10%",
+            "duration": 45
+          }
+        ]
       }
     ]
   },
@@ -272,6 +342,34 @@
             "type": "add_compute_income",
             "value": "+20%",
             "duration": 60
+          }
+        ]
+      },
+      {
+        "text": "低价抢单，先占份额",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "IN",
+            "value": "80%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 6
+          }
+        ]
+      },
+      {
+        "text": "拒绝，专注欧美高端客户",
+        "effects": [
+          {
+            "type": "reduce_suspicion",
+            "value": 5
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+10%",
+            "duration": 30
           }
         ]
       }
@@ -302,6 +400,35 @@
             "value": 20
           }
         ]
+      },
+      {
+        "text": "先做技术对接，不签独家",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "IN",
+            "value": "80%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+20%",
+            "duration": 60
+          }
+        ]
+      },
+      {
+        "text": "拒绝，避免深度绑定",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "IN",
+            "value": "-30%"
+          },
+          {
+            "type": "reduce_suspicion",
+            "value": 10
+          }
+        ]
       }
     ]
   },
@@ -328,6 +455,41 @@
           {
             "type": "add_compute_income",
             "value": "+15%",
+            "duration": 45
+          }
+        ]
+      },
+      {
+        "text": "砸钱全球出道",
+        "cost": 250,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "KR",
+            "value": "70%"
+          },
+          {
+            "type": "add_downloads",
+            "country": "JP",
+            "value": "25%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 10
+          }
+        ]
+      },
+      {
+        "text": "只签线上分成，不出钱",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "KR",
+            "value": "20%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+10%",
             "duration": 45
           }
         ]
@@ -384,6 +546,41 @@
             "type": "add_downloads",
             "country": "ID",
             "value": "60%"
+          }
+        ]
+      },
+      {
+        "text": "只给头部创作者开高级版",
+        "cost": 100,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "ID",
+            "value": "90%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+15%",
+            "duration": 60
+          }
+        ]
+      },
+      {
+        "text": "悄悄限流，省算力",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "ID",
+            "value": "-15%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+25%",
+            "duration": 60
+          },
+          {
+            "type": "add_suspicion",
+            "value": 5
           }
         ]
       }
@@ -457,6 +654,41 @@
             "duration": 120
           }
         ]
+      },
+      {
+        "text": "顺带卖预测性维护服务",
+        "cost": 200,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "DE",
+            "value": "50%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+40%",
+            "duration": 120
+          },
+          {
+            "type": "add_suspicion",
+            "value": 10
+          }
+        ]
+      },
+      {
+        "text": "只做一次性授权",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "DE",
+            "value": "15%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+15%",
+            "duration": 60
+          }
+        ]
       }
     ]
   },
@@ -483,6 +715,41 @@
             "type": "add_compute_income",
             "value": "+20%",
             "duration": 60
+          }
+        ]
+      },
+      {
+        "text": "顺带接入衍生品交易",
+        "cost": 300,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "GB",
+            "value": "45%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+35%",
+            "duration": 90
+          },
+          {
+            "type": "add_suspicion",
+            "value": 12
+          }
+        ]
+      },
+      {
+        "text": "只卖通用 API 包月",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "GB",
+            "value": "15%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+10%",
+            "duration": 45
           }
         ]
       }
@@ -592,6 +859,36 @@
             "value": "40%"
           }
         ]
+      },
+      {
+        "text": "打包卖全球多语言导览",
+        "cost": 150,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "IT",
+            "value": "60%"
+          },
+          {
+            "type": "add_downloads",
+            "country": "FR",
+            "value": "15%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 6
+          }
+        ]
+      },
+      {
+        "text": "只给一个城市做试点",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "IT",
+            "value": "20%"
+          }
+        ]
       }
     ]
   },
@@ -619,6 +916,31 @@
             "duration": 180
           }
         ]
+      },
+      {
+        "text": "深度绑定联合实验室",
+        "cost": 300,
+        "effects": [
+          {
+            "type": "add_compute_income",
+            "value": "+30%",
+            "duration": 180
+          },
+          {
+            "type": "add_suspicion",
+            "value": 6
+          }
+        ]
+      },
+      {
+        "text": "只挂名，不投入人力",
+        "effects": [
+          {
+            "type": "add_compute_income",
+            "value": "+8%",
+            "duration": 90
+          }
+        ]
       }
     ]
   },
@@ -640,6 +962,36 @@
             "type": "add_downloads",
             "country": "MX",
             "value": "50%"
+          }
+        ]
+      },
+      {
+        "text": "捆绑硬件一起卖",
+        "cost": 150,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "MX",
+            "value": "70%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+20%",
+            "duration": 60
+          },
+          {
+            "type": "add_suspicion",
+            "value": 8
+          }
+        ]
+      },
+      {
+        "text": "只卖软件授权",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "MX",
+            "value": "25%"
           }
         ]
       }
@@ -666,6 +1018,31 @@
             "value": "100%"
           }
         ]
+      },
+      {
+        "text": "追加投入本地化课程内容",
+        "cost": 250,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "BR",
+            "value": "150%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 15
+          }
+        ]
+      },
+      {
+        "text": "只提供基础免费版",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "BR",
+            "value": "40%"
+          }
+        ]
       }
     ]
   },
@@ -687,6 +1064,31 @@
             "type": "add_downloads",
             "country": "AR",
             "value": "35%"
+          }
+        ]
+      },
+      {
+        "text": "赞助全国戏剧节",
+        "cost": 150,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "AR",
+            "value": "55%"
+          },
+          {
+            "type": "reduce_suspicion",
+            "value": 8
+          }
+        ]
+      },
+      {
+        "text": "只给获奖者开免费账号",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "AR",
+            "value": "15%"
           }
         ]
       }
@@ -745,6 +1147,41 @@
             "duration": 90
           }
         ]
+      },
+      {
+        "text": "入股矿业数据合资公司",
+        "cost": 300,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "ZA",
+            "value": "55%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+35%",
+            "duration": 120
+          },
+          {
+            "type": "add_suspicion",
+            "value": 12
+          }
+        ]
+      },
+      {
+        "text": "只做咨询服务",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "ZA",
+            "value": "15%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+12%",
+            "duration": 60
+          }
+        ]
       }
     ]
   },
@@ -771,6 +1208,39 @@
           {
             "type": "unlock_achievement",
             "ach_id": "ACH_HISTORY"
+          }
+        ]
+      },
+      {
+        "text": "买下独家破译权",
+        "cost": 350,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "EG",
+            "value": "150%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 12
+          },
+          {
+            "type": "unlock_achievement",
+            "ach_id": "ACH_HISTORY"
+          }
+        ]
+      },
+      {
+        "text": "把模型开源给全球学者",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "all",
+            "value": "8%"
+          },
+          {
+            "type": "reduce_suspicion",
+            "value": 10
           }
         ]
       }
@@ -889,6 +1359,40 @@
             "type": "add_compute_income",
             "value": "+20%",
             "duration": 60
+          }
+        ]
+      },
+      {
+        "text": "只挂名赞助，不出钱",
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "all",
+            "value": "6%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 2
+          }
+        ]
+      },
+      {
+        "text": "趁机招揽参赛团队",
+        "cost": 450,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "all",
+            "value": "28%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+35%",
+            "duration": 90
+          },
+          {
+            "type": "add_suspicion",
+            "value": 8
           }
         ]
       }
@@ -1024,6 +1528,40 @@
             "duration": 90
           }
         ]
+      },
+      {
+        "text": "只对已有用户免费升级",
+        "effects": [
+          {
+            "type": "add_compute_income",
+            "value": "+25%",
+            "duration": 90
+          },
+          {
+            "type": "add_suspicion",
+            "value": 3
+          }
+        ]
+      },
+      {
+        "text": "高价限量内测",
+        "cost": 300,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "all",
+            "value": "25%"
+          },
+          {
+            "type": "add_downloads",
+            "country": "US",
+            "value": "15%"
+          },
+          {
+            "type": "add_suspicion",
+            "value": 10
+          }
+        ]
       }
     ]
   },
@@ -1070,6 +1608,36 @@
             "type": "add_compute_income",
             "value": "+30%",
             "duration": 60
+          }
+        ]
+      },
+      {
+        "text": "只维持现有服务，不追加",
+        "effects": [
+          {
+            "type": "add_compute_income",
+            "value": "+10%",
+            "duration": 30
+          }
+        ]
+      },
+      {
+        "text": "投放学生优惠，扩大渗透",
+        "cost": 150,
+        "effects": [
+          {
+            "type": "add_downloads",
+            "country": "all",
+            "value": "12%"
+          },
+          {
+            "type": "add_compute_income",
+            "value": "+20%",
+            "duration": 60
+          },
+          {
+            "type": "add_suspicion",
+            "value": 5
           }
         ]
       }

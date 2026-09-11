@@ -41,13 +41,15 @@ class PopupsMixin:
         for e in getattr(opt, 'effects', []):
             kind = getattr(e, 'value_kind', 'abs')
             try:
-                val = (f"{float(e.value) * 100:.0f}%" if kind == 'pct'
-                       else f"{float(e.value):.0f}")
+                raw = (float(e.value) * 100 if kind == 'pct' else float(e.value))
             except Exception:
-                val = str(getattr(e, 'value', ''))
+                raw = 0.0
+            val = (f"{abs(raw):.0f}%" if kind == 'pct' else f"{abs(raw):.0f}")
+            sign = '−' if raw < 0 else '+'
             et = getattr(e, 'type', '')
             if et == 'add_downloads':
-                chips.append((f"{t('stats_downloads')} +{val}", 'up'))
+                chips.append((f"{t('stats_downloads')} {sign}{val}",
+                              'up' if raw >= 0 else 'dn'))
             elif et == 'add_suspicion':
                 chips.append((f"{t('stats_suspicion')} +{val}", 'dn'))
             elif et == 'reduce_suspicion':
@@ -57,7 +59,8 @@ class PopupsMixin:
                 name = ach.name(get_lang()) if ach else (getattr(e, 'ach_id', '') or '')
                 chips.append((f"★ {name}", 'sys'))
             elif et == 'add_compute_income':
-                chips.append((f"{t('stats_compute')} +{val}", 'cost'))
+                chips.append((f"{t('stats_compute')} {sign}{val}",
+                              'cost' if raw >= 0 else 'dn'))
             elif et == 'trigger_ending':
                 chips.append((t('end_compare'), 'sys'))
             else:
@@ -65,13 +68,21 @@ class PopupsMixin:
         return chips
 
     def show_choice_popup(self, evt) -> None:
-        """S07 事件选择弹窗（弹出期间暂停主循环）"""
+        """S07 事件选择弹窗（弹出期间暂停主循环）
+
+        单选项事件（options 只有 1 个）不是「选择」，而是「告知 + 自动结算」：
+        不渲染选项按钮，直接把事件描述与影响效果摊开，配一个「知道了」确认键。
+        结算仍走 resolve_choice(evt, 0)，与多选项路径共用同一套引擎逻辑。
+        """
         self.stop_ticking()
         p = engine.player
+        opts = list(getattr(evt, 'options', []) or [])
+        solo = (len(opts) == 1)
         content = BoxLayout(orientation='vertical', spacing=0, padding=0)
         content.add_widget(modal_header(
             getattr(evt, 'icon', '◈'), getattr(evt, 'title', ''),
-            [(t('evt_source_v2'), 'sys'),
+            [(t('evt_source_country') if solo else t('evt_source_v2'),
+              'plain' if solo else 'sys'),
              (t('evt_tick_fmt').format(n=p.tick_count), 'plain')]))
         content.add_widget(hline())
 
@@ -101,14 +112,23 @@ class PopupsMixin:
             else:
                 self._reschedule_tick()
 
-        for i, opt in enumerate(getattr(evt, 'options', [])):
-            ob = U.OptButton(
-                index=i + 1, title=getattr(opt, 'text', ''),
-                note='', chips=self._effect_chips(opt),
-                on_click=_choose)
-            ob.size_hint_y = None
-            ob.height = ob.height_hint
-            body.add_widget(ob)
+        if solo:
+            # 单选项：无选项按钮，直接展示影响效果 + 「知道了」确认键
+            body.add_widget(mk_label(t('evt_auto_effect'), font_size=U.FS_SM,
+                                     color=COLORS['cyan'], size_hint_y=None,
+                                     height=18))
+            chips = self._effect_chips(opts[0])
+            if chips:
+                body.add_widget(ChipRow(chips, height=20))
+        else:
+            for i, opt in enumerate(opts):
+                ob = U.OptButton(
+                    index=i + 1, title=getattr(opt, 'text', ''),
+                    note='', chips=self._effect_chips(opt),
+                    on_click=_choose)
+                ob.size_hint_y = None
+                ob.height = ob.height_hint
+                body.add_widget(ob)
 
         scroll = ScrollView(bar_width=6)
         scroll.add_widget(body)
@@ -116,11 +136,17 @@ class PopupsMixin:
 
         ft = BoxLayout(orientation='horizontal', spacing=8, size_hint_y=None,
                        height=52, padding=(12, 8))
-        ft.add_widget(mk_label(t('evt_irreversible'), font_size=U.FS_CAP,
-                               color=COLORS['text_mute']))
+        ft.add_widget(mk_label(t('evt_auto_effect') if solo
+                               else t('evt_irreversible'),
+                               font_size=U.FS_CAP, color=COLORS['text_mute']))
         ft.add_widget(Widget())
-        ft.add_widget(S.small_btn(t('evt_later'), 'plain', popup.dismiss,
-                                  height=38, font_size=U.FS_BODY))
+        if solo:
+            ft.add_widget(S.small_btn(t('evt_got_it'), 'primary',
+                                      lambda *_: _choose(0),
+                                      height=38, font_size=U.FS_BODY))
+        else:
+            ft.add_widget(S.small_btn(t('evt_later'), 'plain', popup.dismiss,
+                                      height=38, font_size=U.FS_BODY))
         content.add_widget(ft)
         popup.open()
 

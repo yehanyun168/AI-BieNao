@@ -628,6 +628,8 @@ TRANSLATIONS[LANG_ZH].update({
     'evt_requires': '需要：{tech}',
     'evt_tick_fmt': '周期 {n}',
     'evt_clock_paused': '事件处理中 · 时钟已暂停',
+    'evt_auto_effect': '事件影响',
+    'evt_got_it': '知道了',
 
     # ---- S08 危机弹窗 ----
     'crisis_modal_title': '多国联合调查已启动',
@@ -903,6 +905,8 @@ TRANSLATIONS[LANG_EN].update({
     'evt_requires': 'Requires: {tech}',
     'evt_tick_fmt': 'Tick {n}',
     'evt_clock_paused': 'Event in progress · clock paused',
+    'evt_auto_effect': 'Event outcome',
+    'evt_got_it': 'Got it',
 
     # ---- S08 crisis ----
     'crisis_modal_title': 'Joint multinational investigation started',

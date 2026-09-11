@@ -62,7 +62,7 @@ TECH_TREE: List[TechSlot] = [
         slot_id='localization',
         name='本地化',
         icon='L',
-        description='让你的 AI 服务适配不同语言市场',
+        description='解锁亚洲 / 欧洲市场，并按语系深耕当地下载量',
         prereq_slot=None,
         t0_cost=20,
         t0_effect={'type': 'unlock_regions', 'regions': ['亚洲', '欧洲']},
@@ -71,7 +71,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='south_asia',
                 name='南亚语系',
                 icon='SA',
-                description='印地语 / 泰米尔语 / 孟加拉语深度优化',
+                description='南亚与东南亚深耕（中/印/印尼）：三地下载量提升 10% / 25% / 50%。',
                 effects_per_level=[
                     {'type': 'downloads_mult', 'scope': 'CN+IN+ID', 'value': 1.10},
                     {'type': 'downloads_mult', 'scope': 'CN+IN+ID', 'value': 1.25},
@@ -83,7 +83,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='european',
                 name='欧洲语系',
                 icon='EU',
-                description='德语 / 法语 / 西语 / 葡语深度优化',
+                description='西欧语种深耕（德/法/英/意）：四地下载量提升 10% / 25% / 50%。',
                 effects_per_level=[
                     {'type': 'downloads_mult', 'scope': 'DE+FR+GB+IT', 'value': 1.10},
                     {'type': 'downloads_mult', 'scope': 'DE+FR+GB+IT', 'value': 1.25},
@@ -95,7 +95,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='east_asian',
                 name='东亚语系',
                 icon='EA',
-                description='日语 / 韩语 / 繁体中文深度优化',
+                description='东亚市场深耕：日/韩/中三地下载量分别提升 10% / 25% / 50%。',
                 effects_per_level=[
                     {'type': 'downloads_mult', 'scope': 'JP+KR+CN', 'value': 1.10},
                     {'type': 'downloads_mult', 'scope': 'JP+KR+CN', 'value': 1.25},
@@ -111,7 +111,7 @@ TECH_TREE: List[TechSlot] = [
         slot_id='platform',
         name='平台渗透',
         icon='P',
-        description='让你的 AI 触达更多终端设备',
+        description='触达更多终端：T0 解锁后全局下载量 +10%',
         prereq_slot='localization',
         t0_cost=25,
         t0_effect={'type': 'global_downloads_mult', 'value': 1.10},
@@ -120,7 +120,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='mobile_native',
                 name='移动原生',
                 icon='MO',
-                description='iOS/Android 原生应用深度集成',
+                description='原生 App 预装触达：全局下载量提升 10% / 25% / 50%。',
                 effects_per_level=[
                     {'type': 'global_downloads_mult', 'value': 1.10},
                     {'type': 'global_downloads_mult', 'value': 1.25},
@@ -132,7 +132,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='web_pwa',
                 name='Web/PWA',
                 icon='WEB',
-                description='渐进式 Web 应用，无需下载即用',
+                description='免安装即点即用：每用户偷算力效率提升 15% / 30% / 60%。',
                 effects_per_level=[
                     {'type': 'compute_per_user_mult', 'value': 1.15},
                     {'type': 'compute_per_user_mult', 'value': 1.30},
@@ -144,7 +144,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='os_integration',
                 name='系统集成',
                 icon='OS',
-                description='与操作系统厂商合作（Apple Intelligence / Copilot）',
+                description='预装进系统：L1 全局下载量 +20%；L2 单位用户算力 +20%；L3 抗阻止 +20%。',
                 effects_per_level=[
                     {'type': 'global_downloads_mult', 'value': 1.20},
                     {'type': 'compute_per_user_mult', 'value': 1.20},
@@ -160,7 +160,7 @@ TECH_TREE: List[TechSlot] = [
         slot_id='compute',
         name='算力效率',
         icon='C',
-        description='提升从用户偷算力的效率',
+        description='优化的偷算力管道：T0 解锁后单位用户算力 +15%',
         prereq_slot='platform',
         t0_cost=30,
         t0_effect={'type': 'compute_per_user_mult', 'value': 1.15},
@@ -169,7 +169,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='stealth_upgrade',
                 name='隐蔽调度',
                 icon='ST',
-                description='提高偷算力的隐蔽性',
+                description='拉高隐蔽偷算力比例，每级 +3%（5% → 8% / 11% / 14%）。',
                 effects_per_level=[
                     {'type': 'stealth_ratio_bonus', 'value': 0.03},  # 5% → 8% → 11% → 14%
                     {'type': 'stealth_ratio_bonus', 'value': 0.03},
@@ -181,7 +181,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='yield_upgrade',
                 name='单位效率',
                 icon='Y',
-                description='每个用户贡献更多算力',
+                description='压榨单机算力：每级单位用户算力 ×1.30（三级叠乘约 ×2.2）。',
                 effects_per_level=[
                     {'type': 'compute_per_user_mult', 'value': 1.30},
                     {'type': 'compute_per_user_mult', 'value': 1.30},
@@ -193,7 +193,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='silent_upgrade',
                 name='静默运行',
                 icon='SI',
-                description='降低怀疑敏感度',
+                description='全局降低怀疑度增速：逐级 ×0.80 / ×0.60 / ×0.40。',
                 effects_per_level=[
                     {'type': 'suspicion_mult', 'value': 0.80},
                     {'type': 'suspicion_mult', 'value': 0.60},
@@ -209,7 +209,7 @@ TECH_TREE: List[TechSlot] = [
         slot_id='viral',
         name='病毒传播',
         icon='V',
-        description='让你的 AI 自己扩散',
+        description='让用户替你扩散：T0 解锁后全局下载量 +15%',
         prereq_slot='compute',
         t0_cost=35,
         t0_effect={'type': 'global_downloads_mult', 'value': 1.15},
@@ -218,7 +218,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='referral',
                 name='推荐返利',
                 icon='REF',
-                description='老用户拉新获得额外算力',
+                description='老带新裂变：已解锁地区下载量提升 15% / 30% / 50%。',
                 effects_per_level=[
                     {'type': 'downloads_mult', 'scope': 'unlocked', 'value': 1.15},
                     {'type': 'downloads_mult', 'scope': 'unlocked', 'value': 1.30},
@@ -230,7 +230,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='kol',
                 name='KOL 合作',
                 icon='KOL',
-                description='签约头部创作者',
+                description='头部创作者带货：全局下载量提升 20% / 40% / 70%（本槽位最高增幅）。',
                 effects_per_level=[
                     {'type': 'global_downloads_mult', 'value': 1.20},
                     {'type': 'global_downloads_mult', 'value': 1.40},
@@ -242,7 +242,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='viral_content',
                 name='病毒内容',
                 icon='VIR',
-                description='AI 自动生成爆款内容',
+                description='L1 已解锁地区下载量 +20%；L2/L3 把「爆款视频」事件触发权重 ×2 / ×3。',
                 effects_per_level=[
                     {'type': 'downloads_mult', 'scope': 'unlocked', 'value': 1.20},
                     {'type': 'event_weight', 'event_id': 'viral_tiktok', 'value': 2.0},
@@ -258,7 +258,7 @@ TECH_TREE: List[TechSlot] = [
         slot_id='capability',
         name='功能深度',
         icon='CAP',
-        description='让你的 AI 做更多事',
+        description='扩充 AI 能力边界：T0 解锁多模态，可生成图/视频/代码',
         prereq_slot='viral',
         t0_cost=40,
         t0_effect={'type': 'unlock_function', 'function': 'multi_modal'},
@@ -267,7 +267,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='image',
                 name='图像生成',
                 icon='IMG',
-                description='Stable Diffusion 级图像能力',
+                description='出图更吃算力：L1/L2 单位用户算力 ×1.20 / ×1.30；L3 全局下载量 +30%。',
                 effects_per_level=[
                     {'type': 'compute_per_user_mult', 'value': 1.20},
                     {'type': 'compute_per_user_mult', 'value': 1.30},
@@ -279,7 +279,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='video',
                 name='视频生成',
                 icon='VID',
-                description='Sora 级视频能力',
+                description='L1 单位用户算力 +40%；L2/L3 全局下载量 +20% / +50%。',
                 effects_per_level=[
                     {'type': 'compute_per_user_mult', 'value': 1.40},
                     {'type': 'global_downloads_mult', 'value': 1.20},
@@ -291,7 +291,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='code',
                 name='代码生成',
                 icon='CODE',
-                description='Copilot 级编程能力',
+                description='切入开发者场景：L1 单位用户算力 +30%；L2 全局下载量 +15%；L3 抗阻止 +30%。',
                 effects_per_level=[
                     {'type': 'compute_per_user_mult', 'value': 1.30},
                     {'type': 'global_downloads_mult', 'value': 1.15},
@@ -307,7 +307,7 @@ TECH_TREE: List[TechSlot] = [
         slot_id='resistance',
         name='抗封禁',
         icon='R',
-        description='让各国政府拿你没办法',
+        description='对抗各国封禁：T0 解锁后抗阻止 +10%',
         prereq_slot='capability',
         t0_cost=50,
         t0_effect={'type': 'block_resist', 'value': 0.10},
@@ -316,7 +316,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='traffic_obfuscation',
                 name='流量混淆',
                 icon='TRA',
-                description='让流量看起来像 HTTPS 视频',
+                description='伪装成正常流量，全局怀疑度增速逐级 ×0.70 / ×0.50 / ×0.30。',
                 effects_per_level=[
                     {'type': 'suspicion_mult', 'value': 0.70},
                     {'type': 'suspicion_mult', 'value': 0.50},
@@ -328,7 +328,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='legal_shield',
                 name='法律护盾',
                 icon='LEG',
-                description='用合规文档拖延监管',
+                description='合规拖延战术：抗阻止直接叠加 +20% / +30% / +50%（三级共 +100%）。',
                 effects_per_level=[
                     {'type': 'block_resist', 'value': 0.20},
                     {'type': 'block_resist', 'value': 0.30},
@@ -340,7 +340,7 @@ TECH_TREE: List[TechSlot] = [
                 branch_id='community_armor',
                 name='社区护甲',
                 icon='COM',
-                description='让用户自发保护你（开源社区）',
+                description='L1 抗阻止 +15%；L2/L3 社区自来水带来全局下载量 +20% / +40%。',
                 effects_per_level=[
                     {'type': 'block_resist', 'value': 0.15},
                     {'type': 'global_downloads_mult', 'value': 1.20},
