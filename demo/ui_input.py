@@ -112,6 +112,52 @@ class InputMixin:
     # ========================================================
     # 状态刷新
     # ========================================================
+    def _stat_text(self, key: str, mcolor: str, value: float,
+                   unit: str = '', digits: int = 0) -> str:
+        """拼一条顶栏统计的 markup 文本（值单独着色 + 标签灰）。
+
+        抽出来是为了让「数值滚动动效」能复用同一套格式 —— 动效每帧只改
+        中间的数字，标签与颜色不变。
+
+        Args:
+            key: i18n 标签键。
+            mcolor: MK 色键（yellow/pink/red/...）。
+            value: 数值。
+            unit: 后缀单位（如 'B' / '%'）。
+            digits: 小数位。
+        """
+        v = f"{value:.{digits}f}{unit}"
+        return (f"[color={U.MK['dim']}]{t(key)}[/color]  "
+                f"[color={U.MK[mcolor]}][b]{v}[/b][/color]")
+
+    def _animate_stat(self, label, key: str, mcolor: str, new_value: float,
+                      unit: str = '', digits: int = 0,
+                      pulse_tone: str = 'up') -> None:
+        """顶栏统计的「滚动 + 脉冲」刷新（玩家反馈 5：让数字动起来）。
+
+        与静态写法相比只多做两件事：数值跳变时滚一下、并按涨跌脉冲一次。
+        第一次渲染（``_stat_prev`` 里没有记录）直接落值，不产生动效 ——
+        否则开局所有数字会一起从 0 滚上来，喧宾夺主。
+
+        Args:
+            label: 目标 Label。
+            key / mcolor / unit / digits: 传给 ``_stat_text``。
+            new_value: 新数值。
+            pulse_tone: 保留（脉冲用 opacity，无 tint 通道）。
+        """
+        prev = self._stat_prev.get(key)
+        self._stat_prev[key] = new_value
+        if prev is None:
+            label.text = self._stat_text(key, mcolor, new_value, unit, digits)
+            return
+        if abs(new_value - prev) < (10 ** -digits) / 2:
+            return                       # 四舍五入后没变，不做无意义动效
+        import ui_fx
+        ui_fx.count_up(label, prev, new_value,
+                       fmt=lambda v: self._stat_text(key, mcolor, v, unit, digits))
+        # 数值有实际变化才脉冲一次（确认感）
+        ui_fx.pulse(label, scale_alpha=0.55, duration=0.12)
+
     def refresh_all(self) -> None:
         p = engine.player
         if p is None:
@@ -121,21 +167,26 @@ class InputMixin:
         self.refresh_commissions()
 
         # --- 顶栏（设计稿 .bar）---
-        s_color = (U.MK['bad'] if p.suspicion >= SUSPICION_CRISIS
-                   else (U.MK['warn'] if p.suspicion >= 50 else U.MK['susp_low']))
         unlocked = sum(1 for c in engine.player_countries if c.unlocked)
         total = len(engine.player_countries)
-        self.stats_compute.text = (
-            f"[color={U.MK['dim']}]{t('stats_compute')}[/color]  "
-            f"[color={U.MK['yellow']}][b]{p.compute:.0f}[/b][/color]")
-        self.stats_downloads.text = (
-            f"[color={U.MK['dim']}]{t('stats_downloads')}[/color]  "
-            f"[color={U.MK['pink']}][b]{p.total_downloads_m / 1000:.2f}{t('unit_b')}[/b][/color]")
-        self.stats_suspicion.text = (
-            f"[color={U.MK['dim']}]{t('stats_suspicion')}[/color]  "
-            f"[color={s_color}][b]{p.suspicion:.0f}%[/b][/color]")
-        self.stats_meta.text = (f"[color={U.MK['dim']}]{t('stat_countries')}[/color]  "
-                                f"[b]{unlocked}/{total}[/b]")
+        # 首次进入才建缓存（不可放在 __init__：那时还没有 stats_* 控件）
+        if not hasattr(self, '_stat_prev'):
+            self._stat_prev = {}
+        self._animate_stat(self.stats_compute, 'stats_compute', 'yellow',
+                           float(p.compute), digits=0)
+        self._animate_stat(self.stats_downloads, 'stats_downloads', 'pink',
+                           p.total_downloads_m / 1000.0,
+                           unit=t('unit_b'), digits=2)
+        self._animate_stat(self.stats_suspicion, 'stats_suspicion',
+                           'bad' if p.suspicion >= SUSPICION_CRISIS else
+                           ('warn' if p.suspicion >= 50 else 'susp_low'),
+                           float(p.suspicion), unit='%', digits=0)
+        # 国家数用整数直写（走 _stat_text 以保持与其它统计同构）
+        _meta_prev = self._stat_prev.get('stat_countries')
+        self._stat_prev['stat_countries'] = float(unlocked)
+        if _meta_prev is None or abs(_meta_prev - unlocked) > 0.5:
+            self.stats_meta.text = (f"[color={U.MK['dim']}]{t('stat_countries')}"
+                                    f"[/color]  [b]{unlocked}/{total}[/b]")
         # --- 顶栏趋势火花线（玩家反馈 6：让"涨没涨"一眼可见）---
         # 数据源是 UiStats 的全局序列（每周期采样），首周期只有 1 根柱属正常。
         for sk, spark in getattr(self, '_stat_sparks', {}).items():
@@ -299,6 +350,13 @@ class InputMixin:
                         f"{t('cp_strike_toast').format(name=cname)} {body}")
 
         self.refresh_all()
+        # 周期推进的视觉提示（玩家反馈 5）：倒计时条脉冲一次，
+        # 让「新周期开始了」这件事有存在感。动效失败不影响逻辑。
+        try:
+            import ui_fx
+            ui_fx.tick_pulse(getattr(self, 'cd_bar', None))
+        except Exception:
+            pass
 
         if report.get("crisis"):
             self.show_crisis_popup()

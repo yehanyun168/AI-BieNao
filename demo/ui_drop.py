@@ -293,6 +293,39 @@ class DropMixin:
         ax, ay = PA.ANCHORS[code]
         return ox + ax * cw, oy + mh - ay * ch
 
+    def country_center(self, code: str):
+        """国家锚点在 ``_reticle_layer`` 局部坐标系下的中心点。
+
+        供 ``ui_fx.beacon``（动效层）回调使用 —— 动效层不 import 本模块，
+        只 duck-typing 调用 ``stage.country_center(code)``，避免反向依赖。
+
+        Returns:
+            (x, y) 元组；**布局尚未完成或坐标缺失时返回 None**（动效层安全跳过）。
+            注意必须在布局完成后调用：未布局时 ``_map_rect()`` 会退化为
+            1×1 兜底矩形，换算出的坐标会飞到屏幕外（宁可不动效也不要错位）。
+        """
+        if not hasattr(self, '_reticle_layer'):
+            return None
+        # 布局未完成时 _map_rect() 会退化成一个小的兜底矩形（例如 100×50），
+        # 换算出的坐标会飞出舞台 —— 这里用最小尺寸门槛拦掉，宁可不动效也别错位。
+        if self.map_widget.width < 32 or self.map_widget.height < 32:
+            return None
+        try:
+            ox, oy, mw, mh = self.map_widget._map_rect()
+        except Exception:
+            return None
+        if mw < 32 or mh < 32:
+            return None
+        try:
+            x, y = self._country_screen_pos(code)
+        except Exception:
+            return None
+        # 舞台局部坐标 → _reticle_layer 局部坐标（动效控件挂在准星层上）
+        try:
+            return self._reticle_layer.to_local(x, y)
+        except Exception:
+            return None
+
     def _confirm_drop(self) -> None:
         if not (self.drop_skill and self.drop_targets):
             return
@@ -304,6 +337,7 @@ class DropMixin:
                 self.stats.mark_skill(skill_id, 0.0)
                 self.selected_skill = skill_id
                 self._notify(f"{self._skill_name(skill_id)} → {'+'.join(targets)}")
+                self._fx_cast(skill_id, targets)
         finally:
             # 无论投放成功与否，都回到正常游戏内（不退出会话）
             self._cancel_drop()
@@ -314,6 +348,41 @@ class DropMixin:
             self.stats.mark_skill(sid, 0.0)
             self.selected_skill = sid
             self._notify(f"{self._skill_name(sid)}")
+            self._fx_cast(sid, [])
         else:
             self._notify(t('no_compute'))
+            self._fx_reject(sid)
+
+    # ---- 动效反馈（玩家反馈 5：让"这一下生效了"看得见）----
+    def _fx_cast(self, sid: str, targets) -> None:
+        """技能释放成功的视觉反馈：技能卡脉冲 + 目标国信标光环 + 浮字。
+
+        全部走 ui_fx（尊重「动效减弱」开关）；动效失败绝不影响游戏逻辑，
+        因此整段包在 try 里 —— 动效是锦上添花，不能成为新的崩溃点。
+        """
+        try:
+            import ui_fx
+            card = self.skill_cards.get(sid)
+            if card is not None:
+                ui_fx.pulse(card, scale_alpha=0.5)
+            if targets:
+                # 首次释放可能早于任何一次进入投放模式，准星层尚未创建 ——
+                # 这里按需补建，避免动效丢失（动效层只 duck-typing，不 import 本模块）。
+                self._ensure_reticle_layer()
+            for code in (targets or []):
+                # 求坐标用 self（GameUI 才有 country_center），
+                # 挂控件用准星层（与地图同坐标系）。
+                ui_fx.beacon(self, code, container=self._reticle_layer)
+        except Exception:
+            pass
+
+    def _fx_reject(self, sid: str) -> None:
+        """技能释放失败（算力不足）的抖动反馈。"""
+        try:
+            import ui_fx
+            card = self.skill_cards.get(sid)
+            if card is not None:
+                ui_fx.shake(card)
+        except Exception:
+            pass
 
