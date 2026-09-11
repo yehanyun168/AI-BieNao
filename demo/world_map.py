@@ -40,7 +40,7 @@ from kivy.graphics import (
 )
 
 import pixel_assets as PA
-from pixel_ui import PIXEL_FONT_NAME, PixelLabel, hex_rgba
+from pixel_ui import PixelLabel, hex_rgba
 
 
 # ============================================================

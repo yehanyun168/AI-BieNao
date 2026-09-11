@@ -3,32 +3,16 @@ ui_drop.py - DropMixin（拆分自 main.py）
 
 投放模式状态机（设计稿 S04）：选技能 → 选目标（准星层）→ 确认投放
 """
-import os
-
-from kivy.clock import Clock
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.widget import Widget
 
-import i18n
-from i18n import t, get_country_name, get_continent_name, get_lang, LANG_ZH, LANG_EN
+from i18n import t, get_country_name
 import engine
 import sfx
 import pixel_assets as PA
-from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
-import ui_v4 as U
+from data import SKILLS
 import ui_v4_screens as S
-import ui_shared as ST
-from ui_shared import COLORS, Panel
-from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline, _purge_lingering_modals, _wire_close)
-from ui_hud import (REGIONS, region_name, region_codes, LANG_CHIP_TAG,
-                    LAYER_KEYS, LAYER_LABEL_KEY, HEAT_SCALE, BLOCK_SCALE,
-                    COMPUTE_SCALE, STATE_SHAPE)
-from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
-                   MIN_TOUCH, fit_width)
+from ui_hud import region_codes
+from ui_v4 import Reticle, TgtLabel
 
 
 # ============================================================

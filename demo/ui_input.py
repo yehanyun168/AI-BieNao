@@ -4,39 +4,19 @@ ui_input.py - InputMixin（拆分自 main.py）
 键盘映射 / 主循环 game_tick / 技能文案三件套 / refresh_all 总刷新 /
 兼容旧接口的回调别名。
 """
-import os
-
 from kivy.clock import Clock
-from kivy.core.window import Window
-from kivy.uix.widget import Widget
 
-import i18n
-from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
-                  LANG_ZH, LANG_EN)
+from i18n import t, get_lang, get_country_name
 import engine
 import commissions as C
 import save_manager
 from balance import TUNE
-import tech_tree
-from tech_tree import TECH_TREE, SLOT_MAP
+from tech_tree import SLOT_MAP
 from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
 import achievements as achievements_mod
-import endings as endings_mod
-import country_events as ce
 import ui_v4 as U
 import ui_v4_screens as S
-import ui_shared as ST
-from ui_shared import COLORS, Panel
-from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline, _purge_lingering_modals, _wire_close)
-from ui_hud import (REGIONS, region_name, region_codes, LANG_CHIP_TAG,
-                    LAYER_KEYS, LAYER_LABEL_KEY, HEAT_SCALE, BLOCK_SCALE,
-                    COMPUTE_SCALE, STATE_SHAPE)
 from ui_commissions import _name_of as _com_name, _goal_text as _com_goal
-from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
-                   MIN_TOUCH, fit_width)
 
 
 # ============================================================

@@ -16,7 +16,7 @@ ui_fx.py - 统一动效层（P0-6：让每个周期"有东西在动"，玩家反
 """
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional
 
 from kivy.animation import Animation
 from kivy.clock import Clock

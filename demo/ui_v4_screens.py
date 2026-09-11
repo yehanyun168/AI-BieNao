@@ -30,7 +30,7 @@ from kivy.uix.widget import Widget
 from flag_draw import FlagWidget
 from pixel_assets import OWNER_CODES as FLAG_CODES
 
-from pixel_ui import COLORS, PixelLabel, add_pixel_border, hex_rgba
+from pixel_ui import COLORS, PixelLabel, add_pixel_border
 from ui_modal import hline
 
 import i18n
@@ -38,7 +38,7 @@ import ui_v4 as U
 from ui_v4 import (
     AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
     KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StatCell, StatsGrid, StrokePanel, mk_label, ST_FILL, ST_EDGE,
+    StrokePanel, mk_label, ST_FILL,
     PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
     SPR_ROBOT, PAL_ROBOT,
 )

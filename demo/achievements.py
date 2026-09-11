@@ -11,7 +11,7 @@ achievements.py - 成就系统
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set
 
-from conditions import evaluate as _eval, describe as _describe
+from conditions import evaluate as _eval
 import tech_tree as _tt
 
 # 真实槽位 id（单一来源：tech_tree.TECH_TREE）。成就条件引用子表键时必须用这些，

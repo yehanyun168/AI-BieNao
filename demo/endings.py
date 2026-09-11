@@ -17,7 +17,7 @@ endings.py - 结局判定
   unlocked_count   int    已解锁国家数
   total_countries  int    国家总数
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from conditions import evaluate as _eval, describe as _describe

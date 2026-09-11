@@ -10,25 +10,16 @@ from kivy.uix.widget import Widget
 from kivy.clock import Clock
 from kivy.animation import Animation
 
-import i18n
-from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
-                  LANG_ZH, LANG_EN)
+from i18n import t, get_lang
 import engine
 import sfx
-from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
 import achievements as achievements_mod
 import endings as endings_mod
-import country_events as ce
 import ui_v4 as U
 import ui_v4_screens as S
-import ui_shared as ST
-from ui_shared import COLORS, Panel
-from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline, _purge_lingering_modals, _wire_close)
-from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
-                   MIN_TOUCH, fit_width)
+from ui_shared import COLORS
+from ui_modal import make_modal, modal_header, auto_h_label, hline
+from ui_v4 import PxChip, ChipRow, StatsGrid, StrokePanel, mk_label, ST_FILL
 
 
 # ============================================================

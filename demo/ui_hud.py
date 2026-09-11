@@ -14,25 +14,18 @@ from kivy.uix.widget import Widget
 from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
-from pixel_ui import (COLORS as PIXEL_COLORS, PixelPanel, hex_rgba,
-                      add_pixel_border)
+from pixel_ui import (hex_rgba, add_pixel_border)
 import i18n
-from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
-                  LANG_ZH, LANG_EN)
+from i18n import (t, get_lang, LANG_ZH, LANG_EN)
 import engine
-import tech_tree
-from tech_tree import TECH_TREE, SLOT_MAP
-from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
+from data import SKILLS, SKILL_ORDER
 import ui_v4 as U
-import ui_v4_screens as S
 import ui_shared as ST
 from ui_shared import COLORS, Panel
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, Spark, mk_label, ST_FILL, ST_EDGE,
+                   SkillBarCard, Steps, Spark, mk_label, ST_FILL,
                    MIN_TOUCH, fit_width)
 from world_map import WorldMap
-import sfx
 
 
 # ============================================================

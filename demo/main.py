@@ -42,21 +42,15 @@ Config.set('input', 'mouse', 'mouse')
 
 import os
 import sys
-from typing import Callable
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.text import LabelBase
 from kivy.core.window import Window
-from kivy.graphics import Color, Line, Rectangle
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.modalview import ModalView
-from kivy.uix.popup import Popup
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
@@ -110,17 +104,13 @@ _register_fonts()
 
 import i18n
 from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
-from flag_draw import FlagWidget
 import world_map
 from world_map import WorldMap
 from pixel_ui import (hex_rgba, add_pixel_border)   # 只留本文件实际使用的符号
 
 import engine
-import tech_tree
 import save_manager
 import achievements as achievements_mod
-import endings as endings_mod
-import country_events as ce
 import pixel_assets as PA
 
 import ui_v4 as U
@@ -138,14 +128,10 @@ from tutorial import TutorialController   # P0-1 新手引导步骤机
 #   → {ui_pages, ui_drop, ui_popups, ui_session, ui_input} → main
 # ============================================================
 import ui_shared as ST
-from ui_shared import (COLORS, Panel, BASE_TICK_SECONDS, SPEED_STEPS,
-                       DEFAULT_SPEED_IDX, _update_window_title)
+from ui_shared import COLORS, Panel, _update_window_title
 from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline, _purge_lingering_modals, _wire_close)
-from ui_hud import (CountdownBar, WorldMapWidget, HudBox, RailBar, LegendBar,
-                    LayerHud, HudMixin, REGIONS, REGION_LABEL_KEY, LANG_CHIP_TAG,
-                    LAYER_KEYS, LAYER_LABEL_KEY, HEAT_SCALE, BLOCK_SCALE,
-                    COMPUTE_SCALE, STATE_SHAPE, region_name, region_codes)
+                      hline)
+from ui_hud import HudMixin
 from ui_pages import PagesMixin
 from ui_drop import DropMixin
 from ui_popups import PopupsMixin

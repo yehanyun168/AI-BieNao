@@ -8,25 +8,16 @@ import os
 
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.uix.widget import Widget
 
-import i18n
-from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
-                  LANG_ZH, LANG_EN)
+from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
 import engine
 import save_manager
 import sfx
 import ui_v4 as U
 import ui_v4_screens as S
 import ui_shared as ST
-from ui_shared import COLORS, Panel, _update_window_title
-from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline, _purge_lingering_modals, _wire_close)
-from ui_hud import LANG_CHIP_TAG, LAYER_KEYS, LAYER_LABEL_KEY, REGIONS
-from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
-                   MIN_TOUCH, fit_width)
+from ui_shared import _update_window_title
+from ui_hud import REGIONS, LANG_CHIP_TAG, LAYER_KEYS, LAYER_LABEL_KEY
 
 
 # ============================================================
