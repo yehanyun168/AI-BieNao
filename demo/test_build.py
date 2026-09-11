@@ -8,8 +8,6 @@ os.environ['KIVY_WINDOW'] = 'sdl2'  # sandbox 里也能跑
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from kivy.clock import Clock
-
 # 引入 main 模块
 import main as main_module
 
@@ -315,7 +313,6 @@ print(f"   ✅ P0-3 存档往返一致（在场 {res_c[0]} 单 / 完成 {res_c[1
 # ---- 16) 委托/反制 UI 接线（i18n 键完整性 + 模板字段 + Mixin 装配）----
 import i18n as i18n_mod
 import commissions as commissions_mod
-import ui_commissions as ui_commissions_mod
 _needed = [
     'com_offer_new', 'com_offer_tag', 'com_active_tag', 'com_accept',
     'com_decline', 'com_close', 'com_reward_est', 'com_reward_unit',

@@ -31,7 +31,6 @@ for _fp in (r"C:\Windows\Fonts\msyh.ttc", r"C:\Windows\Fonts\simhei.ttf"):
 import engine
 import i18n
 import tech_tree
-import achievements as achievements_mod
 import ui_v4 as U
 import ui_v4_screens as S
 

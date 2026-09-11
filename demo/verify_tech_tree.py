@@ -43,7 +43,6 @@ def check(ok: bool, msg: str, detail: str = '') -> bool:
 
 def main() -> int:
     import engine
-    import tech_tree
     from tech_tree import TECH_TREE
     # 必须先 import main：它在模块级调用 _register_fonts()，
     # 否则任何 Label/PixelLabel 都会因 'MicrosoftYaHei.ttf' 缺失而崩。
