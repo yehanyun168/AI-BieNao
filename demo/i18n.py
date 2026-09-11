@@ -80,6 +80,13 @@ TRANSLATIONS = {
         'pick_prefix': '选中',
         'stat_countries': '国',
         'state_running': '[ ■ ] 运行',
+        'state_paused': '[ ‖ ] 已暂停 · 点此继续',
+        # 怀疑度来源标签（玩家反馈 #5：让玩家看懂"为什么涨了"）
+        'sus_src_steal': '偷算力', 'sus_src_skill': '技能', 'sus_src_event': '事件',
+        'sus_src_choice': '抉择', 'sus_src_country': '国家事件',
+        'sus_src_counterplay': '政府反制', 'sus_src_commission': '委托',
+        'sus_src_crisis': '危机处置', 'sus_src_pressure': '联合收网',
+        'sus_breakdown_head': '怀疑度 {n} ←',
 
         # 年龄结构
         'age_young': '年轻型',
@@ -234,6 +241,12 @@ TRANSLATIONS = {
         'pick_prefix': 'Selected',
         'stat_countries': '',
         'state_running': '[ ■ ] RUN',
+        'state_paused': '[ ‖ ] PAUSED · click to resume',
+        'sus_src_steal': 'Steal', 'sus_src_skill': 'Skill', 'sus_src_event': 'Event',
+        'sus_src_choice': 'Choice', 'sus_src_country': 'Country',
+        'sus_src_counterplay': 'Counter-op', 'sus_src_commission': 'Commission',
+        'sus_src_crisis': 'Crisis', 'sus_src_pressure': 'Joint Crackdown',
+        'sus_breakdown_head': 'Suspicion {n} ←',
 
         # Age structures
         'age_young': 'Young',
@@ -415,6 +428,7 @@ TRANSLATIONS[LANG_ZH].update({
     'layer_heat_max': '最高', 'layer_heat_min': '最低', 'layer_heat_avg': '均值',
     'zoom_fit': '适配窗口',
     'quick_drop': '投放技能', 'quick_pause': '暂停',
+    'quick_resume': '继续',
     'top_search_hint': '点击地图国家查看详情',
 
     # ---- S03 国家检视卡 ----
@@ -456,6 +470,8 @@ TRANSLATIONS[LANG_ZH].update({
     'drop_select_region': '按区域全选',
     'drop_grey_note': '灰色国家不可投放：',
     'drop_selected': '投放模式：已选 {n} 国',
+    'drop_selected_cost': '投放模式：已选 {n} 国 · 消耗 {cost} / 有 {have}',
+    'drop_short_cost': '算力不足：{n} 国需 {cost}，现有 {have}（差 {short}）',
     'drop_sel_mark': '已选',
     'reason_ok': '可投放',
     'reason_locked': '未解锁',
@@ -705,6 +721,7 @@ TRANSLATIONS[LANG_EN].update({
     'layer_heat_max': 'max', 'layer_heat_min': 'min', 'layer_heat_avg': 'avg',
     'zoom_fit': 'Fit window',
     'quick_drop': 'Drop skill', 'quick_pause': 'Pause',
+    'quick_resume': 'Resume',
     'top_search_hint': 'Click a country for details',
 
     # ---- S03 inspector ----
@@ -745,6 +762,8 @@ TRANSLATIONS[LANG_EN].update({
     'drop_select_region': 'Select whole region',
     'drop_grey_note': 'Greyed countries cannot be targeted:',
     'drop_selected': 'Drop mode: {n} selected',
+    'drop_selected_cost': 'Drop: {n} picked · cost {cost} / have {have}',
+    'drop_short_cost': 'Short on compute: {n} cost {cost}, have {have} (short {short})',
     'drop_sel_mark': 'picked',
     'reason_ok': 'Targetable',
     'reason_locked': 'Locked',

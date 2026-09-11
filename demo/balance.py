@@ -74,11 +74,19 @@ TUNE: Dict[str, float] = {
     # 2026-09-11 P0-3 标定 R7：0.0020 → 0.0026。P0-3 随机流重排后危机系
     #   与合规系需要更宽的「中等怀疑」窗口；网格扫描（sens × ratio × decay
     #   × interval，9+8 组合 × 30 局）确定 0.0026 为 7 结局分布最优点。
-    'suspicion_sensitivity_base': 0.0026,
+    # 2026-09-11 玩家反馈 #6 大修：0.0026 → 0.0020（与 adoption 同步）。
+    #   ⚠️ 重标定原因：技能效果归因修复后（use_skill → pending_skill →
+    #   tick 消费），balance_sim 的隐身首次真实生效（旧模拟器技能从不
+    #   落地，等于给 AUTO 白送冷却），AUTO 算力收入抬升 → 科技提速 →
+    #   怀疑增速整体上移。0.0026 在新世界里把 AUTO 关停率推到 ~40%；
+    #   0.0020 回落到 ~31%，且中庸/保守打法的帝国 / 终极 / 解放系全面
+    #   回暖（100 seeds 实测）。
+    'suspicion_sensitivity_base': 0.0020,
     # 「越不信任 AI 的国家越敏感」的加权
     # 2026-09-11 P1-1：0.008 → 0.0020（与 base 同比，保持国家间相对差异）。
     # 2026-09-11 P0-3 标定 R7：0.0020 → 0.0026（与 base 同步）。
-    'suspicion_adoption_factor': 0.0026,
+    # 2026-09-11 玩家反馈 #6 大修：0.0026 → 0.0020（与 base 同步，见上）。
+    'suspicion_adoption_factor': 0.0020,
     # 人口结构对敏感度的乘数
     'suspicion_young_mult': 1.2,
     'suspicion_aging_mult': 0.7,
@@ -89,6 +97,24 @@ TUNE: Dict[str, float] = {
     'crisis_download_decay': 0.97,
     # 压到危机线的这个比例以下才算真正解除
     'crisis_clear_ratio': 0.6,
+    # 「收网线」：怀疑度达到此值后进入联合调查收网阶段，每周期叠加
+    #   sus_pressure_per_tick 的固定怀疑增量（玩家反馈 #6 大修）。
+    # 设计意图：
+    #   1) 高压滞留（95-99 反复横跳）必然走向终局 —— 保证对局在预计
+    #      周期内结束，不会出现「怀疑度永远差一口气」的拖局；
+    #   2) 只收网高位区间、不碰 80-92 恢复带 —— 危机后存活路线
+    #      （被监管 / 自我解放）不受影响，不是所有打法都通向关停；
+    #   3) 收网后想活命必须主动操作（危机选项 -25/-35 / 深度伪装），
+    #      躺平即死 —— 「不正当操作要付出代价」。
+    # 标定：0.5@92（100 seeds 实测，对中庸 / 保守打法几乎零扰动，
+    #   仅对刷脏打法的死局收尾加速）。
+    'sus_pressure_threshold': 92.0,
+    # 收网线的每周期怀疑增量（0 = 关闭该机制）
+    'sus_pressure_per_tick': 0.5,
+    # 怀疑度来源拆解的日志阈值：单周期净变化达到这个值才写一条
+    # 「怀疑度 +N ← 事件 +25 · 国家事件 +10」的解释日志（玩家反馈 #5）。
+    # 纯 UI 观测项，不参与任何数值判定；调大 = 少刷屏。
+    'sus_log_threshold': 5.0,
 
     # ---------------- 政府阻止 ----------------
     # 触发阻止后，每周期阻止强度自然衰减系数
@@ -236,6 +262,8 @@ _REQUIRED = {
     'compute_scale', 'suspicion_sensitivity_base', 'suspicion_adoption_factor',
     'suspicion_young_mult', 'suspicion_aging_mult', 'suspicion_warning',
     'suspicion_crisis', 'crisis_download_decay', 'crisis_clear_ratio',
+    'sus_pressure_threshold', 'sus_pressure_per_tick',
+    'sus_log_threshold',
     'block_decay', 'block_expire_epsilon', 'unlock_penetration_threshold',
     'unlock_seed_downloads', 'penetration_saturated', 'base_tick_seconds',
     'initial_compute', 'potential_users_m', 'start_downloads_primary',
@@ -265,6 +293,10 @@ def validate() -> list:
         errs.append("stealth_ratio_base 不能大于 stealth_ratio_max")
     if TUNE['suspicion_warning'] >= TUNE['suspicion_crisis']:
         errs.append("suspicion_warning 必须小于 suspicion_crisis")
+    if not (TUNE['suspicion_crisis'] < TUNE['sus_pressure_threshold'] < 100):
+        errs.append("sus_pressure_threshold 必须在 (suspicion_crisis, 100) 内")
+    if TUNE['sus_pressure_per_tick'] < 0:
+        errs.append("sus_pressure_per_tick 不能为负")
     if not (0 < TUNE['crisis_clear_ratio'] <= 1):
         errs.append("crisis_clear_ratio 必须在 (0, 1]")
     if not (0 < TUNE['unlock_penetration_threshold'] < 1):

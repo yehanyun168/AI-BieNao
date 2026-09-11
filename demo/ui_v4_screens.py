@@ -150,11 +150,73 @@ class UiStats:
             return [0.0] * len(vals)
         return [v / mx for v in vals]
 
+    @staticmethod
+    def _norm_band(dq: deque, floor: float = 0.0,
+                   span: Optional[float] = None) -> List[float]:
+        """按「绝对量程」归一化：把 [floor, floor+span] 映射到 0–1。
+
+        玩家反馈 #2：旧的「除以序列最大值」在两种情况下完全读不出信息 ——
+
+          1. 带基线的量（算力）：真实变化 100002 → 100006（+0.004%），
+             但 100000 的基线把所有柱子顶到 0.714~1.0，看起来像剧烈抖动。
+          2. 阶梯量（已解锁国家数）：解锁后整段恒等，柱子全高、毫无趋势。
+
+        改成「绝对量程」后，柱子高度表示「在合理区间里的位置」，
+        与游戏进度直接对应，而不是与自己的历史最大值比较
+        （后者会让最后一根永远是满格，形成"永远在涨"的错觉）。
+
+        Args:
+            dq: 数据序列。
+            floor: 量程下界（例如算力基线 0，怀疑度 0）。
+            span: 量程跨度；None 表示用序列自身的 max 作为跨度（旧行为）。
+        """
+        vals = [float(v) for v in dq]
+        if not vals:
+            return []
+        if span is None:
+            span = max(vals) - floor
+        if span <= 0:
+            return [0.0] * len(vals)
+        return [min(max((v - floor) / span, 0.0), 1.0) for v in vals]
+
     def stat_spark(self, key: str) -> List[float]:
-        """顶栏统计的趋势序列（0–1）。
+        """顶栏统计的趋势序列（0–1，语义化归一化）。
 
         Args:
             key: ``'compute'`` / ``'downloads'`` / ``'suspicion'`` / ``'unlocked'``
+
+        每条序列用**各自的语义量程**归一化（玩家反馈 #2）：
+          - downloads：相对自身历史最大值（单调增长，看"涨了多少"）
+          - compute  ：相对历史峰值（基线不参与，避免空转抖动）
+          - suspicion：绝对 0–100（因为怀疑度有明确上限，含义固定）
+          - unlocked ：绝对 0–国家总数（阶梯量，看"解锁到什么程度"）
+        """
+        if key == 'suspicion':
+            # 怀疑度有绝对语义（0-100），用固定量程，柱子高度=危险程度
+            return self._norm_band(self.global_suspicion, 0.0, 100.0)
+        if key == 'unlocked':
+            total = len(self.country_dl) or 20
+            return self._norm_band(self.global_unlocked, 0.0, float(total))
+        if key == 'compute':
+            # 算力无上限：用自身峰值做量程，但下界取序列最小值，
+            # 让"基线之上的真实波动"成为柱子的差异来源。
+            vals = [float(v) for v in self.global_compute]
+            if not vals:
+                return []
+            lo = min(vals)
+            hi = max(vals)
+            if hi <= lo:
+                return [0.5] * len(vals)
+            return [(v - lo) / (hi - lo) for v in vals]
+        dq = {
+            'downloads': self.global_downloads,
+        }.get(key)
+        return self._norm(dq) if dq is not None else []
+
+    def stat_spark_range(self, key: str) -> tuple:
+        """返回某序列火花线的 (下界, 上界) 原始值，供 UI 标注量程。
+
+        玩家反馈 #2：只画柱子不给量程，玩家无法判断「这根柱子算高还是矮」。
         """
         dq = {
             'compute': self.global_compute,
@@ -162,7 +224,14 @@ class UiStats:
             'suspicion': self.global_suspicion,
             'unlocked': self.global_unlocked,
         }.get(key)
-        return self._norm(dq) if dq is not None else []
+        if not dq:
+            return (0.0, 0.0)
+        if key == 'suspicion':
+            return (0.0, 100.0)
+        if key == 'unlocked':
+            return (0.0, float(len(self.country_dl) or 20))
+        vals = [float(v) for v in dq]
+        return (min(vals), max(vals))
 
 
 # ============================================================

@@ -81,11 +81,18 @@ def auto_play(tick_report_hook=None):
     #    保证自动玩家能完成委托闭环（真人玩家同理可用冷门技能刷单）。
     #    ⚠️ 仅在算力充裕（≥800）时练习：技能购买会挤占科技分支升级，
     #    贫瘠局的 T0 链推进（resistance T0 依赖横向跳过）不能被打断。
+    #    ⚠️ 大修后技能真实生效（旧版效果静默丢失，练了个寂寞）：
+    #    中等玩家练技能也会看怀疑度账单 —— 怀疑度 > 40 时不再练
+    #    「脏技能」（怀疑增量 > 0），否则练一次赃一手，关停率爆表。
     if p.compute >= 800:
         for com in p.commissions:
             if (com.status == 'active' and com.goal == 'skill'
                     and com.skill_id in p.unlocked_skills
                     and com.skill_id not in p.skill_cooldowns):
+                sk = engine.SKILLS.get(com.skill_id)
+                if (p.suspicion > 40 and sk is not None
+                        and sk.suspicion_delta > 0):
+                    continue
                 if engine.use_skill(com.skill_id):
                     break
 

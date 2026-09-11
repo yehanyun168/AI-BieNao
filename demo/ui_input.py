@@ -15,6 +15,7 @@ from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
                   LANG_ZH, LANG_EN)
 import engine
 import commissions as C
+import save_manager
 from balance import TUNE
 import tech_tree
 from tech_tree import TECH_TREE, SLOT_MAP
@@ -53,6 +54,38 @@ class InputMixin:
         偷算力类技能是全局的，直接释放（设计稿 S05「立即释放」）。"""
         s = SKILLS.get(sid)
         return bool(s and abs(s.downloads_mult - 1.0) > 1e-9)
+
+    def _skill_unlock_text(self, sid: str) -> str:
+        """锁定态技能卡的提示文案：直接告诉玩家解锁需要点亮哪个科技槽位。
+
+        玩家反馈 #3a：早期看到技能卡灰着、却不知如何解锁，会误以为
+        「显示已解锁但点不动」。这里把解锁条件从科技树数据里读出来，
+        并显示前置链（例如「平台渗透（需先点亮本地化）」），
+        让玩家一眼看到下一步该做什么。
+        """
+        # 开局自带技能不该走到这里；真走到了就退回通用文案
+        req = None
+        try:
+            from data import SKILL_UNLOCK
+            req = SKILL_UNLOCK.get(sid)
+        except Exception:
+            req = None
+        if not req:
+            return t('sk_state_lock')
+        try:
+            slot = SLOT_MAP.get(req['slot'])
+            if slot is None:
+                return t('sk_state_lock')
+            name = slot.name
+            prereq = getattr(slot, 'prereq_slot', None)
+            if prereq:
+                pslot = SLOT_MAP.get(prereq)
+                if pslot is not None and not engine.player.tech.t0_unlocked.get(
+                        prereq, False):
+                    name = f"{name}（需先点亮{pslot.name}）"
+            return t('sk_unlock_hint').format(tech=name)
+        except Exception:
+            return t('sk_state_lock')
 
     # ========================================================
     # 缩放
@@ -147,16 +180,60 @@ class InputMixin:
         """
         prev = self._stat_prev.get(key)
         self._stat_prev[key] = new_value
+        # 趋势后缀（箭头+变化量），由 _refresh_spark_deltas 写进缓存；
+        # 滚动动效的每帧文本也要带上它，否则滚动期间箭头会被抹掉。
+        suffix = getattr(self, '_stat_suffix', {}).get(key, '')
         if prev is None:
-            label.text = self._stat_text(key, mcolor, new_value, unit, digits)
+            label.text = (self._stat_text(key, mcolor, new_value, unit, digits)
+                          + suffix)
             return
         if abs(new_value - prev) < (10 ** -digits) / 2:
             return                       # 四舍五入后没变，不做无意义动效
         import ui_fx
         ui_fx.count_up(label, prev, new_value,
-                       fmt=lambda v: self._stat_text(key, mcolor, v, unit, digits))
+                       fmt=lambda v: (self._stat_text(key, mcolor, v, unit, digits)
+                                      + suffix))
         # 数值有实际变化才脉冲一次（确认感）
         ui_fx.pulse(label, scale_alpha=0.55, duration=0.12)
+
+    def _refresh_spark_deltas(self) -> None:
+        """算好每根顶栏火花线的「近 N 周期变化量」，缓存进 _stat_suffix。
+
+        为什么需要：柱状图只表达形状，不表达量级 —— 玩家看到一排高矮不一的
+        柱子，无法知道「算力到底涨了多少」。这里把窗口首尾差算成人话
+        （↑12 / ↓3% / →0），交给 _animate_stat 拼在数值后面。
+
+        ⚠️ 本函数**不写 label.text**：文本统一由 _animate_stat 负责，
+        避免与滚动动效互相覆盖（两边写同一个 Label 会闪）。
+        """
+        p = engine.player
+        if p is None:
+            return
+        if not hasattr(self, '_stat_suffix'):
+            self._stat_suffix = {}
+        # spark_key → (i18n 标签键, 后缀单位, 小数位)
+        specs = {
+            'compute':   ('stats_compute',   '',  0),
+            'downloads': ('stats_downloads', '',  2),
+            'suspicion': ('stats_suspicion', '%', 0),
+        }
+        for sk, (lbl_key, unit, digits) in specs.items():
+            try:
+                lo, hi = self.stats.stat_spark_range(sk)
+            except Exception:
+                continue
+            delta = hi - lo
+            if abs(delta) < (10 ** -digits) / 2:
+                arrow, mcol, dtext = '→', U.MK['dim'], '0'
+            elif delta > 0:
+                arrow, mcol, dtext = '↑', U.MK['up'], f"{delta:.{digits}f}{unit}"
+            else:
+                arrow, mcol, dtext = '↓', U.MK['dn'], f"{abs(delta):.{digits}f}{unit}"
+            suffix = f"  [color={mcol}]{arrow}{dtext}[/color]"
+            # 只写缓存：真正的 label.text 由紧随其后的 _animate_stat 写入
+            # （它会带上这个后缀）。这样两边永不互相覆盖，滚动动效也不会
+            # 把箭头抹掉。
+            self._stat_suffix[lbl_key] = suffix
 
     def refresh_all(self) -> None:
         p = engine.player
@@ -172,6 +249,19 @@ class InputMixin:
         # 首次进入才建缓存（不可放在 __init__：那时还没有 stats_* 控件）
         if not hasattr(self, '_stat_prev'):
             self._stat_prev = {}
+
+        # --- 顶栏趋势火花线（玩家反馈 #2：让"涨没涨"一眼可见）---
+        # 数据源是 UiStats 的全局序列（每周期采样），首周期只有 1 根柱属正常。
+        # ⚠️ 顺序很重要：必须先更新火花线数据 + 算好趋势后缀（写进
+        #    _stat_suffix），再调 _animate_stat —— 后者会带上此前缀
+        #    做滚动动效；若顺序颠倒，滚动期间后缀会被覆盖丢掉。
+        for sk, spark in getattr(self, '_stat_sparks', {}).items():
+            try:
+                spark.set_values(self.stats.stat_spark(sk))
+            except Exception:
+                pass
+        self._refresh_spark_deltas()
+
         self._animate_stat(self.stats_compute, 'stats_compute', 'yellow',
                            float(p.compute), digits=0)
         self._animate_stat(self.stats_downloads, 'stats_downloads', 'pink',
@@ -187,20 +277,17 @@ class InputMixin:
         if _meta_prev is None or abs(_meta_prev - unlocked) > 0.5:
             self.stats_meta.text = (f"[color={U.MK['dim']}]{t('stat_countries')}"
                                     f"[/color]  [b]{unlocked}/{total}[/b]")
-        # --- 顶栏趋势火花线（玩家反馈 6：让"涨没涨"一眼可见）---
-        # 数据源是 UiStats 的全局序列（每周期采样），首周期只有 1 根柱属正常。
-        for sk, spark in getattr(self, '_stat_sparks', {}).items():
-            try:
-                spark.set_values(self.stats.stat_spark(sk))
-            except Exception:
-                pass
         # 右上角周期数（大号数字，仅数字变化，不重建文本）
         self.lbl_tick_val.text = f"{p.tick_count}"
 
+        # 暂停芯片（玩家反馈 #1）：暂停时显示「继续」，运行中显示「运行」，
+        # 让玩家一眼看出「再点一下会发生什么」。
         if self.paused:
-            self.pause_chip.set_tone('cost', t('pause'))
+            self.pause_chip.set_tone('cost', t('state_paused'))
         else:
             self.pause_chip.set_tone('up', t('state_running'))
+        # 底部暂停按钮文案（暂停↔继续）由状态统一推导，防止两处不同步
+        self._sync_pause_button()
 
         # --- 地图四态 ---
         states = {c.config.code: self._state_of(c) for c in engine.player_countries}
@@ -212,8 +299,12 @@ class InputMixin:
         # --- 技能带 ---
         for sid, card in self.skill_cards.items():
             if sid not in p.unlocked_skills:
+                # 玩家反馈 #3a：早期技能卡只写「未解锁」，玩家无法知道
+                # 「到底要做什么才能解锁」，于是误判为显示 bug。
+                # 这里把解锁条件直接写进卡片状态行（科技树槽位名），
+                # 让锁定态自带「怎么解」的答案。
                 card.set_state('lock', 0, 0.0,
-                               f"{U.SYM['lock']} {t('sk_state_lock')}")
+                               f"{U.SYM['lock']} {self._skill_unlock_text(sid)}")
                 card.set_selected(False)
                 continue
             cd = p.skill_cooldowns.get(sid, 0)
@@ -241,6 +332,11 @@ class InputMixin:
             self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
         if self.drop_mode:
             self._sync_drop_ui()
+        else:
+            # 非投放态也要让按钮文案归位（玩家反馈 #3b：投放结束后
+            # 按钮残留「确认投放」，需再点一次才复位）。文案由状态推导，
+            # 这里无条件同步，杜绝任何残留路径。
+            self._sync_drop_button()
 
         # --- 打开中的页面也要跟着刷新 ---
         if self._page is not None:
@@ -254,6 +350,61 @@ class InputMixin:
         p.events_history.insert(0, f"[{p.tick_count}] {text}")
         p.events_history = p.events_history[:20]
         self.stats.push_log(p.tick_count, text, 'i')
+        if self._log_drawer is not None:
+            self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
+        self.rail.buttons['log'].set_badge(self.stats.unread)
+
+    # 怀疑度来源的中文/英文标签（观测用，不参与判定）
+    _SUS_TAG_KEY = {
+        'steal':        'sus_src_steal',
+        'skill':        'sus_src_skill',
+        'event':        'sus_src_event',
+        'choice':       'sus_src_choice',
+        'country_event': 'sus_src_country',
+        'v2_event':     'sus_src_choice',
+        'counterplay':  'sus_src_counterplay',
+        'commission':   'sus_src_commission',
+        'crisis':       'sus_src_crisis',
+        'crisis_pressure': 'sus_src_pressure',
+    }
+
+    def _log_suspicion_breakdown(self, report: dict) -> None:
+        """把本周期的怀疑度来源拆解写进日志（玩家反馈 #5）。
+
+        触发条件：本周期怀疑度净变化的绝对值达到阈值（默认 5 点），
+        避免每个周期都刷屏。净变化不足阈值时静默 —— 小波动不需要解释。
+
+        目的：玩家在 25 周期用了「算力抽成」后看到 26%→95% 的跳变，
+        无法判断是技能导致的还是事件叠加。这里把「谁贡献了多少」逐条列出，
+        玩家一看就知道是好几类事件在同一周期撞车，而不是某个技能失控。
+        """
+        br = report.get('suspicion_breakdown') or {}
+        if not br:
+            return
+        total = sum(br.values())
+        try:
+            threshold = float(TUNE.get('sus_log_threshold', 5.0))
+        except Exception:
+            threshold = 5.0
+        if abs(total) < threshold:
+            return
+        # 按贡献绝对值从大到小排，玩家先看到主因
+        items = sorted(br.items(), key=lambda kv: -abs(kv[1]))
+        parts = []
+        for tag, val in items:
+            if abs(val) < 0.5:
+                continue
+            key = self._SUS_TAG_KEY.get(tag)
+            name = t(key) if key else tag
+            parts.append(f"{name} {val:+.0f}")
+        if not parts:
+            return
+        tone = 'e' if total > 0 else 'i'
+        self.stats.push_log(
+            engine.player.tick_count,
+            f"{t('sus_breakdown_head').format(n=f'{total:+.0f}')} "
+            + " · ".join(parts),
+            tone)
         if self._log_drawer is not None:
             self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
         self.rail.buttons['log'].set_badge(self.stats.unread)
@@ -349,6 +500,12 @@ class InputMixin:
                     self._notify(
                         f"{t('cp_strike_toast').format(name=cname)} {body}")
 
+        # --- 怀疑度来源拆解（玩家反馈 #5：26%→95% 看不懂为什么）---
+        # 当本周期怀疑度净变化较大时，把来源逐条写进日志，
+        # 让玩家能定位到「是哪一类事件把自己推上去的」，
+        # 而不是只看到一个突兀的大数字。
+        self._log_suspicion_breakdown(report)
+
         self.refresh_all()
         # 周期推进的视觉提示（玩家反馈 5）：倒计时条脉冲一次，
         # 让「新周期开始了」这件事有存在感。动效失败不影响逻辑。
@@ -364,7 +521,13 @@ class InputMixin:
             self.show_choice_popup(report["choice_event"])
         if report.get("ending") is not None:
             self.stop_ticking()
-            save_manager.save()
+            # 结局自动存档。⚠️ 存档失败绝不能挡住结算弹窗 ——
+            # 这里必须吞掉异常：玩家打了一局最想看的就是结局画面，
+            # 不能因为磁盘满/权限问题让 game_tick 抛错、结局永远不出现。
+            try:
+                save_manager.save()
+            except Exception:
+                pass
             self.show_ending_popup(report["ending"])
 
     # ========================================================

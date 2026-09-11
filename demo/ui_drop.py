@@ -94,6 +94,10 @@ class DropMixin:
         self.layer_hud._base_top_inset = 0
         self.layer_hud._sync()
         self.layer_hud._layout_hud()
+        # 按钮文案必须在这里复位（玩家反馈 #3b）——
+        # refresh_all() 里对按钮的同步受 drop_mode 门控，而此处刚把它置假，
+        # 不显式同步就会残留「确认投放」。
+        self._sync_drop_button()
         self.refresh_all()
 
     def _ensure_reticle_layer(self) -> None:
@@ -160,9 +164,21 @@ class DropMixin:
         self.steps.set_current(self.drop_step)
         p = engine.player
         # 顶栏提示
+        #
+        # 玩家反馈 #4：「算力明明够，却投不出去」。根因是算力按目标数**线性
+        # 叠加**（cost × N），而顶栏只写「已选 N 国」，玩家无法预判总价。
+        # 这里把「已选数 / 总消耗 / 现有算力」一并显示，投不出去时立刻
+        # 看得到差在哪，而不是反复点确认却没反应。
         if self.drop_skill:
-            self.drop_hint.set_tone('on', t('drop_selected').format(
-                n=len(self.drop_targets)))
+            n = len(self.drop_targets)
+            cost = engine.skill_cost_for(self.drop_skill, max(n, 1))
+            if p.compute >= cost:
+                self.drop_hint.set_tone('on', t('drop_selected_cost').format(
+                    n=n, cost=f"{cost:.0f}", have=f"{p.compute:.0f}"))
+            else:
+                self.drop_hint.set_tone('cost', t('drop_short_cost').format(
+                    n=n, cost=f"{cost:.0f}", have=f"{p.compute:.0f}",
+                    short=f"{cost - p.compute:.0f}"))
         else:
             self.drop_hint.set_tone('on', t('drop_click_hint'))
 
@@ -211,10 +227,30 @@ class DropMixin:
             self._hide_drop_preview()
 
         # 底部按钮
-        enabled = bool(self.drop_skill and self.drop_targets)
-        self.btn_drop.text = (f"✔ {t('drop_confirm')}" if self.drop_mode and enabled
-                              else f"⊕ {t('quick_drop')}")
-        self.btn_drop.disabled = False
+        #
+        # ⚠️ 修复（玩家反馈 #3b）：旧写法只在 drop_mode 为真时调用本函数，
+        #    投放成功后 _cancel_drop() 立刻把 drop_mode 置假，导致
+        #    refresh_all() 再也不会同步按钮文案 —— 按钮上残留的
+        #    「✔ 确认投放」要等玩家再手点一次才消失。
+        #    现在文案完全由状态推导（_sync_drop_button），并由
+        #    _cancel_drop / refresh_all 无条件调用，杜绝残留。
+        self._sync_drop_button()
+
+    def _sync_drop_button(self) -> None:
+        """底部主按钮文案的唯一来源（与 drop_mode / drop_targets 严格同源）。
+
+        玩家反馈 #3b：投放结束后按钮仍显示「确认投放」需再点一次才复位；
+        且全局技能点击后也被显示成「确认投放」—— 根因都是按钮文案由
+        瞬时路径分别赋值、而非由状态统一推导。这里收敛成一处。
+        """
+        btn = getattr(self, 'btn_drop', None)
+        if btn is None:
+            return
+        actionable = bool(getattr(self, 'drop_mode', False)
+                          and self.drop_skill and self.drop_targets)
+        btn.text = (f"✔ {t('drop_confirm')}" if actionable
+                    else f"⊕ {t('quick_drop')}")
+        btn.disabled = False
 
     def _show_drop_preview(self) -> None:
         if not hasattr(self, '_drop_preview'):

@@ -566,15 +566,20 @@ class Spark(Widget):
         values: 0–1 的数值列表（长度即柱数）。
         highlight_last: 最后一根是否换亮色。
         fill_hex: 柱色覆盖（图层/技能页变体）。
+        show_mid: 是否画一条 50% 基准线（便于判断柱子"算高算矮"）。
+
+    玩家反馈 #2：只画柱子不给基准，玩家无法判断高度含义。这里补一条
+    50% 虚线基准 + 保持末柱高亮（表示"当前值"），让趋势可读。
     """
 
     def __init__(self, values: Sequence[float] = (), highlight_last: bool = True,
-                 fill_hex: Optional[str] = None, **kwargs):
+                 fill_hex: Optional[str] = None, show_mid: bool = True, **kwargs):
         kwargs.setdefault('size_hint_y', None)
         super().__init__(**kwargs)
         self.values = list(values)
         self.highlight_last = highlight_last
         self.fill_hex = fill_hex or ST_FILL['on']
+        self.show_mid = show_mid
         self.bind(pos=self._redraw, size=self._redraw)
         self._redraw()
 
@@ -595,6 +600,11 @@ class Spark(Widget):
             # 底轴（设计稿 border-bottom 1px）
             Color(*COLORS['border'])
             Line(points=[x, y, x + w, y], width=1)
+            # 50% 基准线（玩家反馈 #2：给个参照，才知道柱子高矮）
+            if self.show_mid and h >= 10:
+                Color(*COLORS['border_2'])
+                my = y + 1 + (h - 1) * 0.5
+                Line(points=[x, my, x + w, my], width=1)
             for i, v in enumerate(self.values):
                 vv = min(max(float(v), 0.0), 1.0)
                 bh = max(vv * (h - 1), 0.5)

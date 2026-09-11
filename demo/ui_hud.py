@@ -522,13 +522,18 @@ class HudMixin:
         col.add_widget(lbl)
         # ⚠️ 必须显式 size_hint_y=None，否则垂直 BoxLayout 会把剩下的高度
         # 按 size_hint 重新分配，火花线被拉高到 14px 并挤压标签基线。
-        spark = Spark(values=[], size_hint=(None, None), height=10)
+        #
+        # 玩家反馈 #2：旧高度 10px × 12 根柱 → 每根柱仅 ~3px 宽，
+        # 玩家根本看不出形状。这里加高到 14px、并让柱子数量与宽度
+        # 一起决定可见性（Spark._redraw 里按宽度算柱宽）。
+        spark = Spark(values=[], size_hint=(None, None), height=14)
         spark.size_hint_y = None
-        self._register(spark, height=10)
+        self._register(spark, height=14)
         col.add_widget(spark)
-        # 宽度跟随标签（数字变长自动变宽）
+        # 宽度跟随标签（数字变长自动变宽）；给一个更宽的下限，
+        # 保证 12 根柱子每根都有 ≥4px，形状才可辨。
         def _sync(*_a) -> None:
-            w = max(lbl.width, 52)
+            w = max(lbl.width, 76)
             col.width = w
             spark.width = w
         lbl.bind(width=lambda *_: _sync())

@@ -165,12 +165,15 @@ SKILLS: Dict[str, Skill] = {
         downloads_mult=1.10,
     ),
     # 2）算法霸榜 —— 中成本大推 + 引怀疑
+    # 2026-09-11 玩家反馈 #6 大修：+3 → +5。dirty 技能的怀疑代价此前
+    #   过低（30 局实测：刷脏打法与零技能打法的关停率同为 ~17%，
+    #   「不正当操作无教训」），按「贪心程度」重排梯度。
     "algo_top": Skill(
         id="algo_top", name="算法霸榜", icon="##",
         cost=50, cooldown=5, duration=1,
-        description="下载量 +30%，怀疑度 +3%",
+        description="下载量 +30%，怀疑度 +5%",
         downloads_mult=1.30,
-        suspicion_delta=3.0,
+        suspicion_delta=5.0,
     ),
     # 3）深度伪装 —— 偷算力翻倍 + 怀疑增速腰斩
     "stealth": Skill(
@@ -181,12 +184,13 @@ SKILLS: Dict[str, Skill] = {
         stealth_ratio_mult=2.0,
     ),
     # 4）爆款制造 —— 最强拉新，代价最贵
+    # 2026-09-11 玩家反馈 #6 大修：+5 → +7（与算法霸榜同步重排）。
     "hit_maker": Skill(
         id="hit_maker", name="爆款制造", icon="**",
         cost=100, cooldown=6, duration=1,
-        description="下载量 +50%，怀疑度 +5%",
+        description="下载量 +50%，怀疑度 +7%",
         downloads_mult=1.50,
-        suspicion_delta=5.0,
+        suspicion_delta=7.0,
     ),
     # 5）限流绕过 —— 突破单用户算力上限
     "bypass": Skill(
@@ -196,12 +200,15 @@ SKILLS: Dict[str, Skill] = {
         compute_mult=1.40,
     ),
     # 6）算力抽成 —— 抽成比例提升
+    # 2026-09-11 玩家反馈 #6 大修：+6 → +10。最「贪心」的技能就该有
+    #   最重的怀疑代价（梯度：霸榜 +5 < 爆款 +7 < 抽成 +10），
+    #   让刷脏打法真实地走向关停，而不是与保守打法同结局分布。
     "take_cut": Skill(
         id="take_cut", name="算力抽成", icon="%",
         cost=80, cooldown=7, duration=2,
-        description="偷算力比例 +8%，怀疑度 +6%",
+        description="偷算力比例 +8%，怀疑度 +10%",
         stealth_ratio_bonus=0.08,
-        suspicion_delta=6.0,
+        suspicion_delta=10.0,
     ),
 }
 

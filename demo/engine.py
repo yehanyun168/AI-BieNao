@@ -72,6 +72,12 @@ class PlayerState:
     # v0.4 精准投放：技能目标国家代码列表（空 = 全局投放，旧行为）
     # 设计稿 S04 支持「地图上多选目标」，所以这里由单值升级为列表。
     pending_skill_targets: List[str] = field(default_factory=list)
+    # ⚠️ 大修（玩家反馈 #6 连带发现）：上次成功施放、待本周期生效的技能 id。
+    # 旧版把技能 id 存在调用方手里（UI 传 tick_one_round(skill_in_use=...)），
+    # balance_sim / 测试 / 引擎自测等不传参的调用方会**静默丢失全部技能效果**
+    # （AUTO 玩家的「隐身」从未真正生效过）。现在效果归因收敛到引擎状态：
+    # use_skill 登记 → tick 消费并清空；显式参数仍优先（UI 兼容路径）。
+    pending_skill: str = ""
     tech: PlayerTech = field(default_factory=PlayerTech)
     # —— 结局 / 危机相关 ——
     compute_peak: float = 100.0        # 历史算力峰值（元结局判定用）
@@ -112,6 +118,19 @@ class PlayerState:
 # 全局状态
 player_countries: List[CountryState] = []
 player: PlayerState = None
+
+# 当前周期内怀疑度变化的来源拆解（玩家反馈 #5）。
+# 每个写 suspicion 的地方调 _sus(tag, delta) 记账，tick 结束放进 report。
+# 这是**纯观测**设施：不影响任何游戏数值，仅用于让 UI 能回答
+# 「这一周期怀疑度为什么涨了这么多」。
+_suspicion_trace: Dict[str, float] = {}
+
+
+def _sus(tag: str, delta: float) -> None:
+    """记录一笔怀疑度变化（来源 tag → 净变化）。观测用，不参与判定。"""
+    if not delta:
+        return
+    _suspicion_trace[tag] = _suspicion_trace.get(tag, 0.0) + delta
 
 
 def init_game() -> PlayerState:
@@ -174,6 +193,10 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         "download_growth": 0,
         "compute_gain": 0,
         "suspicion_gain": 0,
+        # 怀疑度变化的来源拆解（玩家反馈 #5：26%→95% 玩家看不懂为什么）
+        # key = 来源分类（偷算力/技能/通用事件/国家事件/v2事件/反制/委托），
+        # value = 该来源本周期带来的怀疑度净变化。
+        "suspicion_breakdown": {},
         "events": [],
         "unlocked": [],
         "blocking_countries": [],
@@ -194,6 +217,9 @@ def tick_one_round(skill_in_use: Optional[str] = None,
 
     player.tick_count += 1
     report["tick"] = player.tick_count
+    # 重置怀疑度来源拆解（本周期开始）
+    global _suspicion_trace
+    _suspicion_trace = {}
     effects = aggregate_effects(player.tech)
 
     # 计算技能乘数（覆盖科技效果中的同类项）
@@ -204,6 +230,14 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     skill_compute_mult = 1.0
     skill_stealth_bonus = 0.0
     skill_stealth_mult = 1.0
+
+    # （大修）技能效果归因：显式参数优先（UI 兼容路径），否则消费引擎侧
+    # 登记的上次施放（use_skill 只扣费设冷却不应用效果，效果在本 tick 落地）。
+    # 旧版技能 id 存在调用方手里 —— balance_sim / 测试 / 自测等无参调用
+    # 全部静默丢效果（AUTO 的「隐身」从未真正生效过）。本修不改变 UI 行为。
+    if not skill_in_use:
+        skill_in_use = player.pending_skill or None
+    player.pending_skill = ""
 
     if skill_in_use and skill_in_use in SKILLS:
         s = SKILLS[skill_in_use]
@@ -307,6 +341,8 @@ def tick_one_round(skill_in_use: Optional[str] = None,
 
     player.compute += total_stolen + (skill_compute_bonus if not targeted else 0.0)
     player.compute_peak = max(player.compute_peak, player.compute)
+    _sus('steal', total_suspicion)                       # 偷算力（基础）
+    _sus('skill', (skill_suspicion_delta if not targeted else 0.0))  # 技能附带
     player.suspicion = max(0, min(100, player.suspicion + total_suspicion + (skill_suspicion_delta if not targeted else 0.0)))
     player.suspicion_peak = max(player.suspicion_peak, player.suspicion)
     report["compute_gain"] = total_stolen
@@ -373,6 +409,19 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         for c in player_countries:
             c.downloads_m *= CRISIS_DOWNLOAD_DECAY
 
+    # === 阶段5.1: 收网压力（玩家反馈 #6 大修）===
+    # 怀疑度越过收网线后，每周期叠加固定增量（balance.TUNE 收网参数）。
+    #   旧问题：危机期下载衰减 → 偷算力基数萎缩 → 怀疑增速 < 事件抽水，
+    #   怀疑度在 95-99 反复横跳、对局拖到天荒地老（玩家实测卡死主因）。
+    #   现在收网区是单向阀：要么主动自救（危机选项 / 深度伪装），要么
+    #   在数个周期内被推到 100 触发关停 —— 对局必在预计周期内结束。
+    # 注意放在衰减之后、事件之前：本周期压力立即参与结局判定（阶段 7）。
+    _sus_pressure = TUNE['sus_pressure_per_tick']
+    if (_sus_pressure > 0
+            and player.suspicion >= TUNE['sus_pressure_threshold']):
+        _sus('crisis_pressure', _sus_pressure)
+        player.suspicion = min(100.0, player.suspicion + _sus_pressure)
+
     # === 阶段6: 冷却递减（按周期，与 tick 墙钟时长解耦）===
     # 技能冷却单位是「周期」（data.SKILLS.cooldown），每推进一个周期减 1。
     # 不能用 dt_seconds 递减：base_tick_seconds=30，会把 cooldown=3 一步扣成负数。
@@ -421,6 +470,9 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         player.game_over = True
         player.ending_id = ending.id
         report["ending"] = ending
+
+    # 观测：把本周期怀疑度来源拆解附进 report（UI 用来解释「为什么涨了」）
+    report["suspicion_breakdown"] = dict(_suspicion_trace)
 
     return report
 
@@ -556,6 +608,7 @@ def _apply_event(evt: data.GameEvent):
         player.compute += evt.effect_compute
         player.compute_peak = max(player.compute_peak, player.compute)
     if evt.effect_suspicion:
+        _sus('event', evt.effect_suspicion)
         player.suspicion = max(0, min(100, player.suspicion + evt.effect_suspicion))
 
 
@@ -615,11 +668,13 @@ def resolve_choice(evt, option_index: int = 0) -> List[str]:
 
         elif eff.type == 'add_suspicion':
             delta = eff.value * 100 if eff.value_kind == 'pct' else eff.value
+            _sus('choice', delta)
             player.suspicion = max(0, min(100, player.suspicion + delta))
             logs.append(f"怀疑度 +{delta:.0f}")
 
         elif eff.type == 'reduce_suspicion':
             delta = eff.value * 100 if eff.value_kind == 'pct' else eff.value
+            _sus('choice', -delta)
             player.suspicion = max(0, player.suspicion - delta)
             logs.append(f"怀疑度 -{delta:.0f}")
 
@@ -732,9 +787,17 @@ def _resolve_counterplay(cs, resist: float) -> Dict:
         kind, detail = 'budget_reinforce', f"+{boost:.0f}"
     else:
         # 跨境协查：怀疑度 +gain，增量截断在危机线下（硬规则 1）
-        delta = TUNE['counterplay_suspicion_gain'] * resist
-        delta = min(delta, SUSPICION_CRISIS - 1 - player.suspicion)
+        #
+        # ⚠️ 修复（玩家反馈 #6）：旧写法 ``min(delta, SUSPICION_CRISIS - 1 - suspicion)``
+        #    在 suspicion >= 79 时会算出**负数**（例如 suspicion=85 → 79-85 = -6），
+        #    于是 ``min`` 把本该「+3」的反制变成「-6」。虽然 ``if delta > 0`` 拦住了
+        #    写入，但这个 clamp 的本意是「把增量削到不越过危机线」，绝不该倒扣。
+        #    更糟的是它让反制在高压期（正是最该施加压力的时候）彻底失效。
+        #    正确语义：先取剩余余量，再用 max(0, ·) 兜底，保证增量恒为非负。
+        headroom = max(0.0, SUSPICION_CRISIS - 1.0 - player.suspicion)
+        delta = min(TUNE['counterplay_suspicion_gain'] * resist, headroom)
         if delta > 0:
+            _sus('counterplay', delta)
             player.suspicion = min(100.0, player.suspicion + delta)
         kind, detail = 'cross_inquiry', f"+{delta:.1f}"
     return {"phase": "strike", "type": kind, "country": cs.config.code,
@@ -887,6 +950,7 @@ def _complete_commission(com) -> None:
     p.compute += com.reward
     p.compute_peak = max(p.compute_peak, p.compute)
     if com.sus_relief > 0:
+        _sus('commission', -com.sus_relief)
         p.suspicion = max(0.0, p.suspicion - com.sus_relief)
     p.commissions.remove(com)
     p.events_history.insert(0, f"[周期 {p.tick_count}] ✅ 委托完成：{com.name_zh}")
@@ -900,6 +964,7 @@ def _fail_commission(com) -> None:
     delta = TUNE['commission_fail_suspicion']
     if p.crisis_triggered:
         delta *= 0.5        # 危机期间失败减半，避免双重惩罚（设计稿 §4.2）
+    _sus('commission', delta)
     p.suspicion = min(100.0, p.suspicion + delta)
     p.commissions.remove(com)
     p.events_history.insert(0, f"[周期 {p.tick_count}] ❌ 委托失败：{com.name_zh}")
@@ -935,6 +1000,7 @@ def _apply_country_event(evt: ce.CountryEvent):
     player.compute += evt.effect_compute
     player.compute_peak = max(player.compute_peak, player.compute)
     if evt.effect_suspicion:
+        _sus('country_event', evt.effect_suspicion)
         player.suspicion = max(0, min(100, player.suspicion + evt.effect_suspicion))
 
 
@@ -955,6 +1021,10 @@ def use_skill(skill_id: str, target_codes=None) -> bool:
     Note:
         算力按目标数量线性叠加 —— 设计稿 S04 的「算力消耗 50 ×3 = 150」。
         全局投放按 1 份计。
+        效果契约（大修）：本函数只负责验证 / 扣费 / 冷却 / 登记目标与技能 id，
+        实际效果在**下一个** ``tick_one_round`` 落地 —— 无需调用方再传
+        ``skill_in_use``（引擎读 ``player.pending_skill``，用完即清）。
+        UI 的显式传参路径仍兼容且优先。
     """
     if player is None:
         return False
@@ -982,6 +1052,7 @@ def use_skill(skill_id: str, target_codes=None) -> bool:
     player.compute -= total_cost
     player.skill_cooldowns[skill_id] = skill.cooldown
     player.pending_skill_targets = targets
+    player.pending_skill = skill_id             # 大修：效果归因进引擎状态
     # P0-3 快照计数：技能使用次数（C4「技能特训」委托的判定基准）
     player.skill_uses[skill_id] = player.skill_uses.get(skill_id, 0) + 1
     return True
@@ -1132,6 +1203,7 @@ def resolve_crisis(idx: int) -> List[str]:
     if opt['compute_cost'] and player.compute < opt['compute_cost']:
         logs.append(i18n.t('crisis_downgrade'))
         opt = CRISIS_OPTIONS[0]
+    _sus('crisis', opt['suspicion_delta'])
     player.suspicion = max(player.suspicion + opt['suspicion_delta'], 0.0)
     if opt['compute_cost']:
         player.compute -= opt['compute_cost']

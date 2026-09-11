@@ -159,19 +159,71 @@ class SessionMixin:
         self.drop_hint.set_tone('on', t('drop_click_hint'))
         self.layer_hud.seg.set_options([t(LAYER_LABEL_KEY[k]) for k in LAYER_KEYS])
         self.steps.set_labels([t('drop_step1'), t('drop_step2'), t('drop_step3')])
-        self.btn_pause.text = f"{U.SYM['pause']} {t('quick_pause')}"
+        self._sync_pause_button()
         self._sync_region_tabs()
         self._apply_layer()
         self.refresh_all()
 
+    def _sync_pause_button(self) -> None:
+        """底部暂停按钮文案的唯一来源（玩家反馈 #1）。
+
+        暂停时按钮应写「继续 / 恢复」，运行时才写「暂停」——
+        旧实现只在 _apply_lang 里赋一次「暂停」，点下去文案从不变化，
+        玩家无法判断当前到底停没停。
+        """
+        btn = getattr(self, 'btn_pause', None)
+        if btn is None:
+            return
+        sym = getattr(U, 'SYM', {})
+        if self.paused:
+            btn.text = f"{sym.get('play', '▶')} {t('quick_resume')}"
+        else:
+            btn.text = f"{sym.get('pause', '■')} {t('quick_pause')}"
+
     def toggle_pause(self) -> None:
+        """暂停 / 恢复（玩家反馈 #1）。
+
+        ⚠️ 旧实现只是 cancel 掉时钟，恢复时走 _reschedule_tick() 把
+        _tick_deadline 重置为「现在 + 整个周期」—— 于是暂停前已经过去的
+        那几秒被丢掉，倒计时从 30s 重新开始，玩家感知为「暂停不真」。
+
+        现在：暂停时把「剩余秒数」冻结进 _paused_remaining；恢复时按这个
+        剩余量重建一次性计时，周期进度从暂停处接着走。
+        """
         if self.paused:
             self.paused = False
-            self._reschedule_tick()
+            self._resume_from_pause()
         else:
             self.paused = True
+            # 冻结剩余时间（下限 0，防止负值导致立即触发）
+            self._paused_remaining = max(
+                0.0, self._tick_deadline - Clock.get_time())
             self.stop_ticking()
         self.refresh_all()
+
+    def _resume_from_pause(self) -> None:
+        """按暂停前冻结的剩余秒数恢复周期进度（而非重置为整周期）。"""
+        self.stop_ticking()
+        if engine.player is None or engine.player.game_over:
+            return
+        remaining = max(0.0, getattr(self, '_paused_remaining', 0.0))
+        interval = self._tick_interval()
+        if remaining <= 0.0 or remaining > interval:
+            # 没有可用的冻结值（旧档 / 首次）→ 退回整周期
+            self._reschedule_tick()
+            return
+        # 先排一次「剩余时间后」的周期推进，之后自动转回等间隔节奏
+        self._tick_deadline = Clock.get_time() + remaining
+
+        def _first_tick(dt):
+            # 第一次触发后立刻切回常规等间隔调度，避免节拍漂移
+            self.tick_event = None
+            self.game_tick(dt)
+            if not self.paused and not engine.player.game_over:
+                self.tick_event = Clock.schedule_interval(
+                    self.game_tick, self._tick_interval())
+
+        self.tick_event = Clock.schedule_once(_first_tick, remaining)
 
     def stop_ticking(self) -> None:
         ev = getattr(self, 'tick_event', None)
