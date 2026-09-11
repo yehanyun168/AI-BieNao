@@ -10,7 +10,7 @@ make_screenshots.py - 生成 README / 分享包里用的 3 张「真实截图」
 
 ⚠️ 两个已知坑（务必保留）：
   1. 窗口物理宽度必须能被 4 整除（这里 1440），否则 Window.screenshot 抓出来的
-     RGBA 行会整体错位、颜色被循环移位（海面 #0a1828 会变成 (24,40,10) 等）。
+     RGBA 行会整体错位、颜色被循环移位（海面 #0d1117 会变成 (17,23,13) 等）。
   2. Kivy 的 Window.screenshot(name=...) 会自动追加 0001 序号，所以先抓到临时名
      再 os.replace 成目标文件名。
 """
@@ -71,11 +71,20 @@ class ShotApp(App):
 
     # ---- 2) 游戏主界面 ----
     def _game(self, *_):
-        self.root_view.start_game(load=False)
+        self.root_view.start_new_game()
         Clock.schedule_once(self._play, 1.0)
 
     def _play(self, *_):
         ui = self.root_view.game
+        # 新手引导会在开局自动弹出，会挡住地图 —— 截图前直接结束它，
+        # 否则「游戏主界面」这张图永远只能拍到引导弹窗。
+        try:
+            tut = getattr(ui, 'tutorial', None)
+            if tut is not None:
+                # skip() 走的是「玩家点跳过」的同一条路径（会 _teardown 掉遮罩）
+                tut.skip()
+        except Exception as e:
+            print('   ⚠️ 关闭引导失败（不影响截图）：%s' % e)
         # 先跑一段，让地图有「已解锁 / 未解锁 / 阻止中」三种状态同框
         import random
         random.seed(7)

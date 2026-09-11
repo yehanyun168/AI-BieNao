@@ -489,7 +489,7 @@ class MainMenu(FloatLayout):
         root.add_widget(left)
 
         # ---- 右：只读像素地图剪影 ----
-        right = Panel(bg=hex_rgba('#0a1828'), border_color=COLORS['border_2'])
+        right = Panel(bg=hex_rgba('#0d1117'), border_color=COLORS['border_2'])
         right.size_hint_x = 1.0 - self.LEFT_W
         self.sil_map = WorldMap()
         self.sil_map.size_hint = (1, 1)

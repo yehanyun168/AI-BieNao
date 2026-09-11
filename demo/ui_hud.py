@@ -543,7 +543,7 @@ class HudMixin:
     # ---- 地图舞台（设计稿 .mapstage）----
     def _make_map_stage(self) -> Widget:
         stage = FloatLayout()
-        holder = Panel(bg=hex_rgba('#0a1828'), border_color=COLORS['border_2'])
+        holder = Panel(bg=hex_rgba('#0d1117'), border_color=COLORS['border_2'])
         stage.size_hint = (1, 1)
         stage.pos_hint = {'x': 0, 'y': 0}
         holder.add_widget(stage)

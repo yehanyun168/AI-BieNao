@@ -17,13 +17,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SHOTS = os.path.join(HERE, '_v4shots')
 
 # 设计令牌 → RGB（单一来源：world_map.py / pixel_ui.COLORS）
+# ⚠️ sea / sealine / land / coast 已按 design/ardot_ui/pixel_world_map_880x484.png
+#    重新取样对齐（旧值 #0a1828 / #12293c / #16323c / #27505b 是手调近似值）。
+#    改这里之前先跑 tools/check_map_palette.py，以设计稿为准。
 TOKENS = {
     'bg     #0d1117': (13, 17, 23),
     'panel2 #1f2630': (31, 38, 48),
-    'sea    #0a1828': (10, 24, 40),
-    'sealine#12293c': (18, 41, 60),
-    'land   #16323c': (22, 50, 60),
-    'coast  #27505b': (39, 80, 91),
+    'sea    #0d1117': (13, 17, 23),
+    'sealine#1d242c': (29, 36, 44),
+    'land   #1d242c': (29, 36, 44),
+    'coast  #2c343e': (44, 52, 62),
     'on.f   #1f6f63': (31, 111, 99),
     'on.e   #3ec9ac': (62, 201, 172),
     'sel.f  #4ec9b0': (78, 201, 176),

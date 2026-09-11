@@ -11,7 +11,7 @@ world_map.py - 像素世界地图（120 x 60 网格 / Miller 投影 / Natural Ea
 7 条 canvas 指令 + 一次 stencil push/pop，重绘成本高。
 
 新版直接画 **像素格**：
-  海面 → 经纬网 → 陆地底 #16323c → 海岸线高亮 #27505b
+  海面 → 经纬网 → 陆地底 #1d242c → 海岸线高亮 #2c343e
   → 20 国填充（状态色）→ 20 国国界（1 格宽独立游程）→ 引导线 + 标签框
 国家不再是多边形，而是一组横向游程 (x, y, w)，用 Rectangle 落笔；
 国界是**独立的一圈格子**（不是 stroke —— stroke 会在游程内部画出网格线）。
@@ -44,15 +44,22 @@ from pixel_ui import PIXEL_FONT_NAME, PixelLabel, hex_rgba
 
 
 # ============================================================
-# 配色（严格对齐设计稿 §5）
+# 配色（严格对齐设计稿 §5 / design/ardot_ui/S06_world_map.png）
 # ============================================================
-SEA        = '#0a1828'   # 海面
-SEA_LINE   = '#12293c'   # 经纬网（每 4 格一条）
-LAND       = '#16323c'   # 陆地底
-COAST      = '#27505b'   # 海岸线高亮
+# 以下常量由 design/ardot_ui/pixel_world_map_880x484.png 直接取样得到，
+# 不再是手调的近似值（见 tools/check_map_palette.py 的取样结果）。
+SEA        = '#0d1117'   # 海面（= 设计稿底色）
+SEA_LINE   = '#1d242c'   # 经纬网（每 4 格一条）
+LAND       = '#1d242c'   # 无名陆地（不属于 20 国的大陆块：格陵兰/撒哈拉内陆/西伯利亚）
+COAST      = '#2c343e'   # 海岸线高亮
 CHIP_BG    = '#0b1218'   # 标签框底
 
 # 国家四态：fill 填充 / edge 国界 / text 标签文字
+# ⚠️ 四态全部与设计稿取样值逐位一致（见 tools/check_map_palette.py），勿随意改：
+#    #232a30 = 未解锁（20 国之一，但还没拿下）
+#    #1f6f63 = 已占， #4ec9b0 = 选中， #5c2323/#ef4444 = 被封锁
+#    注意 'lk' 与 LAND 是**两种不同的灰**：前者是"待拿下的国家"，
+#    后者是"不属于任何玩家国家的大陆底"，混用会让地图失去层次。
 STATE_FILL = {'lk': '#232a30', 'on': '#1f6f63', 'blk': '#5c2323', 'sel': '#4ec9b0'}
 STATE_EDGE = {'lk': '#4a5560', 'on': '#3ec9ac', 'blk': '#ef4444', 'sel': '#eafffb'}
 STATE_TEXT = {'lk': '#b6c2cd', 'on': '#8ff0da', 'blk': '#ffb4b4', 'sel': '#eafffb'}
