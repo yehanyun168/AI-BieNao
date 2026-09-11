@@ -18,6 +18,7 @@ import engine
 import sfx
 import tech_tree
 from tech_tree import TECH_TREE, SLOT_MAP
+from balance import TUNE
 from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS, SKILL_UNLOCK
 import save_manager
 import achievements as achievements_mod
@@ -508,7 +509,8 @@ class PagesMixin:
             self.map_stage.add_widget(self._inspector)
         self._inspector.update(
             self._country_state(code), self.stats,
-            engine.player.total_downloads_m, engine.player.suspicion)
+            engine.player.total_downloads_m, engine.player.suspicion,
+            TUNE['unlock_penetration_threshold'])
 
     def _close_inspector(self) -> None:
         if self._inspector is not None:

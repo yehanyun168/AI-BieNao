@@ -11,6 +11,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
+from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
 from pixel_ui import (COLORS as PIXEL_COLORS, PixelPanel, wrap_pixel, hex_rgba,
@@ -28,7 +29,7 @@ import ui_shared as ST
 from ui_shared import COLORS, Panel
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
                    ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
-                   StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
+                   StrokePanel, SaveSlotRow, Spark, mk_label, ST_FILL, ST_EDGE,
                    MIN_TOUCH, fit_width)
 from world_map import WorldMap
 import sfx
@@ -398,11 +399,17 @@ class HudMixin:
         bar.add_widget(self.lbl_logo)
         bar.add_widget(self._sep())
 
-        # ---- 左组：统计（设计稿 .stat）----
-        self.stats_compute = self._stat(bar, 'stats_compute', 'yellow')
-        self.stats_downloads = self._stat(bar, 'stats_downloads', 'pink')
-        self.stats_suspicion = self._stat(bar, 'stats_suspicion', 'red')
-        self.stats_meta = self._stat(bar, 'stat_countries', 'text')
+        # ---- 左组：统计（设计稿 .stat；下方各挂一根 12 周期趋势火花线）----
+        self._stat_sparks: dict = {}
+        self._stat_labels: dict = {}
+        self.stats_compute = self._stat(bar, 'stats_compute', 'yellow',
+                                        spark_key='compute')
+        self.stats_downloads = self._stat(bar, 'stats_downloads', 'pink',
+                                          spark_key='downloads')
+        self.stats_suspicion = self._stat(bar, 'stats_suspicion', 'red',
+                                          spark_key='suspicion')
+        self.stats_meta = self._stat(bar, 'stat_countries', 'text',
+                                     spark_key='unlocked')
         bar.add_widget(Widget())              # 弹性空隙：把右组推到最右
 
         # ---- 右组：周期数（醒目，用户要求「右上角显示周期数」）----
@@ -482,13 +489,55 @@ class HudMixin:
                 i._line, 'points', [i.center_x, i.y + 8, i.center_x, i.y + 30]))
         return s
 
-    def _stat(self, bar: BoxLayout, key: str, color_name: str) -> Label:
-        """顶栏统计组：标签 + 大数字 + 增量"""
+    def _stat(self, bar: BoxLayout, key: str, color_name: str,
+              spark_key: Optional[str] = None) -> Label:
+        """顶栏统计组：标签 + 大数字 + 增量，可选趋势火花线。
+
+        Args:
+            bar: 顶栏水平 BoxLayout。
+            key: i18n 标签键。
+            color_name: 保留参数（数字颜色由 refresh_all 按语义着色）。
+            spark_key: 传 'compute'/'downloads'/'suspicion'/'unlocked' 时，
+                在数字下方叠一根 12 周期的像素趋势柱（设计稿 S05 顶栏样式）。
+
+        ⚠️ 设计稿 S05 里每个统计都是「上行=标签+数值，下行=火花线」的两段式。
+        实现上用一个垂直 BoxLayout 承载（label 在上，Spark 在下），整体作为
+        单个子控件加进顶栏，宽度自适应 —— 顶栏是水平布局，多塞一个子控件
+        会挤掉右侧周期块，所以必须包在一个盒子里。
+        """
         lbl = mk_label(f"[color={U.MK['dim']}]{t(key)}[/color]  --",
                        font_size=U.FS_SM, markup=True, size_hint_x=None)
         fit_width(lbl, pad=10, min_w=64)
         self._register(lbl, font=U.FS_SM)
-        bar.add_widget(lbl)
+        if spark_key is None:
+            bar.add_widget(lbl)
+            return lbl
+
+        col = BoxLayout(orientation='vertical', spacing=2,
+                        size_hint=(None, None), height=self.TOP_H)
+        lbl.size_hint = (1, None)
+        lbl.height = self.TOP_H - 14
+        lbl.halign = 'left'
+        lbl.valign = 'middle'
+        col.add_widget(lbl)
+        # ⚠️ 必须显式 size_hint_y=None，否则垂直 BoxLayout 会把剩下的高度
+        # 按 size_hint 重新分配，火花线被拉高到 14px 并挤压标签基线。
+        spark = Spark(values=[], size_hint=(None, None), height=10)
+        spark.size_hint_y = None
+        self._register(spark, height=10)
+        col.add_widget(spark)
+        # 宽度跟随标签（数字变长自动变宽）
+        def _sync(*_a) -> None:
+            w = max(lbl.width, 52)
+            col.width = w
+            spark.width = w
+        lbl.bind(width=lambda *_: _sync())
+        self._register(col, height=self.TOP_H)
+        bar.add_widget(col)
+        # 记录：refresh_all 里按 key 取对应 Spark 更新数据
+        self._stat_sparks[spark_key] = spark
+        self._stat_labels[spark_key] = lbl
+        _sync()
         return lbl
 
     # ---- 地图舞台（设计稿 .mapstage）----

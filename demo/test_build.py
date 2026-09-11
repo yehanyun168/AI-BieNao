@@ -341,6 +341,66 @@ assert hasattr(main_module.GameUI, 'show_top_toast'), \
 print(f"   ✅ 16) 委托/反制 UI 接线（i18n zh+en ×{len(_needed)} 键 / "
       f"模板字段 / Mixin 装配）")
 
+# ---- 17) 可视化 / 引导 / 节奏参考（玩家反馈 6、7、10）----
+# 顶栏四个统计各挂一根趋势火花线（设计稿 S05）；UiStats 必须维护全局序列。
+import ui_v4_screens as _screens
+_st = _screens.UiStats()
+for _attr in ('global_downloads', 'global_compute', 'global_suspicion',
+              'global_unlocked'):
+    assert hasattr(_st, _attr), f"UiStats 缺全局序列 {_attr}"
+assert hasattr(_st, 'stat_spark'), "UiStats 应提供 stat_spark(key)"
+# 归一化：单调递增序列应能产出递增的 0–1 火花值
+from collections import deque as _dq
+_st.global_compute = _dq([1.0, 2.0, 4.0, 8.0], maxlen=12)
+_vals = _st.stat_spark('compute')
+assert _vals and abs(_vals[-1] - 1.0) < 1e-9 and _vals[0] < _vals[-1], \
+    f"火花线归一化异常: {_vals}"
+assert _st.stat_spark('不存在') == [], "未知 key 应返回空序列"
+# 顶栏装配：已构建的 GameUI 实例必须注册 4 个 spark_key（实例属性，
+# 在 _make_topbar 里填充，故检查实例而非类）。
+# ⚠️ 本文件第 35 行已把 ui 重绑定为 GameUI 实例（ui = ui.game），
+# 所以这里直接用 ui，不要再写 ui.game。
+_ui_sparks = getattr(ui, '_stat_sparks', None)
+assert _ui_sparks, "GameUI 实例应具备顶栏火花线注册表 _stat_sparks"
+_core_keys = {'compute', 'downloads', 'suspicion', 'unlocked'}
+_missing_sk = _core_keys - set(_ui_sparks)
+assert not _missing_sk, f"顶栏缺火花线: {_missing_sk}"
+for _k, _sp in _ui_sparks.items():
+    assert hasattr(_sp, 'set_values'), f"spark[{_k}] 不可更新"
+
+# 新手指引：核心循环 + 参数讲解 + 科技树演示
+import tutorial as _tut
+_steps = _tut.TutorialController.STEPS
+assert len(_steps) >= 12, f"引导步骤应 ≥12（含核心循环），实际 {len(_steps)}"
+_titles = ' '.join(s.title for s in _steps)
+for _kw in ('循环', '核心参数', '科技'):
+    assert _kw in _titles, f"引导应讲「{_kw}」，实际标题: {_titles}"
+# 至少一步演示科技树（诊断结论：科技是第一加速器）
+_demo = [s for s in _steps if s.action == 'open_tech_page']
+assert _demo, "引导应包含打开科技树的演示步骤"
+# 所有步骤不得残留未替换的占位符
+import re as _re
+for _i, _s in enumerate(_steps):
+    _bad = _re.findall(r'\{[a-z_]+\}', _s.body)
+    assert not _bad, f"引导第 {_i} 步残留占位符: {_bad}"
+
+# 里程碑提示（检视卡）：按引擎真实阈值分档
+_insp_cls = _screens.InspectorPanel
+_ms = _insp_cls._milestone_text
+assert '还差' in _ms(0.031, 0.80, False, 0.10), "未解锁应给出「还差 X%」"
+assert '饱和' in _ms(0.995, 0.80, True, 0.10), "≥99% 应显示已饱和"
+assert '阻止' in _ms(0.82, 0.80, True, 0.10), "越过阻止阈值应警告"
+
+# 节奏参考 + 里程碑 i18n 键（zh/en 对称）
+_pace_keys = ['help_pace_t', 'help_pace_body', 'insp_ms_unlock', 'insp_ms_need',
+              'insp_ms_next', 'insp_ms_ready', 'insp_ms_blocked',
+              'insp_ms_saturated']
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    _m = [k for k in _pace_keys if k not in i18n_mod.TRANSLATIONS[_lang]]
+    assert not _m, f"i18n[{_lang}] 缺可视化/节奏键: {_m}"
+print(f"   ✅ 17) 可视化/引导/节奏（顶栏火花×4 / 引导 {len(_steps)} 步 / "
+      f"里程碑分档 / i18n ×{len(_pace_keys)} 键）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

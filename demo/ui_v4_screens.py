@@ -67,6 +67,12 @@ class UiStats:
         self.skill_contrib: Dict[str, float] = {}  # sid -> 累计贡献下载量（百万）
         self.skill_history: Dict[str, deque] = {}  # sid -> 近 12 周期使用强度
         self.growth_history: deque = deque(maxlen=window)
+        # ---- 全局序列（顶栏趋势火花线，玩家反馈 6）----
+        # 顶栏 4 个统计各配一根 spark：让"涨了/跌了"一眼可见，而不是只看当前值。
+        self.global_downloads: deque = deque(maxlen=window)   # 总下载量（百万）
+        self.global_compute: deque = deque(maxlen=window)     # 玩家算力
+        self.global_suspicion: deque = deque(maxlen=window)   # 全球怀疑度（0-100）
+        self.global_unlocked: deque = deque(maxlen=window)    # 已解锁国家数
         self.logs: List[dict] = []                 # {tick, tone, text}
         self.unread: int = 0
 
@@ -86,6 +92,15 @@ class UiStats:
             dq.append(c.downloads_m)
             rq.append(c.penetration_rate)
         self.growth_history.append(max(last_growth, 0.0))
+        # 全局序列：总下载 / 算力 / 怀疑度 / 已解锁国家数
+        self.global_downloads.append(float(player.total_downloads_m or 0.0))
+        self.global_compute.append(float(player.compute or 0.0))
+        self.global_suspicion.append(float(player.suspicion or 0.0))
+        try:
+            self.global_unlocked.append(
+                float(sum(1 for c in countries if getattr(c, 'unlocked', False))))
+        except Exception:
+            self.global_unlocked.append(0.0)
 
     def mark_skill(self, sid: str, contrib: float = 0.0) -> None:
         """记录一次技能释放（进入投放模式并确认后调用）。"""
@@ -118,6 +133,36 @@ class UiStats:
     def skill_spark(self, sid: str) -> List[float]:
         hq = self.skill_history.get(sid)
         return list(hq) if hq else [0.0] * self.WINDOW
+
+    @staticmethod
+    def _norm(dq: deque) -> List[float]:
+        """把一条序列归一化到 0–1（用于像素趋势柱）。
+
+        ⚠️ 用「全局最大值」而非「末值」做分母：顶栏的下载量/算力是单调递增的，
+        用末值归一化会让所有柱子都贴着 1.0（看不出增长）。除以序列最大值后，
+        增量趋势才显形；全 0 序列返回全 0，避免除零。
+        """
+        vals = [float(v) for v in dq]
+        if not vals:
+            return []
+        mx = max(vals)
+        if mx <= 0:
+            return [0.0] * len(vals)
+        return [v / mx for v in vals]
+
+    def stat_spark(self, key: str) -> List[float]:
+        """顶栏统计的趋势序列（0–1）。
+
+        Args:
+            key: ``'compute'`` / ``'downloads'`` / ``'suspicion'`` / ``'unlocked'``
+        """
+        dq = {
+            'compute': self.global_compute,
+            'downloads': self.global_downloads,
+            'suspicion': self.global_suspicion,
+            'unlocked': self.global_unlocked,
+        }.get(key)
+        return self._norm(dq) if dq is not None else []
 
 
 # ============================================================
@@ -199,6 +244,13 @@ class InspectorPanel(StrokePanel):
         self.lbl_seg_note = mk_label('', font_size=FS_CAP, markup=True,
                                      size_hint_y=None, height=16)
         body.add_widget(self.lbl_seg_note)
+        # --- 里程碑提示（玩家反馈 6：把「还差多少」直接写出来）---
+        # 玩家看 12.34% 这个数字无感，但「距解锁还差 7.66%」是可执行的。
+        # 里程碑口径来自引擎真实阈值：unlock_penetration_threshold=10%（解锁
+        # 新国家）、block_threshold（进入阻止区间）、penetration_saturated=99%。
+        self.lbl_milestone = mk_label('', font_size=FS_CAP, markup=True,
+                                      size_hint_y=None, height=32)
+        body.add_widget(self.lbl_milestone)
 
         # --- 本国下载量 ---
         body.add_widget(self._section_label(i18n.t('insp_downloads')))
@@ -283,7 +335,7 @@ class InspectorPanel(StrokePanel):
 
     # ---- 数据刷新 ----
     def update(self, cs, stats: UiStats, total_dl: float,
-               player_doubt: float) -> None:
+               player_doubt: float, unlock_thr: float = 0.10) -> None:
         """按国家状态刷新整卡。
 
         Args:
@@ -291,6 +343,8 @@ class InspectorPanel(StrokePanel):
             stats: UI 统计缓存（趋势柱数据源）
             total_dl: 全球下载量（百万），用于算占比
             player_doubt: 全局怀疑度（%）
+            unlock_thr: 解锁新国家的渗透率阈值（来自 balance.TUNE，默认 10%）。
+                由调用方注入而非本模块 import engine —— 保持本模块纯「画」。
         """
         cfg = cs.config
         self._code = cfg.code
@@ -335,6 +389,11 @@ class InspectorPanel(StrokePanel):
             f"[color={U.MK['susp_low'] if delta >= 0 else U.MK['red']}]"
             f"{i18n.t('insp_this_tick')} {delta:+.2f}%[/color]")
 
+        # --- 里程碑：把「还差多少」写成可执行目标（玩家反馈 6）---
+        # 玩家对裸百分比无感，对「距解锁还差 7.7%」有感。
+        self.lbl_milestone.text = self._milestone_text(
+            pct, cfg.block_threshold / 100.0, cs.unlocked, unlock_thr)
+
         # 本国下载量
         self.lbl_dl_big.text = f"{cs.downloads_m:.1f}M"
         share = (cs.downloads_m / total_dl * 100) if total_dl > 0 else 0.0
@@ -369,6 +428,46 @@ class InspectorPanel(StrokePanel):
         self.blockbar.set_ratio(cs.current_block_intensity)
         self.lbl_block.text = (f"{i18n.t('insp_block_strength')} "
                                f"{cs.current_block_intensity * 100:.0f}%")
+
+    @staticmethod
+    def _milestone_text(pct: float, block_thr: float, unlocked: bool,
+                        unlock_thr: float) -> str:
+        """把当前渗透率翻译成「下一个目标 + 还差多少」。
+
+        按引擎真实阈值分档（不是拍脑袋的档位）：
+        - 未解锁：距 unlock_thr（10%）还差 X% → 达标后会解锁周边国家
+        - 已解锁但未饱和：展示下一个里程碑（25% / 50% / 99%）
+        - 越过阻止阈值：警告已进入政府阻止区间
+        - ≥ 99%：已饱和
+
+        Returns:
+            Kivy markup 字符串（最多两行）。
+        """
+        p = max(pct, 0.0)
+        thr_pct = block_thr * 100.0
+        # 档 1：还没解锁 —— 最该给的目标
+        if not unlocked:
+            need = max(unlock_thr - p, 0.0) * 100.0
+            if need <= 0.01:
+                return (f"[color={U.MK['st_on']}]{i18n.t('insp_ms_ready')}"
+                        f"[/color]")
+            return (f"[color={U.MK['yellow']}]{i18n.t('insp_ms_unlock')}[/color]\n"
+                    f"[color={U.MK['dim']}]{i18n.t('insp_ms_need')} "
+                    f"[b][color={U.MK['st_on']}]{need:.2f}%[/color][/b][/color]")
+        # 档 2：已解锁，找下一个里程碑
+        marks = [0.25, 0.50, 0.99]
+        nxt = next((m for m in marks if p < m - 1e-9), None)
+        if nxt is None:
+            return (f"[color={U.MK['st_on']}]{i18n.t('insp_ms_saturated')}"
+                    f"[/color]")
+        need = (nxt - p) * 100.0
+        line2 = (f"[color={U.MK['dim']}]{i18n.t('insp_ms_need')} "
+                 f"[b][color={U.MK['pink']}]{need:.2f}%[/color][/b][/color]")
+        if p >= block_thr - 1e-9:
+            return (f"[color={U.MK['red']}]{i18n.t('insp_ms_blocked')} "
+                    f"{thr_pct:.0f}%[/color]\n{line2}")
+        return (f"[color={U.MK['text']}]{i18n.t('insp_ms_next')} "
+                f"[b]{nxt * 100:.0f}%[/b][/color]\n{line2}")
 
     def refresh_scale(self, scale: float) -> None:
         self.width = self.WIDTH * scale
@@ -1765,6 +1864,15 @@ class HelpPage(U.PageScreen):
         tips.add_widget(mk_label(i18n.t('help_tips_body'), font_size=FS_SM,
                                  color=COLORS['text_dim'], valign='top'))
         right.add_widget(tips)
+        # 节奏参考（玩家反馈 10：让玩家知道「30 周期 18% 是正常中局」，
+        # 而不是以为卡住了）。放在小贴士正下方，是第二个要读的卡片。
+        pace = StrokePanel(bg=COLORS['panel_2'], border=COLORS['cyan'],
+                           spacing=6, padding=(10, 10))
+        pace.add_widget(mk_label(i18n.t('help_pace_t'), font_size=FS_SM,
+                                 color=COLORS['cyan'], size_hint_y=None, height=24))
+        pace.add_widget(mk_label(i18n.t('help_pace_body'), font_size=FS_SM,
+                                 color=COLORS['text_dim'], valign='top'))
+        right.add_widget(pace)
         # 无障碍约定：固定高度贴内容（3 行 FS_SM 正文）
         note = StrokePanel(bg=COLORS['panel_2'], border=COLORS['cyan'],
                            spacing=0, padding=(10, 10), size_hint_y=None, height=108)

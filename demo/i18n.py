@@ -430,6 +430,13 @@ TRANSLATIONS[LANG_ZH].update({
     'insp_seg_note': '10 格 = 80%，第 11 格起进入政府阻止区间；',
     'insp_this_tick': '本周期',
     'insp_share': '占全球',
+    # 里程碑提示（玩家反馈 6：把"还差多少"写成可执行目标）
+    'insp_ms_unlock': '🔓 解锁周边国家',
+    'insp_ms_need': '还差',
+    'insp_ms_next': '下一个里程碑',
+    'insp_ms_ready': '🔓 即将解锁周边国家',
+    'insp_ms_blocked': '⚠ 已进入阻止区间（阈值',
+    'insp_ms_saturated': '✓ 已饱和（99%+）',
     'insp_block_warn': '⚠ 若怀疑度达 {thr}%，该国将启动阻止，强度按预算消耗',
     'insp_block_strength': '阻止强度',
     'insp_focus': '设为关注',
@@ -556,6 +563,13 @@ TRANSLATIONS[LANG_ZH].update({
                      '· 盯紧「怀疑度」，别让它飙到 80 触发危机；\n'
                      '· 点科技树解锁更强技能，攒算力放开全局技；\n'
                      '· 撑过足够周期、达成隐藏条件即可通关。',
+    'help_pace_t': '节奏参考（别被数字吓到）',
+    'help_pace_body': '一局完整游戏约 45–55 个周期，不是慢慢磨到 100%。\n'
+                      '· 周期 1–15：渗透 ~3–8%。算力紧，先点 T0 科技；\n'
+                      '· 周期 15–35：渗透 ~10–25%。科技起效，开始复利；\n'
+                      '· 周期 35–50：渗透 25–50% 后指数爆发，很快出结局。\n'
+                      '关键：渗到 10% 会解锁邻国，摊开后怀疑度才压得住。\n'
+                      '只推一个国家 = 怀疑度爆表 = 被关停。',
     'help_tips_t': '上手小贴士',
     'help_tips_body': '· 开局先点 1–2 个国家把渗透率做起来；\n'
                       '· 怀疑度高了就换个国家或调低速度；\n'
@@ -706,6 +720,12 @@ TRANSLATIONS[LANG_EN].update({
     'insp_seg_note': '10 seg = 80%; gov blocking starts at seg 11;',
     'insp_this_tick': 'this tick',
     'insp_share': 'of global',
+    'insp_ms_unlock': '🔓 Unlocks neighbors',
+    'insp_ms_need': 'need',
+    'insp_ms_next': 'Next milestone',
+    'insp_ms_ready': '🔓 Unlocking neighbors soon',
+    'insp_ms_blocked': '⚠ In blocking range (threshold',
+    'insp_ms_saturated': '✓ Saturated (99%+)',
     'insp_block_warn': '⚠ If suspicion reaches {thr}%, this country starts blocking',
     'insp_block_strength': 'Block strength',
     'insp_focus': 'Focus',
@@ -832,6 +852,13 @@ TRANSLATIONS[LANG_EN].update({
                      '· Watch "suspicion" — don\'t let it hit 80 or a crisis fires;\n'
                      '· Climb the tech tree for stronger skills, bank compute for globals;\n'
                      '· Survive enough cycles and hit hidden win conditions to win.',
+    'help_pace_t': 'Pacing reference (don\'t panic at the numbers)',
+    'help_pace_body': 'A full game runs ~45–55 cycles — not a slow grind to 100%.\n'
+                      '· Cycles 1–15: penetration ~3–8%. Compute is tight; unlock T0 tech first;\n'
+                      '· Cycles 15–35: penetration ~10–25%. Tech kicks in, compounding starts;\n'
+                      '· Cycles 35–50: past 25–50% it explodes and endings fire fast.\n'
+                      'Key: hitting 10% unlocks neighbors — spreading out keeps suspicion down.\n'
+                      'Pushing one country only = suspicion spike = shutdown.',
     'help_tips_t': 'Quick tips',
     'help_tips_body': '· Start by pushing 1–2 countries to build penetration;\n'
                       '· High suspicion? Switch targets or slow the pace;\n'

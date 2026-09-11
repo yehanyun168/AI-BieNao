@@ -136,6 +136,13 @@ class InputMixin:
             f"[color={s_color}][b]{p.suspicion:.0f}%[/b][/color]")
         self.stats_meta.text = (f"[color={U.MK['dim']}]{t('stat_countries')}[/color]  "
                                 f"[b]{unlocked}/{total}[/b]")
+        # --- 顶栏趋势火花线（玩家反馈 6：让"涨没涨"一眼可见）---
+        # 数据源是 UiStats 的全局序列（每周期采样），首周期只有 1 根柱属正常。
+        for sk, spark in getattr(self, '_stat_sparks', {}).items():
+            try:
+                spark.set_values(self.stats.stat_spark(sk))
+            except Exception:
+                pass
         # 右上角周期数（大号数字，仅数字变化，不重建文本）
         self.lbl_tick_val.text = f"{p.tick_count}"
 
@@ -177,7 +184,8 @@ class InputMixin:
             cs = self._country_state(self.focus_country)
             if cs is not None:
                 self._inspector.update(cs, self.stats, p.total_downloads_m,
-                                       p.suspicion)
+                                       p.suspicion,
+                                       TUNE['unlock_penetration_threshold'])
         if self._log_drawer is not None:
             self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
         if self.drop_mode:

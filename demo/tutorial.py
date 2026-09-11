@@ -95,33 +95,62 @@ class TutorialController:
             '欢迎来到《AI 别闹》',
             '你是一个想征服全球舆论的 AI。\n'
             '目标：让更多国家「下载」你的内容，同时别被监管方关停。\n'
-            '下面用 30 秒带你认一遍界面。',
+            '下面用 40 秒带你走一遍[color={on}]核心循环[/color]与关键参数。'.replace(
+                '{on}', MK['st_on']),
+            target=None, anchor='center', dim=0.62),
+        TutorialStep(
+            '先记住这个循环',
+            '[b]选国家 → 放技能 → 攒算力 → 点科技 → 再扩张[/b]\n\n'
+            '每一「周期」你可以：\n'
+            '· 选 1 个国家，投 1 个技能\n'
+            '· 用算力研发科技（科技是最大的加速器）\n'
+            '· 控制怀疑度，别让监管盯上你\n\n'
+            '周期会自动推进——不是回合制，所以别急着点。',
             target=None, anchor='center', dim=0.62),
         TutorialStep(
             '这是世界地图',
             '每个色块是一个国家市场。\n'
             f'[color={MK["st_on"]}]青色[/color] = 已渗透 · '
             f'[color={MK["st_blk"]}]红色[/color] = 被监管封锁 · '
-            '灰色 = 尚未解锁。\n点地图上的国家可以查看它的详情。',
+            '灰色 = 尚未解锁。\n'
+            '点地图上的国家可以查看它的详情。',
             target='map_widget', anchor='bottom', dim=0.62),
         TutorialStep(
             '点国家 → 看检视卡',
             f'看，左侧弹出了[color={MK["st_on"]}]检视卡[/color]：\n'
             '· 渗透率（你在该国的覆盖）\n'
             '· 怀疑度（监管对你的警惕）\n'
-            '· 下载量（你的影响力）',
+            '· 下载量（你的影响力）\n\n'
+            '底部会写「距解锁还差 X%」——照着这个目标推就行。',
+            target='map_widget', anchor='center', dim=0.0, action='select_cn'),
+        TutorialStep(
+            '认识 3 个核心参数',
+            '[b]渗透率[/b]：该国下载量 ÷ 人口。≥10% 解锁周边国家，\n'
+            '   99% 为饱和。这是你的「进度条」。\n'
+            '[b]怀疑度[/b]：≥80% 触发危机弹窗，逼你在三条生路里选\n'
+            '   一条（通常损失算力或渗透）。所以别在一国猛推。\n'
+            '[b]算力[/b]：技能消耗 + 科技研发都要花。技能里的\n'
+            '   「偷算力」类可以回血，但会推高怀疑度。',
             target='map_widget', anchor='center', dim=0.0, action='select_cn'),
         TutorialStep(
             '盯紧「怀疑度」',
-            f'怀疑度涨太高（≥80）会触发[color={MK["st_blk"]}]危机弹窗[/color]，\n'
-            '逼你在三条生路里选一条——通常会损失算力或渗透。\n'
-            '所以别在同一国猛推到怀疑度爆表。',
+            f'怀疑度涨太高（≥80）会触发[color={MK["st_blk"]}]危机弹窗[/color]。\n'
+            '两条降怀疑的路：\n'
+            f'· [color={MK["st_on"]}]深度伪装[/color]技能（0 算力，冷却 8 周期）\n'
+            '· 停止在该国投放，让它自然衰减\n\n'
+            '记住：推得越猛，监管盯得越紧。',
             target='map_widget', anchor='center', dim=0.0, action='select_cn'),
         TutorialStep(
             '6 个技能（快捷键 1–6）',
-            '底部是 6 个技能卡。\n'
-            '先选中国家，再按技能键（或点卡片），就能把内容「投放」过去。\n'
-            '不同技能影响渗透速度、怀疑度、算力消耗。',
+            '底部 6 张技能卡，冷却单位是[color={on}]「周期」[/color]，不是秒。\n'
+            '· 主动推送：0 算力，下载 ×1.1，冷却 3\n'
+            '· 算法霸榜：50 算力，下载 ×1.3，但怀疑 +3\n'
+            '· 深度伪装：0 算力，降怀疑，冷却 8\n'
+            '· 爆款制造：100 算力，下载 ×1.5，怀疑 +5\n'
+            '· 限流绕过：30 算力，解封锁，冷却 4\n'
+            '· 算力抽成：80 算力，偷算力，怀疑 +6\n\n'
+            '绿色高亮 = 可用；灰色 = 冷却中或算力不足。'.replace(
+                '{on}', MK['st_on']),
             target='skill:push_song', anchor='bottom', dim=0.62),
         TutorialStep(
             '投放流程',
@@ -131,10 +160,22 @@ class TutorialController:
             '记住三步：选国家 → 选技能 → 确认投放。',
             target='rail', anchor='bottom', dim=0.62),
         TutorialStep(
+            '科技才是最大加速器',
+            '这是[color={on}]科技树[/color]（右侧「科技」）。为什么最该先点它？\n'
+            '· 6 个 T0 各 20–50 算力，[b]全部解锁仅 200 算力[/b]\n'
+            '· 光「平台渗透」+「病毒传播」就能把全局下载 ×1.4\n'
+            '· 「本地化」解锁亚洲/欧洲市场（否则你只有少数国家可推）\n'
+            '· 「算力效率」让每用户偷的算力更多 → 更快回本\n\n'
+            '先打通 T0，收益立刻翻倍——比埋头推流快得多。'.replace(
+                '{on}', MK['st_on']),
+            target='rail', anchor='bottom', dim=0.62,
+            action='open_tech_page'),
+        TutorialStep(
             '周期倒计时',
             '顶部的细条 = 一个「周期」的剩余时间。\n'
             '周期结束，游戏自动推进一回合（渗透增长、事件触发）。\n'
-            '已减速到 30 秒/周期，你有充足时间思考。',
+            '已减速到 30 秒/周期，你有充足时间思考。\n\n'
+            '顶栏每个数字下方的趋势线，能看出它在涨还是在跌。',
             target='cd_bar', anchor='top', dim=0.62),
         TutorialStep(
             '随时暂停 / 帮助 / 设置',
@@ -142,10 +183,13 @@ class TutorialController:
             '设置里还能调速、减弱动效、开色盲辅助，以及「重看教程」。',
             target='pause_chip', anchor='top', dim=0.62),
         TutorialStep(
-            '教程结束，去推流吧',
-            '你已经认全了核心界面。\n'
-            '随时在设置里点「重看教程」可再看一遍。\n'
-            '祝你统治全球舆论 😏',
+            '上手路线（照着推）',
+            '1️⃣ 先攒算力，把 6 个 T0 科技点出来（约 200 算力）\n'
+            '2️⃣ 选一个人口多、怀疑度低的国家开始推\n'
+            '3️⃣ 每周期放 1 个技能，盯着怀疑度别过 80\n'
+            '4️⃣ 渗透到 10% 会自动解锁周边国家，顺势扩张\n'
+            '5️⃣ 怀疑度高了就放「深度伪装」压一压\n\n'
+            '操作得当约 80 周期可通关。祝你统治全球舆论 😏',
             target=None, anchor='center', dim=0.62),
     ]
 
@@ -291,6 +335,13 @@ class TutorialController:
                 self.game.on_map_country_click('CN')
             except Exception:
                 pass
+        elif step.action == 'open_tech_page':
+            # 让玩家在引导里就看到科技树（诊断结论：科技是第一加速器，
+            # 但旧版引导完全没提，导致玩家 30 周期渗透仍 <20%）。
+            try:
+                self.game.open_page('tech')
+            except Exception:
+                pass
         # 文本
         self._bubble_title.text = f"[b]{step.title}[/b]"
         self._bubble_body.text = step.body
@@ -433,9 +484,16 @@ class TutorialController:
         self.game.paused = self._was_paused
 
     def _cleanup_panels(self) -> None:
-        """关闭引导演示打开的检视卡，避免残留。"""
+        """关闭引导演示打开的面板（检视卡 / 科技树页），避免残留。"""
         try:
             if getattr(self.game, '_inspector', None) is not None:
                 self.game._close_inspector()
+        except Exception:
+            pass
+        try:
+            # 科技树演示步会打开全屏页；不关掉会盖在后续步骤上。
+            page = getattr(self.game, '_page', None)
+            if page is not None and getattr(page, 'page_name', '') == 'tech':
+                self.game.close_page()
         except Exception:
             pass
