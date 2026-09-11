@@ -31,7 +31,7 @@ from flag_draw import FlagWidget
 from pixel_assets import OWNER_CODES as FLAG_CODES
 
 from pixel_ui import COLORS, PixelLabel, add_pixel_border, hex_rgba
-from flag_draw import FlagWidget
+from ui_modal import hline
 
 import i18n
 import ui_v4 as U
@@ -373,13 +373,7 @@ class InspectorPanel(StrokePanel):
 
     # ---- 小工具 ----
     def _make_divider(self) -> None:
-        d = Widget(size_hint_y=None, height=2)
-        with d.canvas.before:
-            Color(*COLORS['border'])
-            d._r = Rectangle(pos=d.pos, size=d.size)
-        d.bind(pos=lambda i, v: setattr(i._r, 'pos', v),
-               size=lambda i, v: setattr(i._r, 'size', v))
-        self.add_widget(d)
+        self.add_widget(hline())
 
     @staticmethod
     def _section_label(text: str) -> PixelLabel:
@@ -810,10 +804,6 @@ class SlotRow(Widget):
         self.bind(pos=self._layout, size=self._layout)
         self._sync()
 
-    def set_row(self, icon: str, name: str, status: str, state: str) -> None:
-        self._icon, self._name, self._status, self.state = icon, name, status, state
-        self._sync()
-
     def _sync(self) -> None:
         col = {'done': U.MK['susp_low'], 'on': U.MK['cyan'], 'lock': U.MK['lock']}.get(self.state, U.MK['text'])
         self.lbl.text = (f"[b][color={col}]{self._name}[/color][/b]   "
@@ -869,10 +859,6 @@ class LinkBar(Widget):
         super().__init__(**kwargs)
         self.on = on
         self.bind(pos=self._redraw, size=self._redraw)
-        self._redraw()
-
-    def set_on(self, on: bool) -> None:
-        self.on = on
         self._redraw()
 
     def _redraw(self, *_args) -> None:

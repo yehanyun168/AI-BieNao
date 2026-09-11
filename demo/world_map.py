@@ -72,11 +72,6 @@ DIM_TEXT = '#5a646e'
 CONT_EDGE  = '#dca30a'
 CONT_TEXT  = '#ffe9a8'
 
-# 兼容旧常量名（render_*.py / 外部脚本）
-SEA_COLOR    = hex_rgba(SEA)
-GRID_COLOR   = hex_rgba(SEA_LINE)
-BORDER_COLOR = hex_rgba(STATE_EDGE['on'])
-
 # ============================================================
 # data.py 依赖的兼容接口
 # ============================================================
@@ -91,9 +86,6 @@ COUNTRY_STYLES = {
     for code in PA.OWNER_CODES
 }
 COUNTRY_CENTERS = {code: PA.ANCHORS[code] for code in PA.OWNER_CODES}
-
-MAP_ASPECT = PA.GRID_W / float(PA.GRID_H)      # 2:1 内接等比
-
 
 def point_in_polygon(px, py, polygon):
     """射线法（保留：外部脚本 / 旧逻辑偶尔会用到）"""
@@ -490,13 +482,6 @@ class WorldMap(FloatLayout):
     def _refresh_label_colors(self):
         """兼容旧接口名"""
         self._apply_colors()
-
-    def label_bg(self, code):
-        """标签框描边色（供外部复用同一套状态色）"""
-        st = self._state_of(code)
-        if code in self._continent_codes and st != 'sel':
-            return hex_rgba(CONT_EDGE)
-        return hex_rgba(STATE_EDGE[st])
 
     # --------------------------------------------------------
     # 点击命中：归属格查表 O(1)

@@ -13,9 +13,7 @@ pixel_ui.py - 像素风 UI 组件库
   - PixelLabel          像素风标签（字体 hinting 关闭）
 """
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.button import Button
 from kivy.uix.label import Label
-from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle, Line
 
 

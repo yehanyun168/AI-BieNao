@@ -106,9 +106,6 @@ class InputMixin:
             self._cast_skill_direct(sid)
             self.refresh_all()
 
-    def _skill_page_action_alias(self, sid: str, kind: str) -> None:
-        self._skill_page_action(sid, kind)
-
     # 兼容旧接口（test_build / make_screenshots 仍会调用）
     def on_skill_click(self, skill_id: str) -> None:
         self.on_skill_card_click(skill_id)

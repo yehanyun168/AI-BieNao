@@ -44,14 +44,6 @@ ST_EDGE: Dict[str, str] = {'on': '#3ec9ac', 'sel': '#eafffb',
 # ⚠️ 用户反馈「除开始界面外所有文字太小看不清」→ 在 v0.4 原阶梯（28/22/18/15、
 # 13/12/11）基础上整体放大 ~1.5×：正文 13→20、说明 12→17、小字 11→16。
 # 这是全项目字号的**单一来源**，改这里即可全局生效（调用点都引用常量）。
-# 若后续想再统一微调，调 SCALE 即可，无需逐处改字号。
-TEXT_SCALE = 1.0                       # 全局字号微调系数（1.0 = 按下方基准）
-
-# 字体阶梯（设计稿 --fs-*）
-#
-# ⚠️ 用户反馈「除开始界面外所有文字太小看不清」→ 在 v0.4 原阶梯（28/22/18/15、
-# 13/12/11）基础上整体放大 ~1.5×：正文 13→20、说明 12→17、小字 11→16。
-# 这是全项目字号的**单一来源**，改这里即可全局生效（调用点都引用常量）。
 #
 # v0.5 用户再次反馈「按钮文字要再大些、要清晰可读」→ 引入 FS_SCALE 统一放大，
 # 无需逐处改字号。所有字号常量都走这个系数。
@@ -77,16 +69,8 @@ FS_DISPLAY, FS_H1, FS_H2, FS_H3 = (_fs(BASE_DISPLAY), _fs(BASE_H1),
 FS_BODY, FS_SM, FS_CAP = _fs(BASE_BODY), _fs(BASE_SM), _fs(BASE_CAP)
 FS_TINY = _fs(BASE_TINY)
 
-# 节奏（设计稿 --s1..--s12）
+# 节奏令牌（设计稿 --s1..--s12；S2 有默认参数使用，S1/S3/S4/S6 供 __all__ 导出）
 S1, S2, S3, S4, S6 = 4, 8, 12, 16, 24
-
-# 语义角色（设计稿 --c-*）
-C_COMPUTE = 'yellow'     # 算力
-C_DOWNLOAD = 'pink'      # 下载量
-C_SUSPICION = 'red'      # 怀疑度
-C_OK = 'green'
-C_WARN = 'orange'
-C_FOCUS = 'cyan'
 
 # 交互尺寸下限（无障碍：触控/鼠标都够用）
 MIN_TOUCH = 44
@@ -746,10 +730,6 @@ class Reticle(Widget):
         self.bind(pos=self._redraw, size=self._redraw)
         self._redraw()
 
-    def set_color_name(self, name: str) -> None:
-        self._color = name
-        self._redraw()
-
     def _redraw(self, *_args) -> None:
         self.canvas.before.clear()
         x, y = self.pos
@@ -1144,10 +1124,6 @@ class KvGrid(GridLayout):
         if lbl is not None:
             lbl.text = text
 
-    def clear_values(self, text: str = '--') -> None:
-        for lbl in self._values.values():
-            lbl.text = text
-
     def refresh_scale(self, scale: float) -> None:
         self.row_h = 17 * scale
         for child in self.children:
@@ -1467,20 +1443,6 @@ class StatsGrid(GridLayout):
     def __init__(self, cells: Sequence[Tuple] = (), cols: int = 4, **kwargs):
         super().__init__(cols=cols, spacing=6, size_hint_y=None, **kwargs)
         self._cells: List[StatCell] = []
-        for item in cells:
-            key, val = item[0], item[1]
-            cname = item[2] if len(item) > 2 else None
-            cell = StatCell(key, val, COLORS[cname] if cname else None)
-            self.add_widget(cell)
-            self._cells.append(cell)
-        rows = (len(self._cells) + cols - 1) // cols
-        self.height = rows * 46 + max(rows - 1, 0) * 6
-
-    def set_cells(self, cells: Sequence[Tuple]) -> None:
-        for c in self._cells:
-            self.remove_widget(c)
-        self._cells = []
-        cols = self.cols
         for item in cells:
             key, val = item[0], item[1]
             cname = item[2] if len(item) > 2 else None
@@ -1904,9 +1866,6 @@ class PageScreen(StrokePanel):
         """兼容旧调用点：改走 fit_width 的测量逻辑（避免自反馈撑宽）。"""
         fit_width(inst, pad=12)
 
-    def set_title(self, text: str) -> None:
-        self.lbl_title.text = text
-
     def set_back_button(self, text: str, callback: Callable) -> None:
         self.btn_back.text = text
         self.btn_back.opacity = 1
@@ -1946,8 +1905,8 @@ class PageScreen(StrokePanel):
 __all__ = [
     'ST_FILL', 'ST_EDGE', 'FS_DISPLAY', 'FS_H1', 'FS_H2', 'FS_H3',
     'FS_BODY', 'FS_SM', 'FS_CAP', 'S1', 'S2', 'S3', 'S4', 'S6', 'MIN_TOUCH',
-    'C_COMPUTE', 'C_DOWNLOAD', 'C_SUSPICION', 'C_OK', 'C_WARN', 'C_FOCUS',
-    'rgba', 'mk_label', 'fit_width', 'StrokePanel', 'PxChip', 'ChipRow', 'SegBar', 'Spark',
+    'rgba', 'mk_label', 'fit_width',
+    'StrokePanel', 'PxChip', 'ChipRow', 'SegBar', 'Spark',
     'BlockBar', 'Steps', 'Reticle', 'TgtLabel', 'RailButton', 'RegionTab',
     'SegSwitch', 'LegendChip', 'KvGrid', 'SkillBarCard', 'OptButton',
     'StatCell', 'StatsGrid', 'AchCell', 'LogRow', 'LOG_TONE', 'KeyBox',
