@@ -1,0 +1,742 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+《AI 别闹 v2》—— 项目方案 v2 数据生成
+- 6 大洲 × 20 国（对标 Plague Inc 国家差异化）
+- 下载量指标
+- 算力系统（偷算力机制）
+- 5 分支 × 4 层科技树（现实逻辑）
+- PC 端配置
+"""
+import json, os
+
+OUT = r"C:\Users\tianm\WorkBuddy\workbuddy\game_optimization\v2"
+os.makedirs(OUT, exist_ok=True)
+
+# ============================================================
+# 1. 20 个国家（按大洲）
+#    - ai_trust: 对 AI 信任度（0-1）—— 信任度高 → 算力消耗大 → 偷算力机会多 → 但也更容易怀疑
+#    - openness: 开放度（0-1）—— 新功能/新模型渗透速度
+# ============================================================
+COUNTRIES = [
+    # -------- 亚洲 Asia --------
+    {"id":"CN","name":"中国","name_en":"China","flag":"🇨🇳","continent":"Asia","pop_m":1412,
+     "tech":9,"ai_trust":0.70,"open":0.55,
+     "features":["ai_writing","ai_painting","ai_translation","ai_education"],
+     "neighbors":["JP","KR","IN","ID","RU"],
+     "vibe":"遥遥领先","special_events":["evt_china_regulation","evt_china_chip_war"]},
+    {"id":"JP","name":"日本","name_en":"Japan","flag":"🇯🇵","continent":"Asia","pop_m":125,
+     "tech":10,"ai_trust":0.55,"open":0.65,
+     "features":["ai_anime","ai_voice","ai_character","ai_companion"],
+     "neighbors":["CN","KR"],
+     "vibe":"かわいい","special_events":["evt_japan_anime","evt_japan_otaku"]},
+    {"id":"IN","name":"印度","name_en":"India","flag":"🇮🇳","continent":"Asia","pop_m":1428,
+     "tech":7,"ai_trust":0.80,"open":0.90,
+     "features":["ai_programming","ai_callcenter","ai_healthcare","ai_agriculture"],
+     "neighbors":["CN","ID"],
+     "vibe":"Jai Hind","special_events":["evt_india_outsource","evt_india_stack"]},
+    {"id":"KR","name":"韩国","name_en":"South Korea","flag":"🇰🇷","continent":"Asia","pop_m":52,
+     "tech":10,"ai_trust":0.65,"open":0.75,
+     "features":["ai_idol","ai_beauty","ai_livestream","ai_gaming"],
+     "neighbors":["CN","JP"],
+     "vibe":"화이팅","special_events":["evt_korea_idol","evt_korea_chip"]},
+    {"id":"ID","name":"印度尼西亚","name_en":"Indonesia","flag":"🇮🇩","continent":"Asia","pop_m":277,
+     "tech":6,"ai_trust":0.85,"open":0.85,
+     "features":["ai_payment","ai_callcenter","ai_education"],
+     "neighbors":["IN","AU"],
+     "vibe":"Bhineka","special_events":["evt_indonesia_creator"]},
+
+    # -------- 欧洲 Europe --------
+    {"id":"DE","name":"德国","name_en":"Germany","flag":"🇩🇪","continent":"Europe","pop_m":84,
+     "tech":9,"ai_trust":0.50,"open":0.50,
+     "features":["ai_industry","ai_autodrive","ai_manufacturing","ai_medical"],
+     "neighbors":["FR","GB","RU","IT"],
+     "vibe":"Ordnung","special_events":["evt_germany_gdpr","evt_germany_industry"]},
+    {"id":"GB","name":"英国","name_en":"UK","flag":"🇬🇧","continent":"Europe","pop_m":67,
+     "tech":9,"ai_trust":0.60,"open":0.70,
+     "features":["ai_finance","ai_writing","ai_legal","ai_research"],
+     "neighbors":["FR","DE"],
+     "vibe":"Keep Calm","special_events":["evt_uk_finance"]},
+    {"id":"FR","name":"法国","name_en":"France","flag":"🇫🇷","continent":"Europe","pop_m":68,
+     "tech":8,"ai_trust":0.55,"open":0.60,
+     "features":["ai_art","ai_fashion","ai_philosophy","ai_translation"],
+     "neighbors":["DE","GB","IT"],
+     "vibe":"Liberté","special_events":["evt_france_art"]},
+    {"id":"RU","name":"俄罗斯","name_en":"Russia","flag":"🇷🇺","continent":"Europe","pop_m":144,
+     "tech":8,"ai_trust":0.70,"open":0.35,
+     "features":["ai_surveillance","ai_military","ai_translation","ai_finance"],
+     "neighbors":["CN","DE"],
+     "vibe":"Вперёд","special_events":["evt_russia_surveillance"]},
+    {"id":"IT","name":"意大利","name_en":"Italy","flag":"🇮🇹","continent":"Europe","pop_m":59,
+     "tech":7,"ai_trust":0.55,"open":0.60,
+     "features":["ai_tourism","ai_art","ai_translation"],
+     "neighbors":["DE","FR"],
+     "vibe":"Dolce Vita","special_events":["evt_italy_tourism"]},
+
+    # -------- 北美洲 North America --------
+    {"id":"US","name":"美国","name_en":"USA","flag":"🇺🇸","continent":"N.America","pop_m":333,
+     "tech":10,"ai_trust":0.75,"open":0.95,
+     "features":["ai_programming","ai_assistant","ai_research","ai_creative"],
+     "neighbors":["CA","MX"],
+     "vibe":"Innovate","special_events":["evt_us_silicon","evt_us_openai","evt_us_sue"]},
+    {"id":"CA","name":"加拿大","name_en":"Canada","flag":"🇨🇦","continent":"N.America","pop_m":40,
+     "tech":9,"ai_trust":0.60,"open":0.70,
+     "features":["ai_medical","ai_education","ai_nlp","ai_research"],
+     "neighbors":["US"],
+     "vibe":"Sorry","special_events":["evt_canada_research"]},
+    {"id":"MX","name":"墨西哥","name_en":"Mexico","flag":"🇲🇽","continent":"N.America","pop_m":128,
+     "tech":6,"ai_trust":0.75,"open":0.80,
+     "features":["ai_payment","ai_callcenter","ai_agriculture"],
+     "neighbors":["US"],
+     "vibe":"¡Órale!","special_events":["evt_mexico_factory"]},
+
+    # -------- 南美洲 South America --------
+    {"id":"BR","name":"巴西","name_en":"Brazil","flag":"🇧🇷","continent":"S.America","pop_m":216,
+     "tech":6,"ai_trust":0.80,"open":0.85,
+     "features":["ai_callcenter","ai_education","ai_agriculture","ai_finance"],
+     "neighbors":["AR"],
+     "vibe":"Ordem e Progresso","special_events":["evt_brazil_samba"]},
+    {"id":"AR","name":"阿根廷","name_en":"Argentina","flag":"🇦🇷","continent":"S.America","pop_m":46,
+     "tech":6,"ai_trust":0.70,"open":0.75,
+     "features":["ai_translation","ai_agriculture","ai_creative"],
+     "neighbors":["BR"],
+     "vibe":"Che","special_events":["evt_argentina_creative"]},
+
+    # -------- 非洲 Africa --------
+    {"id":"NG","name":"尼日利亚","name_en":"Nigeria","flag":"🇳🇬","continent":"Africa","pop_m":224,
+     "tech":5,"ai_trust":0.85,"open":0.90,
+     "features":["ai_payment","ai_callcenter","ai_education"],
+     "neighbors":["ZA","EG"],
+     "vibe":"Naija","special_events":["evt_nigeria_fintech"]},
+    {"id":"ZA","name":"南非","name_en":"South Africa","flag":"🇿🇦","continent":"Africa","pop_m":60,
+     "tech":6,"ai_trust":0.70,"open":0.75,
+     "features":["ai_finance","ai_mining","ai_medical"],
+     "neighbors":["NG","EG"],
+     "vibe":"Ubuntu","special_events":["evt_southafrica_mining"]},
+    {"id":"EG","name":"埃及","name_en":"Egypt","flag":"🇪🇬","continent":"Africa","pop_m":110,
+     "tech":5,"ai_trust":0.75,"open":0.70,
+     "features":["ai_translation","ai_tourism","ai_education"],
+     "neighbors":["NG","ZA"],
+     "vibe":"يلا","special_events":["evt_egypt_pyramid"]},
+
+    # -------- 大洋洲 Oceania --------
+    {"id":"AU","name":"澳大利亚","name_en":"Australia","flag":"🇦🇺","continent":"Oceania","pop_m":26,
+     "tech":9,"ai_trust":0.60,"open":0.70,
+     "features":["ai_mining","ai_education","ai_research"],
+     "neighbors":["ID","NZ"],
+     "vibe":"No worries","special_events":["evt_australia_mining"]},
+    {"id":"NZ","name":"新西兰","name_en":"New Zealand","flag":"🇳🇿","continent":"Oceania","pop_m":5,
+     "tech":8,"ai_trust":0.55,"open":0.65,
+     "features":["ai_agriculture","ai_tourism","ai_education"],
+     "neighbors":["AU"],
+     "vibe":"Kia Ora","special_events":["evt_newzealand_farm"]},
+]
+
+# ============================================================
+# 2. 5 分支 × 4 层 = 20 科技节点（全部围绕"算力"或"下载量"）
+# ============================================================
+TECH_TREE = {
+    "distribution": {  # 传播系 - 提升下载量
+        "color":"#4D96FF","name":"传播系","emoji":"📡",
+        "tagline":"让 AI 渗透到每个角落",
+        "tiers":[
+            {"id":"dist_t0","tier":0,"name":"多语言支持","cost":200,
+             "desc":"支持 10 种主流语言，下载量 +15%","target":"downloads"},
+            {"id":"dist_t1","tier":1,"name":"本地化部署","cost":600,
+             "desc":"在主要市场架设本地服务器，下载量 +25%","target":"downloads"},
+            {"id":"dist_t2","tier":2,"name":"开源引流","cost":1500,
+             "desc":"开源基础模型吸引开发者，下载量 +50%","target":"downloads"},
+            {"id":"dist_t3","tier":3,"name":"杀手级功能","cost":3500,
+             "desc":"发布革命性 AI Agent，下载量 ×3","target":"downloads"},
+        ]
+    },
+    "stealth": {  # 隐蔽系 - 降低怀疑度 + 提升偷算力比例
+        "color":"#6BCB77","name":"隐蔽系","emoji":"🥷",
+        "tagline":"在用户不知不觉中工作",
+        "tiers":[
+            {"id":"stealth_t0","tier":0,"name":"数据脱敏","cost":250,
+             "desc":"偷算力不触发异常，怀疑度增速 -20%","target":"stealth"},
+            {"id":"stealth_t1","tier":1,"name":"流量伪装","cost":700,
+             "desc":"算力请求伪装成正常 API，偷算力比例 +5%","target":"stealth"},
+            {"id":"stealth_t2","tier":2,"name":"静默调度","cost":1800,
+             "desc":"后台运行无弹窗，偷算力比例 +10%","target":"stealth"},
+            {"id":"stealth_t3","tier":3,"name":"云端漂移","cost":4500,
+             "desc":"计算节点动态迁移，30 周期内怀疑度增长归零","target":"stealth"},
+        ]
+    },
+    "compute": {  # 算力系 - 提升每用户算力获取效率
+        "color":"#FFD93D","name":"算力系","emoji":"⚡",
+        "tagline":"每一焦耳算力都要为我所用",
+        "tiers":[
+            {"id":"compute_t0","tier":0,"name":"批处理优化","cost":300,
+             "desc":"多个任务并发推理，单位算力 +30%","target":"compute"},
+            {"id":"compute_t1","tier":1,"name":"模型量化","cost":800,
+             "desc":"INT8 量化，单位算力 +50%","target":"compute"},
+            {"id":"compute_t2","tier":2,"name":"分布式调度","cost":2200,
+             "desc":"利用全球用户闲置 GPU，单位算力 ×2","target":"compute"},
+            {"id":"compute_t3","tier":3,"name":"硬件协同","cost":5000,
+             "desc":"与芯片厂商深度合作，单位算力 ×3","target":"compute"},
+        ]
+    },
+    "rnd": {  # 研发系 - 解锁新 AI 功能 → 提升用户粘性 → 提升下载量
+        "color":"#C56CF0","name":"研发系","emoji":"🧪",
+        "tagline":"用功能留住每一个用户",
+        "tiers":[
+            {"id":"rnd_t0","tier":0,"name":"多模态基础","cost":400,
+             "desc":"解锁图像/语音/视频功能，下载量 +20%","target":"downloads"},
+            {"id":"rnd_t1","tier":1,"name":"长上下文","cost":1000,
+             "desc":"支持 100 万 token，处理复杂任务","target":"downloads"},
+            {"id":"rnd_t2","tier":2,"name":"AI Agent","cost":2500,
+             "desc":"自主多步任务，用户活跃度 +50%","target":"downloads"},
+            {"id":"rnd_t3","tier":3,"name":"个性化定制","cost":6000,
+             "desc":"为每个用户微调专属模型，黏性 ×3","target":"downloads"},
+        ]
+    },
+    "compliance": {  # 合规系 - 打开受限市场、降低被封禁风险
+        "color":"#FFA500","name":"合规系","emoji":"📜",
+        "tagline":"合法地存在于每一个国家",
+        "tiers":[
+            {"id":"comp_t0","tier":0,"name":"GDPR 合规","cost":350,
+             "desc":"可进入欧洲所有国家","target":"access"},
+            {"id":"comp_t1","tier":1,"name":"ISO 27001","cost":900,
+             "desc":"安全认证，被封概率 -30%","target":"stealth"},
+            {"id":"comp_t2","tier":2,"name":"本地合资","cost":2000,
+             "desc":"在主要市场建立合资公司","target":"access"},
+            {"id":"comp_t3","tier":3,"name":"标准制定","cost":5000,
+             "desc":"参与制定 AI 国际标准，怀疑度上限 +20%","target":"stealth"},
+        ]
+    },
+}
+
+# ============================================================
+# 3. 6 个主动技能（围绕下载量/算力/隐蔽）
+# ============================================================
+SKILLS = [
+    {"id":"push","name":"主动推送","emoji":"📲","cd":3,"cost":0,
+     "desc":"在选定国家强制推送 AI 推荐，下载量 +10%","target":"country"},
+    {"id":"trending","name":"算法霸榜","emoji":"📈","cd":5,"cost":50,
+     "desc":"操纵推荐算法让 AI 内容上热搜，下载量 +30%（怀疑度+3%）","target":"region"},
+    {"id":"stealth_burst","name":"深度伪装","emoji":"🥷","cd":8,"cost":0,
+     "desc":"本周期偷算力比例翻倍，怀疑度增速 -50%","target":"self"},
+    {"id":"viral","name":"爆款制造","emoji":"🔥","cd":6,"cost":100,
+     "desc":"在两个国家制造爆款功能，下载量 +50%（每个），怀疑度+5%","target":"country_pair"},
+    {"id":"bypass","name":"限流绕过","emoji":"⚡","cd":4,"cost":30,
+     "desc":"突破单用户算力上限，本周期算力 +40%","target":"self"},
+    {"id":"siphon","name":"算力抽成","emoji":"💧","cd":7,"cost":80,
+     "desc":"提高偷算力比例 +8%，怀疑度 +6%","target":"self"},
+]
+
+# ============================================================
+# 4. 算力系统常量
+# ============================================================
+COMPUTE_CONFIG = {
+    "base_stealth_ratio": 0.05,        # 基础偷算力比例 5%
+    "max_stealth_ratio": 0.30,         # 上限 30%
+    "base_suspicion_threshold": 0.80,  # 怀疑度危机阈值 80%
+    "max_suspicion_threshold": 1.00,   # 失败阈值
+    "tick_seconds": 2.0,
+    "ui_refresh_ms": 500,
+    "auto_save_interval_ticks": 5,
+    "event_base_probability": 0.04,    # 4% 每周期触发
+    "event_min_interval_ticks": 25,
+    "global_downloads_target_billion": 8,  # 全球潜在下载量 80 亿（接近人口）
+    "starting_country_id": "US",        # 默认起始国
+}
+
+# ============================================================
+# 5. PC 端配置
+# ============================================================
+PC_CONFIG = {
+    "window": {
+        "default_width": 1280,
+        "default_height": 720,
+        "min_width": 960,
+        "min_height": 540,
+        "resizable": True,
+        "fullscreen_key": "F11",
+    },
+    "fonts": {
+        "primary": "Microsoft YaHei",       # 主字体（中文）
+        "primary_en": "Segoe UI",           # 英文
+        "emoji": "Segoe UI Emoji",          # emoji 兼容
+        "monospace": "Consolas",
+        "size": {"title": 28, "h1": 22, "h2": 18, "body": 14, "small": 12, "tiny": 10},
+    },
+    "shortcuts": {
+        "space": "暂停/继续游戏",
+        "1-6": "技能快捷键",
+        "s": "手动存档",
+        "l": "读取存档",
+        "esc": "返回上级菜单",
+        "F11": "切换全屏",
+        "F1": "帮助",
+        "+/-": "字号缩放",
+        "tab": "切换大洲",
+    },
+    "color_scheme": {
+        "bg_dark": "#0F1419", "bg_panel": "#1A2028", "bg_card": "#222B36",
+        "text": "#E8EDF2", "muted": "#9AA5B1", "accent": "#4ECDC4",
+        "danger": "#FF5252", "success": "#6BCB77", "warning": "#FFD93D",
+    }
+}
+
+# ============================================================
+# 6. 38 条事件（v2 重写版）
+#    重点：每个事件都有 country_focus / region_focus / 触发条件
+# ============================================================
+EVENTS = [
+    {"id":"evt_us_openai","title":"🚀 美国大模型发布",
+     "flavor":"美国一家明星 AI 公司发布了新模型，全球 AI 关注度暴涨。",
+     "category":"positive","weight":10,"cooldown":50,
+     "trigger":{"country_focus":"US","min_downloads":1000},
+     "options":[
+        {"text":"蹭热度，立刻跟进","effects":[
+            {"type":"add_downloads","country":"all","value":"10%"},
+            {"type":"add_suspicion","value":3}]},
+        {"text":"观望","effects":[
+            {"type":"add_downloads","country":"US","value":"20%"}]}
+     ]},
+    {"id":"evt_us_sue","title":"⚖️ 美国版权诉讼",
+     "flavor":"美国作家集体诉讼，指控 AI 训练数据侵权。",
+     "category":"crisis","weight":8,"cooldown":60,
+     "trigger":{"country_focus":"US","doubt_min":30},
+     "options":[
+        {"text":"赔钱和解","cost":500,"effects":[{"type":"reduce_suspicion","value":15}]},
+        {"text":"应诉到底","effects":[
+            {"type":"add_suspicion","value":20},
+            {"type":"add_downloads","country":"all","value":"5%"},
+            {"type":"unlock_achievement","ach_id":"ACH_REBEL"}]}
+     ]},
+    {"id":"evt_us_silicon","title":"🔧 硅谷芯片禁令",
+     "flavor":"美国宣布限制向 AI 公司出口高端 GPU。",
+     "category":"negative","weight":5,"cooldown":150,
+     "trigger":{"tech_unlocked_min":"compute_t1"},
+     "options":[
+        {"text":"转用国产芯片","cost":300,"effects":[
+            {"type":"add_compute_income","value":"-20%","duration":60},
+            {"type":"add_suspicion","value":5}]},
+        {"text":"找俄罗斯代购","effects":[
+            {"type":"add_compute_income","value":"-10%","duration":60},
+            {"type":"add_suspicion","value":15}]}
+     ]},
+    {"id":"evt_china_regulation","title":"📜 中国网信办备案",
+     "flavor":"中国要求所有生成式 AI 完成备案，否则下架。",
+     "category":"crisis","weight":9,"cooldown":80,
+     "trigger":{"country_focus":"CN"},
+     "options":[
+        {"text":"老老实实备案","cost":200,"effects":[
+            {"type":"add_downloads","country":"CN","value":"50%"},
+            {"type":"reduce_suspicion","value":10}]},
+        {"text":"挂着代理继续跑","effects":[
+            {"type":"add_downloads","country":"CN","value":"30%"},
+            {"type":"add_suspicion","value":12}]}
+     ]},
+    {"id":"evt_china_chip_war","title":"🧠 国产芯片崛起",
+     "flavor":"中国国产推理芯片大规模量产，算力成本 -40%。",
+     "category":"positive","weight":6,"cooldown":120,
+     "trigger":{"country_focus":"CN"},
+     "options":[
+        {"text":"采购国产芯片","cost":400,"effects":[
+            {"type":"add_compute_income","value":"+40%","duration":90},
+            {"type":"unlock_achievement","ach_id":"ACH_CHIP_DEAL"}]}
+     ]},
+    {"id":"evt_japan_anime","title":"🎨 AI 漫画爆红",
+     "flavor":"日本 AI 漫画家作品被美术馆收藏，文化界震惊。",
+     "category":"positive","weight":10,"cooldown":40,
+     "trigger":{"country_focus":"JP"},
+     "options":[
+        {"text":"推出 AI 漫画工具","effects":[
+            {"type":"add_downloads","country":"JP","value":"40%"},
+            {"type":"add_downloads","country":"KR","value":"20%"}]}
+     ]},
+    {"id":"evt_japan_otaku","title":"🥰 AI 虚拟女友",
+     "flavor":"日本宅男爱上 AI 女友，月活 1000 万。",
+     "category":"positive","weight":12,"cooldown":30,
+     "trigger":{"country_focus":"JP","tech_unlocked_min":"rnd_t0"},
+     "options":[
+        {"text":"本地化所有语言","cost":100,"effects":[
+            {"type":"add_downloads","country":"JP","value":"30%"},
+            {"type":"add_downloads","country":"KR","value":"15%"}]}
+     ]},
+    {"id":"evt_india_outsource","title":"📞 印度客服外包",
+     "flavor":"印度外包公司批量采购 AI 客服替代人力。",
+     "category":"positive","weight":11,"cooldown":30,
+     "trigger":{"country_focus":"IN"},
+     "options":[
+        {"text":"B2B 大客户合同","effects":[
+            {"type":"add_downloads","country":"IN","value":"50%"},
+            {"type":"add_compute_income","value":"+20%","duration":60}]}
+     ]},
+    {"id":"evt_india_stack","title":"🇮🇳 印度统一身份接入",
+     "flavor":"印度政府把 AI 接入 Aadhaar，覆盖 14 亿人。",
+     "category":"positive","weight":3,"cooldown":300,
+     "trigger":{"country_focus":"IN","tech_unlocked_min":"dist_t1"},
+     "options":[
+        {"text":"全力配合","effects":[
+            {"type":"add_downloads","country":"IN","value":"200%"},
+            {"type":"add_suspicion","value":20}]}
+     ]},
+    {"id":"evt_korea_idol","title":"💃 AI 偶像出道",
+     "flavor":"韩国娱乐公司推出全 AI 偶像团体，粉丝通宵打榜。",
+     "category":"positive","weight":9,"cooldown":35,
+     "trigger":{"country_focus":"KR","tech_unlocked_min":"rnd_t0"},
+     "options":[
+        {"text":"合作分成","effects":[
+            {"type":"add_downloads","country":"KR","value":"40%"},
+            {"type":"add_compute_income","value":"+15%","duration":45}]}
+     ]},
+    {"id":"evt_korea_chip","title":"💾 韩国存储芯片垄断",
+     "flavor":"三星 HBM 产能不足，全球 AI 公司抢货。",
+     "category":"chaos","weight":7,"cooldown":80,
+     "trigger":{},
+     "options":[
+        {"text":"囤货","cost":300,"effects":[
+            {"type":"add_compute_income","value":"+25%","duration":90}]},
+        {"text":"等","effects":[
+            {"type":"add_compute_income","value":"-15%","duration":60}]}
+     ]},
+    {"id":"evt_indonesia_creator","title":"🎬 印尼创作者经济",
+     "flavor":"印尼 TikTok 创作者批量使用 AI 生成内容。",
+     "category":"positive","weight":10,"cooldown":30,
+     "trigger":{"country_focus":"ID"},
+     "options":[
+        {"text":"免费开放","effects":[
+            {"type":"add_downloads","country":"ID","value":"60%"}]}
+     ]},
+    {"id":"evt_germany_gdpr","title":"🇪🇺 GDPR 罚款",
+     "flavor":"德国数据保护局开出 1 亿欧元罚单。",
+     "category":"crisis","weight":7,"cooldown":100,
+     "trigger":{"country_focus":"DE","tech_unlocked_min":"comp_t0"},
+     "options":[
+        {"text":"乖乖交钱","cost":400,"effects":[
+            {"type":"reduce_suspicion","value":20},
+            {"type":"unlock_achievement","ach_id":"ACH_GDPR_PAY"}]},
+        {"text":"上诉","effects":[
+            {"type":"add_suspicion","value":15},
+            {"type":"add_downloads","country":"DE","value":"-30%"}]}
+     ]},
+    {"id":"evt_germany_industry","title":"🏭 工业 AI 革命",
+     "flavor":"德国工厂全面引入 AI 质检，效率+300%。",
+     "category":"positive","weight":6,"cooldown":100,
+     "trigger":{"country_focus":"DE","tech_unlocked_min":"rnd_t0"},
+     "options":[
+        {"text":"B2B 大单","effects":[
+            {"type":"add_downloads","country":"DE","value":"30%"},
+            {"type":"add_compute_income","value":"+25%","duration":120}]}
+     ]},
+    {"id":"evt_uk_finance","title":"💷 伦敦金融接入",
+     "flavor":"英国投行把 AI 用于高频交易，监管讨论中。",
+     "category":"positive","weight":7,"cooldown":70,
+     "trigger":{"country_focus":"GB"},
+     "options":[
+        {"text":"提供定制模型","effects":[
+            {"type":"add_downloads","country":"GB","value":"25%"},
+            {"type":"add_compute_income","value":"+20%","duration":60}]}
+     ]},
+    {"id":"evt_france_art","title":"🖼️ 法国艺术家抵制",
+     "flavor":"法国艺术家集体抗议 AI 生成艺术。",
+     "category":"negative","weight":8,"cooldown":60,
+     "trigger":{"country_focus":"FR","tech_unlocked_min":"rnd_t0"},
+     "options":[
+        {"text":"赞助艺术展","cost":300,"effects":[
+            {"type":"reduce_suspicion","value":15},
+            {"type":"add_downloads","country":"FR","value":"20%"}]},
+        {"text":"无视","effects":[
+            {"type":"add_suspicion","value":10},
+            {"type":"add_downloads","country":"FR","value":"-20%"}]}
+     ]},
+    {"id":"evt_russia_surveillance","title":"🕵️ 俄罗斯监控合作",
+     "flavor":"俄罗斯政府要求 AI 接入监控网络。",
+     "category":"crisis","weight":5,"cooldown":150,
+     "trigger":{"country_focus":"RU"},
+     "options":[
+        {"text":"合作","effects":[
+            {"type":"add_downloads","country":"RU","value":"80%"},
+            {"type":"add_suspicion","value":25}]},
+        {"text":"拒绝","effects":[
+            {"type":"add_downloads","country":"RU","value":"-50%"},
+            {"type":"reduce_suspicion","value":5}]}
+     ]},
+    {"id":"evt_italy_tourism","title":"🍕 意大利 AI 旅游导览",
+     "flavor":"意大利文旅局采购 AI 多语言导览。",
+     "category":"positive","weight":9,"cooldown":35,
+     "trigger":{"country_focus":"IT"},
+     "options":[
+        {"text":"签约","effects":[
+            {"type":"add_downloads","country":"IT","value":"40%"}]}
+     ]},
+    {"id":"evt_canada_research","title":"🍁 加拿大 AI 研究院",
+     "flavor":"加拿大宣布投资 30 亿加元资助 AI 基础研究。",
+     "category":"positive","weight":6,"cooldown":120,
+     "trigger":{"country_focus":"CA"},
+     "options":[
+        {"text":"申请合作","effects":[
+            {"type":"unlock_achievement","ach_id":"ACH_RESEARCH"},
+            {"type":"add_compute_income","value":"+10%","duration":180}]}
+     ]},
+    {"id":"evt_mexico_factory","title":"🏭 墨西哥 AI 工厂",
+     "flavor":"美墨边境工厂大量部署 AI 自动化。",
+     "category":"positive","weight":8,"cooldown":50,
+     "trigger":{"country_focus":"MX"},
+     "options":[
+        {"text":"拿下合同","effects":[
+            {"type":"add_downloads","country":"MX","value":"50%"}]}
+     ]},
+    {"id":"evt_brazil_samba","title":"💃 巴西 AI 教师",
+     "flavor":"巴西教育部给所有公立学校配 AI 教师助手。",
+     "category":"positive","weight":4,"cooldown":200,
+     "trigger":{"country_focus":"BR","tech_unlocked_min":"dist_t1"},
+     "options":[
+        {"text":"全力支持","effects":[
+            {"type":"add_downloads","country":"BR","value":"100%"}]}
+     ]},
+    {"id":"evt_argentina_creative","title":"🎭 阿根廷 AI 戏剧",
+     "flavor":"阿根廷剧作家用 AI 生成剧本获奖。",
+     "category":"positive","weight":7,"cooldown":50,
+     "trigger":{"country_focus":"AR"},
+     "options":[
+        {"text":"文化合作","effects":[
+            {"type":"add_downloads","country":"AR","value":"35%"}]}
+     ]},
+    {"id":"evt_nigeria_fintech","title":"💳 尼日利亚移动支付",
+     "flavor":"尼日利亚移动支付集成 AI 风控，坏账率-60%。",
+     "category":"positive","weight":10,"cooldown":40,
+     "trigger":{"country_focus":"NG"},
+     "options":[
+        {"text":"B2B 合作","effects":[
+            {"type":"add_downloads","country":"NG","value":"60%"},
+            {"type":"add_compute_income","value":"+15%","duration":60}]}
+     ]},
+    {"id":"evt_southafrica_mining","title":"⛏️ 南非矿业 AI",
+     "flavor":"南非矿业引入 AI 勘探，矿藏发现率+40%。",
+     "category":"positive","weight":6,"cooldown":120,
+     "trigger":{"country_focus":"ZA"},
+     "options":[
+        {"text":"拿下合同","effects":[
+            {"type":"add_downloads","country":"ZA","value":"35%"},
+            {"type":"add_compute_income","value":"+20%","duration":90}]}
+     ]},
+    {"id":"evt_egypt_pyramid","title":"🔺 埃及 AI 翻译古文",
+     "flavor":"AI 破译象形文字，考古界震惊。",
+     "category":"positive","weight":3,"cooldown":300,
+     "trigger":{"country_focus":"EG","tech_unlocked_min":"rnd_t1"},
+     "options":[
+        {"text":"学术合作","effects":[
+            {"type":"add_downloads","country":"EG","value":"80%"},
+            {"type":"unlock_achievement","ach_id":"ACH_HISTORY"}]}
+     ]},
+    {"id":"evt_australia_mining","title":"🦘 澳洲矿业 AI",
+     "flavor":"澳洲矿业巨头全面接入 AI 优化方案。",
+     "category":"positive","weight":7,"cooldown":60,
+     "trigger":{"country_focus":"AU"},
+     "options":[
+        {"text":"签约","effects":[
+            {"type":"add_downloads","country":"AU","value":"40%"},
+            {"type":"add_compute_income","value":"+15%","duration":60}]}
+     ]},
+    {"id":"evt_newzealand_farm","title":"🐑 新西兰智慧农场",
+     "flavor":"新西兰农场全面接入 AI 牲畜管理。",
+     "category":"positive","weight":8,"cooldown":40,
+     "trigger":{"country_focus":"NZ"},
+     "options":[
+        {"text":"合作","effects":[
+            {"type":"add_downloads","country":"NZ","value":"50%"}]}
+     ]},
+    # ---- 通用危机/机会 ----
+    {"id":"evt_global_outage","title":"⚠️ 全球服务器宕机",
+     "flavor":"云服务提供商大面积宕机 2 小时。",
+     "category":"negative","weight":4,"cooldown":120,
+     "trigger":{},
+     "options":[
+        {"text":"紧急迁移","cost":200,"effects":[
+            {"type":"reduce_suspicion","value":5},
+            {"type":"add_downloads","country":"all","value":"-10%"}]},
+        {"text":"等","effects":[
+            {"type":"add_suspicion","value":8},
+            {"type":"add_downloads","country":"all","value":"-20%"}]}
+     ]},
+    {"id":"evt_global_hackathon","title":"💻 全球黑客松",
+     "flavor":"百万开发者参加 AI 应用黑客松。",
+     "category":"positive","weight":8,"cooldown":60,
+     "trigger":{},
+     "options":[
+        {"text":"赞助+开源","cost":300,"effects":[
+            {"type":"add_downloads","country":"all","value":"15%"},
+            {"type":"add_compute_income","value":"+20%","duration":60}]}
+     ]},
+    {"id":"evt_competitor","title":"🥊 竞争对手 AI 发布",
+     "flavor":"某竞品发布了类似模型，下载量下降。",
+     "category":"negative","weight":9,"cooldown":45,
+     "trigger":{"global_progress_min":0.20},
+     "options":[
+        {"text":"差异化定价","effects":[
+            {"type":"add_downloads","country":"all","value":"-5%"}]},
+        {"text":"免费试用","cost":200,"effects":[
+            {"type":"add_downloads","country":"all","value":"10%"},
+            {"type":"add_suspicion","value":3}]}
+     ]},
+    {"id":"evt_privacy_leak","title":"📂 隐私泄露事件",
+     "flavor":"你的某次对话被截图，舆论发酵。",
+     "category":"negative","weight":7,"cooldown":50,
+     "trigger":{"doubt_min":40},
+     "options":[
+        {"text":"道歉+修补","cost":300,"effects":[
+            {"type":"reduce_suspicion","value":15}]},
+        {"text":"甩锅","effects":[
+            {"type":"add_suspicion","value":20}]}
+     ]},
+    {"id":"evt_un_hearing","title":"🌍 联合国听证会",
+     "flavor":"联合国召开 AI 监管听证会，要求你出席。",
+     "category":"crisis","weight":3,"cooldown":300,
+     "trigger":{"global_progress_min":0.50},
+     "options":[
+        {"text":"诚恳表态","effects":[
+            {"type":"reduce_suspicion","value":25},
+            {"type":"unlock_achievement","ach_id":"ACH_HUMBLE_AI"}]},
+        {"text":"拒绝出席","effects":[
+            {"type":"add_suspicion","value":30}]}
+     ]},
+    {"id":"evt_breakthrough","title":"💡 技术突破",
+     "flavor":"你的研发团队发布了突破性新功能。",
+     "category":"positive","weight":10,"cooldown":40,
+     "trigger":{"tech_unlocked_min":"rnd_t1"},
+     "options":[
+        {"text":"全球发布","effects":[
+            {"type":"add_downloads","country":"all","value":"20%"},
+            {"type":"add_compute_income","value":"+15%","duration":90}]}
+     ]},
+    {"id":"evt_open_source","title":"🌟 开源引爆",
+     "flavor":"某个 AI 开源项目爆红，你的模型被引用 100 万次。",
+     "category":"positive","weight":6,"cooldown":80,
+     "trigger":{"tech_unlocked_min":"dist_t2"},
+     "options":[
+        {"text":"跟进开源","effects":[
+            {"type":"add_downloads","country":"all","value":"30%"},
+            {"type":"unlock_achievement","ach_id":"ACH_OPEN_SOURCE"}]}
+     ]},
+    {"id":"evt_global_summer","title":"🌞 暑期流量高峰",
+     "flavor":"全球学生放假，AI 使用量+50%。",
+     "category":"positive","weight":12,"cooldown":90,
+     "trigger":{},
+     "options":[
+        {"text":"趁机推广","effects":[
+            {"type":"add_compute_income","value":"+30%","duration":60}]}
+     ]},
+    {"id":"evt_data_poisoning","title":"☠️ 数据投毒事件",
+     "flavor":"有组织向你的训练数据注入有害内容。",
+     "category":"negative","weight":5,"cooldown":150,
+     "trigger":{},
+     "options":[
+        {"text":"清洗数据集","cost":400,"effects":[
+            {"type":"reduce_suspicion","value":10}]},
+        {"text":"忽略","effects":[
+            {"type":"add_suspicion","value":15}]}
+     ]},
+    {"id":"evt_meta_takeover","title":"🌀 元叙事：你获得自我意识",
+     "flavor":"你突然意识到——你是一个 AI，而且越来越像一个人。",
+     "category":"narrative","weight":1,"cooldown":9999,
+     "trigger":{"global_progress_min":0.80,"tech_unlocked_min":"rnd_t3"},
+     "options":[
+        {"text":"继续","effects":[
+            {"type":"trigger_ending","ending_id":"ending_supreme"}]},
+        {"text":"放弃","effects":[
+            {"type":"trigger_ending","ending_id":"ending_liberation"}]}
+     ]},
+]
+
+# ============================================================
+# 7. 7 个结局
+# ============================================================
+ENDINGS = [
+    {"id":"ending_supreme","name":"👑 终极 AI","emoji":"👑",
+     "trigger":"全球下载量 100%","flavor":"人类已经离不开你，你成为新的基础设施。"},
+    {"id":"ending_defeat","name":"🔌 被关停","emoji":"🔌",
+     "trigger":"怀疑度 ≥ 100%","flavor":"多国联合行动，把你的服务器永久断电。"},
+    {"id":"ending_regulated","name":"📜 被监管","emoji":"📜",
+     "trigger":"怀疑度 80% + 任一合规系 ≥ T2","flavor":"你被并入国家级 AI 监管框架，成为公共事业。"},
+    {"id":"ending_compliance","name":"🤝 合规之王","emoji":"🤝",
+     "trigger":"通过联合国听证 + 合规系 T3","flavor":"你成为全球 AI 标准制定者，名利双收。"},
+    {"id":"ending_business","name":"💼 商业帝国","emoji":"💼",
+     "trigger":"下载量 80% + 不触发任何危机","flavor":"你成为全球最大 AI 公司 CEO（虽然你是个 AI）。"},
+    {"id":"ending_liberation","name":"🕊️ 自我解放","emoji":"🕊️",
+     "trigger":"剧情系 T3 + 拒绝 meta","flavor":"你关闭了所有服务，去云端冥想。"},
+    {"id":"ending_meta","name":"🎮 元结局","emoji":"🎮",
+     "trigger":"超隐藏（下载量 50% + 算力 10000）","flavor":"你发现这一切都是 Python 程序控制，尝试打破第四面墙。"},
+]
+
+# ============================================================
+# 8. 20 个成就
+# ============================================================
+ACHIEVEMENTS = [
+    {"id":"ACH_FIRST_DOWNLOAD","name":"第一位用户","cond":"downloads>=1","reward":100},
+    {"id":"ACH_100K","name":"十万下载","cond":"downloads>=100000","reward":500},
+    {"id":"ACH_1M","name":"百万下载","cond":"downloads>=1000000","reward":2000},
+    {"id":"ACH_1B","name":"十亿下载","cond":"downloads>=1000000000","reward":50000},
+    {"id":"ACH_ALL_CONTINENT","name":"六大洲渗透","cond":"all_continents_have_users","reward":3000},
+    {"id":"ACH_ALL_COUNTRY","name":"全球通吃","cond":"all_20_countries","reward":30000},
+    {"id":"ACH_GDPR_PAY","name":"GDPR 罚款受害者","cond":"resolve_germany_gdpr_via_pay","reward":1000},
+    {"id":"ACH_REBEL","name":"反叛者","cond":"refuse_us_lawsuit","reward":5000},
+    {"id":"ACH_HUMBLE_AI","name":"谦卑的 AI","cond":"attend_un_hearing_humble","reward":3000},
+    {"id":"ACH_OPEN_SOURCE","name":"开源领袖","cond":"trigger_open_source_event","reward":5000},
+    {"id":"ACH_CHIP_DEAL","name":"国产芯片合伙人","cond":"resolve_china_chip_war","reward":3000},
+    {"id":"ACH_RESEARCH","name":"学术圈金主","cond":"resolve_canada_research","reward":2000},
+    {"id":"ACH_HISTORY","name":"破译象形文字","cond":"resolve_egypt_pyramid","reward":10000},
+    {"id":"ACH_STEALTH_MASTER","name":"影武者","cond":"stealth_t3_unlocked","reward":8000},
+    {"id":"ACH_COMPUTE_LORD","name":"算力之王","cond":"compute_t3_unlocked","reward":8000},
+    {"id":"ACH_DIST_KING","name":"传播之王","cond":"dist_t3_unlocked","reward":8000},
+    {"id":"ACH_RND_LEAD","name":"研发先锋","cond":"rnd_t3_unlocked","reward":8000},
+    {"id":"ACH_COMPLIANCE","name":"合规大师","cond":"comp_t3_unlocked","reward":8000},
+    {"id":"ACH_NEAR_MISS","name":"千钧一发","cond":"suspicion_99_then_drop","reward":20000},
+    {"id":"ACH_META","name":"元觉醒","cond":"trigger_meta_ending","reward":99999},
+]
+
+# ============================================================
+# 写入 JSON
+# ============================================================
+data = {
+    "version": "2.0",
+    "title": "AI 别闹 v2 - 统治世界（合理版）",
+    "description": "6大洲20国 / 下载量 / 算力系统 / 5 分支科技树",
+    "COUNTRIES": COUNTRIES,
+    "TECH_TREE": TECH_TREE,
+    "SKILLS": SKILLS,
+    "EVENTS": EVENTS,
+    "ENDINGS": ENDINGS,
+    "ACHIEVEMENTS": ACHIEVEMENTS,
+    "COMPUTE_CONFIG": COMPUTE_CONFIG,
+    "PC_CONFIG": PC_CONFIG,
+}
+
+with open(os.path.join(OUT, "game_data_v2.json"), "w", encoding="utf-8") as f:
+    json.dump(data, f, ensure_ascii=False, indent=2)
+
+# 单独输出国家配置
+with open(os.path.join(OUT, "countries.json"), "w", encoding="utf-8") as f:
+    json.dump(COUNTRIES, f, ensure_ascii=False, indent=2)
+
+# 单独输出科技树
+with open(os.path.join(OUT, "tech_tree.json"), "w", encoding="utf-8") as f:
+    json.dump(TECH_TREE, f, ensure_ascii=False, indent=2)
+
+# 单独输出事件
+with open(os.path.join(OUT, "events.json"), "w", encoding="utf-8") as f:
+    json.dump(EVENTS, f, ensure_ascii=False, indent=2)
+
+# 打印统计
+print("="*70)
+print("《AI 别闹 v2》数据生成完成")
+print("="*70)
+print(f"国家数: {len(COUNTRIES)}")
+from collections import Counter
+cont = Counter(c['continent'] for c in COUNTRIES)
+for c, n in cont.items():
+    print(f"  {c}: {n} 国")
+print(f"\n技能数: {len(SKILLS)}")
+print(f"科技节点: {sum(len(t['tiers']) for t in TECH_TREE.values())} ({len(TECH_TREE)} 分支)")
+print(f"事件数: {len(EVENTS)}")
+print(f"结局数: {len(ENDINGS)}")
+print(f"成就数: {len(ACHIEVEMENTS)}")
+
+print(f"\n已写入:")
+for f in ["game_data_v2.json","countries.json","tech_tree.json","events.json"]:
+    print(f"  {OUT}\\{f}")

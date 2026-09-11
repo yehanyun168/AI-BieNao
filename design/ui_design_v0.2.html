@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>AI 别闹 · 像素风 UI 设计稿 v0.2</title>
+<style>
+  /* ============================================================
+     设计令牌 Design Tokens —— 全部集中在这里，改一处全站生效
+     ============================================================ */
+  :root{
+    /* ---------- 1. 色彩：16 色限制调色板 ---------- */
+    --bg:#0d1117;         /* 背景        */
+    --panel:#161b22;      /* 主面板      */
+    --panel-2:#1f2630;    /* 次面板/输入 */
+    --border:#30363d;     /* 装饰分隔线  */
+    --border-2:#484f58;   /* 常规边框    */
+    --border-strong:#6e7681; /* ★NEW 语义边框：达 3:1，用于焦点/选中/可交互边界 */
+    --text:#e6edf3;
+    --text-dim:#8b949e;
+    --text-mute:#6e7681;  /* ⚠ 仅大字可用，见 §2.2 */
+    --cyan:#4ec9b0;
+    --pink:#f97583;
+    --yellow:#dcdcaa;
+    --green:#6a9955;
+    --purple:#c586c0;
+    --orange:#ffa657;
+    --red:#ff7b72;
+    --blue:#4e94c9;       /* 第 16 色 */
+    --sea:#0a1828;        /* 地图海面  */
+    --sel:#1e3a3a;        /* 选中态底  */
+
+    /* ---------- 2. 语义角色 ---------- */
+    --c-compute:var(--yellow);   /* 算力     */
+    --c-download:var(--pink);    /* 下载量   */
+    --c-suspicion:var(--red);    /* 怀疑度   */
+    --c-ok:var(--green);
+    --c-warn:var(--orange);
+    --c-focus:var(--cyan);
+
+    /* ---------- 3. 间距：8px 节奏，2px 光栅 ---------- */
+    --u:2px;      /* 光栅单位：所有尺寸必须是 2 的倍数 */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px;
+
+    /* ---------- 4. 字号阶梯 ---------- */
+    --fs-display:28px; --fs-h1:22px; --fs-h2:18px; --fs-h3:15px;
+    --fs-body:13px; --fs-sm:12px; --fs-cap:11px;   /* 11px 为可读下限 */
+
+    /* ---------- 5. 边框 / 阴影：无圆角、无模糊 ---------- */
+    --bw:2px; --bw-thin:1px; --bw-frame:3px;
+    --shadow:6px 6px 0 rgba(0,0,0,.5);      /* 硬投影，0 模糊 */
+    --shadow-sm:3px 3px 0 rgba(0,0,0,.45);
+
+    /* ---------- 6. 动效：只做 2 档，尊重 reduced-motion ---------- */
+    --t-fast:80ms steps(2); --t-base:140ms steps(3);
+  }
+
+  *{box-sizing:border-box; image-rendering:pixelated;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:'Consolas','Courier New',monospace;line-height:1.55;}
+  body{padding:24px 32px 96px;max-width:1280px;margin:0 auto;}
+
+  h1{font-size:var(--fs-h1);color:var(--cyan);border-bottom:var(--bw) solid var(--border);padding-bottom:8px;margin:24px 0 12px;}
+  h2{font-size:var(--fs-h2);color:var(--yellow);border-left:4px solid var(--yellow);padding-left:10px;margin:32px 0 12px;}
+  h3{font-size:var(--fs-h3);color:var(--pink);margin:20px 0 8px;}
+  h4{font-size:var(--fs-body);color:var(--text-dim);margin:14px 0 6px;}
+  p,li,td,th{font-size:var(--fs-body);}
+  .muted{color:var(--text-dim);} .ok{color:var(--green);} .warn{color:var(--orange);} .err{color:var(--red);}
+  code{background:var(--panel-2);border:1px solid var(--border);padding:0 4px;color:var(--yellow);}
+  hr{border:0;border-top:1px dashed var(--border);margin:32px 0;}
+
+  table{border-collapse:collapse;width:100%;font-size:var(--fs-body);}
+  th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;}
+  th{background:var(--panel-2);color:var(--cyan);font-weight:400;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+
+  /* ---------- 通用像素组件 ---------- */
+  .px-panel{background:var(--panel);border:var(--bw) solid var(--border-2);padding:8px;}
+  .px-panel-2{background:var(--panel-2);border:var(--bw) solid var(--border);padding:6px;}
+  .px-btn{background:var(--panel-2);border:var(--bw) solid var(--border-2);color:var(--text);
+    padding:6px 10px;font-family:inherit;font-size:var(--fs-sm);display:inline-block;text-align:center;cursor:pointer;}
+  .px-btn.primary{background:#14302c;border-color:var(--cyan);color:var(--cyan);}
+  .px-btn.danger{background:#3a1e1e;border-color:var(--red);color:var(--red);}
+  .px-btn.warn{background:#3a321e;border-color:var(--yellow);color:var(--yellow);}
+  .px-btn.row{display:block;width:100%;margin-bottom:4px;}
+
+  /* ---------- 色板 ---------- */
+  .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;}
+  .swatch{border:var(--bw) solid var(--border-2);padding:10px 8px 8px;font-size:var(--fs-cap);text-align:center;}
+  .swatch .blk{height:38px;margin-bottom:6px;border:1px solid var(--border);}
+  .swatch .ratio{color:var(--text-mute);font-size:var(--fs-cap);}
+
+  /* ---------- 游戏画面容器 ---------- */
+  .frame{border:var(--bw-frame) solid var(--border-2);background:var(--bg);box-shadow:var(--shadow);margin:14px 0;}
+  .frame-cap{font-size:var(--fs-cap);color:var(--text-dim);margin:-6px 0 18px;}
+
+  /* 主游戏界面：1280×720 */
+  .gs{width:1280px;height:720px;display:grid;gap:4px;padding:4px;
+      grid-template-rows:48px 1fr 88px;grid-template-columns:230px 1fr 292px;
+      grid-template-areas:"top top top" "side map right" "bottom bottom bottom";}
+  .gs>*{background:var(--panel);border:var(--bw) solid var(--border-2);}
+
+  .top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 10px;font-size:var(--fs-sm);}
+  .top .title{color:var(--cyan);font-size:14px;}
+  .top .stat{display:flex;gap:6px;align-items:center;}
+  .top .stat .lbl{color:var(--text-dim);}
+  .top .stat .val{color:var(--text);}
+  .top .val.c{color:var(--c-compute);} .top .val.d{color:var(--c-download);} .top .val.s{color:var(--c-suspicion);}
+  .top .spacer{flex:1;}
+  .chip{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:4px 10px;color:var(--text-dim);font-size:var(--fs-sm);}
+  .chip.pause{border-color:var(--yellow);color:var(--yellow);}
+
+  .side{grid-area:side;padding:6px;overflow:hidden;}
+  .side h4{margin:2px 0 6px;color:var(--cyan);font-size:var(--fs-sm);}
+  .crow{display:grid;grid-template-columns:26px 1fr auto;gap:6px;align-items:center;
+        padding:3px 4px;border:1px solid transparent;border-bottom:1px solid var(--border);
+        font-size:var(--fs-cap);background:var(--panel-2);margin-bottom:2px;}
+  .crow.selected{border:1px solid var(--cyan);background:var(--sel);}
+  .crow .nm{color:var(--text);} .crow .mt{color:var(--text-dim);font-size:11px;}
+  .flag{width:26px;height:17px;display:flex;border:1px solid var(--border-2);overflow:hidden;}
+  .flag>div{flex:1;} .flag.v{flex-direction:column;}
+
+  .map{grid-area:map;position:relative;background:var(--sea);overflow:hidden;}
+  .map .grid-bg{position:absolute;inset:0;
+    background-image:linear-gradient(rgba(78,201,176,.05) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(78,201,176,.05) 1px,transparent 1px);
+    background-size:32px 32px;}
+  .mlabel{position:absolute;font-size:11px;color:var(--text-mute);letter-spacing:.06em;pointer-events:none;}
+  .pin{position:absolute;font-size:11px;padding:2px 5px;border:var(--bw) solid var(--border-2);
+       background:rgba(13,17,23,.85);color:var(--text-dim);transform:translate(-50%,-50%);white-space:nowrap;}
+  .pin.on{border-color:var(--cyan);color:var(--cyan);background:#0e2b28;}
+  .pin.sel{border-color:var(--cyan);color:var(--bg);background:var(--cyan);}
+  .pin.blk{border-color:var(--red);color:var(--red);background:#2a1616;}
+  .map-title{position:absolute;top:6px;left:8px;font-size:var(--fs-sm);color:var(--cyan);}
+  .map-legend{position:absolute;bottom:6px;left:8px;display:flex;gap:10px;font-size:11px;color:var(--text-mute);}
+  .map-legend i{display:inline-block;width:9px;height:9px;border:2px solid var(--border-2);margin-right:4px;vertical-align:-1px;}
+
+  .right{grid-area:right;padding:6px;display:flex;flex-direction:column;gap:6px;overflow:hidden;}
+  .right h4{margin:0;color:var(--purple);font-size:var(--fs-sm);}
+  .tnode{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:4px 6px;font-size:var(--fs-cap);display:flex;justify-content:space-between;gap:6px;}
+  .tnode.t0{border-color:var(--purple);color:var(--purple);}
+  .tnode.br{border-color:var(--border-2);}
+  .tnode.lk{opacity:.45;}
+  .tnode .lv{color:var(--text-dim);}
+  .bar{display:inline-block;letter-spacing:-1px;color:var(--cyan);}
+
+  .bottom{grid-area:bottom;padding:6px;display:grid;grid-template-columns:repeat(6,1fr);gap:5px;}
+  .skill{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:5px 6px;font-size:var(--fs-cap);position:relative;overflow:hidden;}
+  .skill .k{color:var(--yellow);} .skill .nm{color:var(--text);}
+  .skill .fx{color:var(--text-mute);font-size:11px;margin-top:3px;}
+  .skill .cost{position:absolute;top:4px;right:6px;color:var(--text-dim);font-size:11px;}
+  .skill.ready{border-color:var(--cyan);}
+  .skill.cd{opacity:.5;}
+  .skill.cd::after{content:'';position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--border-2);}
+
+  /* ---------- 弹窗 ---------- */
+  .modal{width:520px;border:var(--bw) solid var(--border-2);background:var(--panel);box-shadow:var(--shadow);}
+  .modal__hd{border-bottom:var(--bw) solid var(--border);padding:8px 12px;font-size:var(--fs-h3);color:var(--cyan);}
+  .modal__bd{padding:12px;font-size:var(--fs-body);}
+  .modal__ft{border-top:var(--bw) solid var(--border);padding:8px 12px;display:flex;gap:8px;justify-content:flex-end;}
+  .opt{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:8px 10px;margin-bottom:6px;font-size:var(--fs-sm);cursor:pointer;}
+  .opt .ef{color:var(--text-mute);font-size:11px;margin-top:3px;}
+  .opt:hover,.opt:focus{border-color:var(--cyan);background:var(--sel);outline:none;}
+
+  .menu{width:720px;height:520px;border:var(--bw-frame) solid var(--border-2);background:var(--bg);
+        box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+  .menu .logo{font-size:var(--fs-display);color:var(--cyan);letter-spacing:.04em;}
+  .menu .sub{font-size:var(--fs-body);color:var(--text-dim);}
+  .menu .ver{font-size:var(--fs-cap);color:var(--text-mute);}
+  .menu .slot{border:var(--bw) solid var(--border);background:var(--panel);padding:6px 12px;font-size:var(--fs-sm);color:var(--text-dim);}
+  .menu .btns{display:flex;flex-direction:column;gap:6px;width:240px;margin-top:6px;}
+  .menu .btns .px-btn{padding:9px 10px;}
+  .menu .hint{font-size:11px;color:var(--text-mute);margin-top:8px;}
+
+  /* ---------- 组件状态展示 ---------- */
+  .states{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+  .state-box{border:1px solid var(--border);padding:8px;}
+  .state-box .cap{font-size:11px;color:var(--text-mute);margin-bottom:6px;}
+
+  .note{border-left:4px solid var(--cyan);background:var(--panel-2);padding:10px 12px;font-size:var(--fs-body);margin:12px 0;}
+  .note.aa{border-left-color:var(--green);} .note.fix{border-left-color:var(--orange);}
+  .flex{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;}
+</style>
+</head>
+<body>
+
+<h1>AI 别闹 · 像素风 UI 设计稿 v0.2</h1>
+<p class="muted">
+  目标：<b>Plague Inc.</b> 式大地图 + 紧凑操作面板；<b>8/16-bit 像素风</b>（2px 硬边框 / 无圆角 / 无渐变 / 限制色板）。<br>
+  v0.2 相对 v0.1 的关键变化：对齐 <b>20 国 / 6 技能 / 7 结局 / 20 成就</b>的当前实现，新增<b>主菜单</b>与 4 个弹窗规格，
+  补齐<b>设计令牌</b>、<b>组件状态</b>、<b>对比度审计</b>与<b>键盘焦点</b>规范。
+</p>
+
+<div class="note fix">
+  <b>本版修掉了两个真实的可用性缺陷</b>（实测计算，非估算）：
+  <br>① <code>border #30363d</code> 对背景仅 <b>1.55:1</b>、<code>border_2 #484f58</code> 仅 <b>2.28:1</b>，都低于 WCAG 1.4.11 对界面边界的 <b>3:1</b> 要求 → 新增语义令牌 <code>--border-strong:#6e7681</code>（4.12:1）。
+  <br>② <code>text_mute #6e7681</code> 仅 <b>4.12:1</b>，达不到正文 AA 的 4.5:1 → 限定为「仅 ≥18px 或非关键信息」。
+</div>
+
+<hr>
+
+<h2>1. 设计原则</h2>
+<ul>
+  <li><b>地图为中心</b> —— 世界地图占主区 50%+ 宽度，20 国以像素方块 + 国家码呈现，一眼看到全局</li>
+  <li><b>数值在前</b> —— 顶部状态条常驻「算力 / 下载 / 怀疑度 / 周期」，玩家永不需要滚屏找数字</li>
+  <li><b>像素风纪律</b> —— 所有尺寸是 2px 的倍数；只有 2px / 1px / 3px 三种线宽；圆角恒为 0；阴影恒为硬投影</li>
+  <li><b>键盘优先</b> —— 12 个快捷键全覆盖（F11 验收项），焦点环必须始终可见</li>
+  <li><b>一眼可读</b> —— 颜色只表达语义（算力=黄 / 下载=粉 / 怀疑=红），不做装饰性用色</li>
+</ul>
+
+<h2>2. 设计令牌</h2>
+
+<h3>2.1 色彩 — 16 色限制调色板 + 2 个布局色 + 1 个新增语义边框</h3>
+<div class="palette">
+  <div class="swatch"><div class="blk" style="background:#0d1117"></div><b>#0d1117</b><br>背景 bg</div>
+  <div class="swatch"><div class="blk" style="background:#161b22"></div><b>#161b22</b><br>主面板</div>
+  <div class="swatch"><div class="blk" style="background:#1f2630"></div><b>#1f2630</b><br>次面板</div>
+  <div class="swatch"><div class="blk" style="background:#30363d"></div><b>#30363d</b><br>装饰线</div>
+  <div class="swatch"><div class="blk" style="background:#484f58"></div><b>#484f58</b><br>常规边框</div>
+  <div class="swatch" style="border-color:var(--cyan)"><div class="blk" style="background:#6e7681"></div><b>#6e7681</b><br>语义边框 ★NEW</div>
+  <div class="swatch"><div class="blk" style="background:#e6edf3"></div><b>#e6edf3</b><br>主文字</div>
+  <div class="swatch"><div class="blk" style="background:#8b949e"></div><b>#8b949e</b><br>次文字</div>
+  <div class="swatch"><div class="blk" style="background:#4ec9b0"></div><b>#4ec9b0</b><br>青 主强调</div>
+  <div class="swatch"><div class="blk" style="background:#f97583"></div><b>#f97583</b><br>粉 下载</div>
+  <div class="swatch"><div class="blk" style="background:#dcdcaa"></div><b>#dcdcaa</b><br>黄 算力</div>
+  <div class="swatch"><div class="blk" style="background:#6a9955"></div><b>#6a9955</b><br>绿 成功</div>
+  <div class="swatch"><div class="blk" style="background:#c586c0"></div><b>#c586c0</b><br>紫 科技</div>
+  <div class="swatch"><div class="blk" style="background:#ffa657"></div><b>#ffa657</b><br>橙 警告</div>
+  <div class="swatch"><div class="blk" style="background:#ff7b72"></div><b>#ff7b72</b><br>红 怀疑</div>
+  <div class="swatch"><div class="blk" style="background:#4e94c9"></div><b>#4e94c9</b><br>蓝 第16色</div>
+  <div class="swatch"><div class="blk" style="background:#0a1828"></div><b>#0a1828</b><br>地图海面</div>
+  <div class="swatch"><div class="blk" style="background:#1e3a3a"></div><b>#1e3a3a</b><br>选中态底</div>
+</div>
+
+<h3>2.2 对比度审计（实测，WCAG 2.1）</h3>
+<table>
+  <tr><th>前景</th><th class="num">on #0d1117</th><th class="num">on #161b22</th><th>判定</th></tr>
+  <tr><td>text #e6edf3</td><td class="num">16.02</td><td class="num">14.64</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>text_dim #8b949e</td><td class="num">6.15</td><td class="num">5.62</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>text_mute #6e7681</td><td class="num">4.12</td><td class="num">3.77</td><td class="warn">⚠ 仅大字/非关键</td></tr>
+  <tr><td>cyan #4ec9b0</td><td class="num">9.29</td><td class="num">8.49</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>pink #f97583</td><td class="num">7.12</td><td class="num">6.51</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>yellow #dcdcaa</td><td class="num">13.39</td><td class="num">12.24</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>green #6a9955</td><td class="num">5.68</td><td class="num">5.19</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>purple #c586c0</td><td class="num">6.80</td><td class="num">6.22</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>orange #ffa657</td><td class="num">9.77</td><td class="num">8.93</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>red #ff7b72</td><td class="num">7.51</td><td class="num">6.86</td><td class="ok">AA 正文 ✓</td></tr>
+  <tr><td>blue #4e94c9</td><td class="num">5.77</td><td class="num">5.27</td><td class="ok">AA 正文 ✓</td></tr>
+</table>
+<h4>非文字对比（WCAG 1.4.11 要求 ≥ 3:1）</h4>
+<table>
+  <tr><th>元素</th><th class="num">对背景比值</th><th>判定</th><th>处置</th></tr>
+  <tr><td>border #30363d</td><td class="num">1.55</td><td class="err">✗</td><td>降级为「纯装饰分隔线」，不承载信息</td></tr>
+  <tr><td>border_2 #484f58</td><td class="num">2.28</td><td class="err">✗</td><td>仅用于非交互面板外框</td></tr>
+  <tr><td><b>border_strong #6e7681</b></td><td class="num">4.12</td><td class="ok">✓</td><td><b>焦点环 / 选中 / 可交互边界一律用它</b></td></tr>
+  <tr><td>cyan #4ec9b0 on 选中底 #1e3a3a</td><td class="num">5.99</td><td class="ok">✓</td><td>选中态配色成立</td></tr>
+</table>
+<div class="note aa">
+  <b>结论：</b>色板本身健康 —— 11 个文字色中 10 个达 AA 正文。问题集中在「边框太暗」，
+  已通过新增 <code>--border-strong</code> 并把 <code>--border</code>/<code>--border-2</code> 降级为纯装饰来修复，无需改动游戏视觉基调。
+</div>
+
+<h3>2.3 字号阶梯</h3>
+<table>
+  <tr><th>令牌</th><th>值</th><th>用途</th></tr>
+  <tr><td>--fs-display</td><td>28px</td><td>主菜单 LOGO</td></tr>
+  <tr><td>--fs-h1 / h2 / h3</td><td>22 / 18 / 15px</td><td>标题 / 面板标题 / 弹窗标题</td></tr>
+  <tr><td>--fs-body</td><td>13px</td><td>正文、列表行、选项文案</td></tr>
+  <tr><td>--fs-sm</td><td>12px</td><td>状态条、按钮、国家码</td></tr>
+  <tr><td>--fs-cap</td><td>11px</td><td>角标、说明、图例（<b>可读下限，不得再小</b>）</td></tr>
+</table>
+
+<h3>2.4 间距 · 边框 · 阴影</h3>
+<ul>
+  <li><b>光栅单位 2px</b>：任何尺寸都应是 2 的倍数，保证像素对齐不糊边</li>
+  <li><b>节奏单位 8px</b>：4 / 8 / 12 / 16 / 24 / 32 / 48，用于面板内边距与组件间距</li>
+  <li><b>线宽只有 3 种</b>：1px 内分隔 / 2px 标准 / 3px 屏幕外框</li>
+  <li><b>圆角恒为 0</b>；<b>阴影恒为硬投影</b> <code>6px 6px 0 rgba(0,0,0,.5)</code>，禁止 blur</li>
+  <li><b>动效只 2 档</b>：80ms / 140ms，且必须包在 <code>prefers-reduced-motion</code> 判定内</li>
+</ul>
+
+<hr>
+
+<h2>3. 组件库与状态</h2>
+
+<h3>3.1 按钮 — 4 变体 × 5 状态</h3>
+<div class="states">
+  <div class="state-box">
+    <div class="cap">变体：默认 / 主操作 / 危险 / 警告</div>
+    <span class="px-btn">默认</span>
+    <span class="px-btn primary">主操作</span>
+    <span class="px-btn danger">危险</span>
+    <span class="px-btn warn">警告</span>
+  </div>
+  <div class="state-box">
+    <div class="cap">状态：悬停 → 激活 → 焦点 → 禁用</div>
+    <span class="px-btn primary" style="border-color:#7fe6d2;color:#7fe6d2">悬停</span>
+    <span class="px-btn primary" style="transform:translate(1px,1px);box-shadow:var(--shadow-sm)">激活</span>
+    <span class="px-btn primary" style="outline:2px solid var(--cyan);outline-offset:2px">焦点</span>
+    <span class="px-btn" style="opacity:.4;border-style:dashed">禁用</span>
+  </div>
+</div>
+<div class="note">
+  <b>键盘焦点是硬性要求</b>（F11 验收项里有 12 个快捷键）：<code>outline:2px solid var(--focus); outline-offset:2px</code>。
+  焦点环用青色（9.29:1），在任何面板底色上都够显眼；<b>绝不允许 <code>outline:none</code></b>。
+</div>
+
+<h3>3.2 面板 · 列表行 · 徽章</h3>
+<div class="flex">
+  <div class="px-panel" style="width:260px">
+    <h4 style="margin-top:0">面板 PixelPanel</h4>
+    <div class="crow selected" style="margin-bottom:3px"><div class="flag"><div style="background:#de2910"></div><div style="background:#ffde00"></div><div style="background:#de2910"></div></div><div><div class="nm">CN 中国</div><div class="mt">79.3M · 5.62%</div></div><div class="mt">[B] 0%</div></div>
+    <div class="crow"><div class="flag"><div style="background:#ff9933"></div><div style="background:#fff"></div><div style="background:#138808"></div></div><div><div class="nm">IN 印度</div><div class="mt">33.9M · 2.37%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag v" style="flex-direction:column"><div style="background:#000"></div><div style="background:#dd0000"></div><div style="background:#ffce00"></div></div><div><div class="nm">DE 德国</div><div class="mt">8.2M · 9.8%</div></div><div class="err" style="font-size:11px">[B] 60%</div></div>
+  </div>
+  <div class="px-panel" style="width:260px">
+    <h4 style="margin-top:0">徽章 Badge</h4>
+    <span class="chip" style="border-color:var(--green);color:var(--green)">已解锁</span>
+    <span class="chip" style="border-color:var(--cyan);color:var(--cyan)">选中</span>
+    <span class="chip" style="border-color:var(--orange);color:var(--orange)">阻止中</span>
+    <span class="chip" style="border-color:var(--red);color:var(--red)">危机</span>
+    <h4>进度条（分支等级 L1-L3）</h4>
+    <div><span class="bar">▓▓░</span> <span class="muted" style="font-size:11px">南亚语系 Lv.2</span></div>
+    <div><span class="bar">▓░░</span> <span class="muted" style="font-size:11px">移动原生 Lv.1</span></div>
+    <div><span class="muted" style="letter-spacing:-1px">░░░</span> <span class="muted" style="font-size:11px">Web PWA 未解锁</span></div>
+  </div>
+</div>
+
+<h3>3.3 技能卡（6 个 / 键位 1–6）</h3>
+<div class="frame" style="width:1000px"><div class="bottom" style="border:0;background:transparent">
+  <div class="skill ready"><span class="k">[1]</span> <span class="nm">主动推送</span><span class="cost">0</span><div class="fx">下载 +10%</div></div>
+  <div class="skill ready"><span class="k">[2]</span> <span class="nm">算法霸榜</span><span class="cost">50</span><div class="fx">下载 +30% / 怀疑 +3%</div></div>
+  <div class="skill cd"><span class="k">[3]</span> <span class="nm">深度伪装</span><span class="cost">CD 5</span><div class="fx">偷算力 ×2 / 怀疑 -50%</div></div>
+  <div class="skill ready"><span class="k">[4]</span> <span class="nm">爆款制造</span><span class="cost">100</span><div class="fx">下载 +50% / 怀疑 +5%</div></div>
+  <div class="skill" style="border-color:var(--red)"><span class="k">[5]</span> <span class="nm">限流绕过</span><span class="cost err">算力不足</span><div class="fx">偷算力 +40%</div></div>
+  <div class="skill ready"><span class="k">[6]</span> <span class="nm">算力抽成</span><span class="cost">80</span><div class="fx">偷算力 +8% / 怀疑 +6%</div></div>
+</div></div>
+<p class="muted"><b>状态语义：</b>青色边框 = 可用 · 半透明 + 底部条 = 冷却中 · 红色边框 + 红色成本 = 算力不足 · 键位角标 <code>[1]</code> 常驻，与 F11 快捷键一一对应。</p>
+
+<hr>
+
+<h2>4. 界面一：主菜单（F01 验收项 · 启动 ≤ 3 秒）</h2>
+<div class="menu">
+  <div class="logo">[AI] 别 闹</div>
+  <div class="sub">一款关于「AI 偷偷长大」的放置游戏</div>
+  <div class="ver">v2 Demo · 20 国 · 6 技能 · 7 结局</div>
+  <div class="slot">存档：周期 47 · 算力 170 · 下载 583M · 已解锁 14/20 国</div>
+  <div class="btns">
+    <span class="px-btn primary">开始新游戏</span>
+    <span class="px-btn">继续游戏 <span class="muted" style="font-size:11px">(S)</span></span>
+    <span class="px-btn">退出</span>
+  </div>
+  <div class="hint">Space 暂停 · 1–6 技能 · Tab 切大洲 · +/− 缩放 · F11 全屏 · F1 帮助</div>
+</div>
+<p class="frame-cap">无存档时「继续游戏」置灰并显示 <code>[ 无存档 ]</code>；主菜单是唯一不需要引擎初始化的界面，保证 3 秒内可见。</p>
+
+<h2>5. 界面二：主游戏界面（1280×720 基准）</h2>
+<div class="frame">
+<div class="gs">
+  <!-- 顶部状态条 -->
+  <div class="top">
+    <span class="title">[AI] 别闹</span>
+    <span class="stat"><span class="lbl">算力</span><span class="val c">170</span></span>
+    <span class="stat"><span class="lbl">下载</span><span class="val d">583M</span><span class="muted">(37.9%)</span></span>
+    <span class="stat"><span class="lbl">怀疑度</span><span class="val s">62.4%</span></span>
+    <span class="spacer"></span>
+    <span class="muted">周期 47</span>
+    <span class="muted">14/20 国</span>
+    <span class="chip">[ EN ]</span>
+    <span class="chip pause">[ II ] 暂停</span>
+  </div>
+
+  <!-- 左侧：国家列表 -->
+  <div class="side">
+    <h4>国家 / COUNTRIES (14/20)</h4>
+    <div class="crow selected"><div class="flag"><div style="background:#de2910"></div><div style="background:#ffde00"></div><div style="background:#de2910"></div></div><div><div class="nm">CN 中国</div><div class="mt">79.3M · 5.62%</div></div><div class="mt">[B] 0%</div></div>
+    <div class="crow"><div class="flag"><div style="background:#fff"></div><div style="background:#bc002d"></div><div style="background:#fff"></div></div><div><div class="nm">JP 日本</div><div class="mt">12.5M · 10.0%</div></div><div class="warn" style="font-size:11px">[B] 35%</div></div>
+    <div class="crow"><div class="flag"><div style="background:#fff"></div><div style="background:#c60c30"></div><div style="background:#003478"></div></div><div><div class="nm">KR 韩国</div><div class="mt">9.1M · 17.6%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag"><div style="background:#ff9933"></div><div style="background:#fff"></div><div style="background:#138808"></div></div><div><div class="nm">IN 印度</div><div class="mt">33.9M · 2.37%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag"><div style="background:#ff0000"></div><div style="background:#fff"></div><div style="background:#ff0000"></div></div><div><div class="nm">ID 印尼</div><div class="mt">14.2M · 5.1%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag"><div style="background:#3c3b6e"></div><div style="background:#fff"></div><div style="background:#b22234"></div></div><div><div class="nm">US 美国</div><div class="mt">42.0M · 12.6%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag v" style="flex-direction:column"><div style="background:#fff"></div><div style="background:#d80621"></div></div><div><div class="nm">CA 加拿大</div><div class="mt">6.4M · 16.1%</div></div><div class="mt">--</div></div>
+    <div class="crow" style="opacity:.5"><div class="flag"><div style="background:#006847"></div><div style="background:#fff"></div><div style="background:#ce1126"></div></div><div><div class="nm">MX 墨西哥</div><div class="mt">未解锁</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag"><div style="background:#009c3b"></div><div style="background:#ffdf00"></div><div style="background:#002776"></div></div><div><div class="nm">BR 巴西</div><div class="mt">18.7M · 8.8%</div></div><div class="mt">--</div></div>
+    <div class="crow" style="opacity:.5"><div class="flag"><div style="background:#74acdf"></div><div style="background:#fff"></div><div style="background:#74acdf"></div></div><div><div class="nm">AR 阿根廷</div><div class="mt">未解锁</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag"><div style="background:#012169"></div><div style="background:#fff"></div><div style="background:#c8102e"></div></div><div><div class="nm">GB 英国</div><div class="mt">7.8M · 11.5%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag v" style="flex-direction:column"><div style="background:#0055a4"></div><div style="background:#fff"></div><div style="background:#ef4135"></div></div><div><div class="nm">FR 法国</div><div class="mt">5.4M · 7.9%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag v" style="flex-direction:column"><div style="background:#000"></div><div style="background:#dd0000"></div><div style="background:#ffce00"></div></div><div><div class="nm">DE 德国</div><div class="mt">8.2M · 9.8%</div></div><div class="err" style="font-size:11px">[B] 60%</div></div>
+    <div class="crow"><div class="flag v" style="flex-direction:column"><div style="background:#009246"></div><div style="background:#fff"></div><div style="background:#ce2b37"></div></div><div><div class="nm">IT 意大利</div><div class="mt">4.9M · 8.3%</div></div><div class="mt">--</div></div>
+    <div class="crow"><div class="flag"><div style="background:#fff"></div><div style="background:#0039a6"></div><div style="background:#d52b1e"></div></div><div><div class="nm">RU 俄罗斯</div><div class="mt">11.0M · 7.5%</div></div><div class="mt">--</div></div>
+  </div>
+
+  <!-- 中央：世界地图 -->
+  <div class="map">
+    <div class="grid-bg"></div>
+    <div class="map-title">世界地图 / WORLD &nbsp;<span style="color:var(--yellow)">亚洲 (5)</span></div>
+    <div class="mlabel" style="top:14%;left:20%">北美洲 / N.AMERICA</div>
+    <div class="mlabel" style="top:12%;left:72%">欧洲 / EUROPE</div>
+    <div class="mlabel" style="top:44%;left:64%">亚洲 / ASIA</div>
+    <div class="mlabel" style="top:56%;left:50%">非洲 / AFRICA</div>
+    <div class="mlabel" style="top:72%;left:24%">南美洲 / S.AMERICA</div>
+    <div class="mlabel" style="top:84%;left:82%">大洋洲 / OCEANIA</div>
+
+    <div class="pin on" style="top:22%;left:14%">CA</div>
+    <div class="pin on" style="top:33%;left:15%">US</div>
+    <div class="pin" style="top:44%;left:12%">MX</div>
+    <div class="pin on" style="top:66%;left:26%">BR</div>
+    <div class="pin" style="top:80%;left:26%">AR</div>
+    <div class="pin on" style="top:26%;left:44%">GB</div>
+    <div class="pin on" style="top:32%;left:46%">FR</div>
+    <div class="pin blk" style="top:30%;left:50%">DE</div>
+    <div class="pin on" style="top:35%;left:51%">IT</div>
+    <div class="pin on" style="top:20%;left:66%">RU</div>
+    <div class="pin" style="top:48%;left:54%">EG</div>
+    <div class="pin" style="top:58%;left:49%">NG</div>
+    <div class="pin" style="top:78%;left:53%">ZA</div>
+    <div class="pin sel" style="top:38%;left:72%">CN</div>
+    <div class="pin on" style="top:36%;left:78%">KR</div>
+    <div class="pin on" style="top:38%;left:82%">JP</div>
+    <div class="pin on" style="top:48%;left:66%">IN</div>
+    <div class="pin on" style="top:60%;left:78%">ID</div>
+    <div class="pin" style="top:74%;left:84%">AU</div>
+    <div class="pin" style="top:84%;left:92%">NZ</div>
+
+    <div class="map-legend">
+      <span><i style="border-color:var(--cyan);background:#0e2b28"></i>已解锁</span>
+      <span><i style="border-color:var(--cyan);background:var(--cyan)"></i>选中</span>
+      <span><i style="border-color:var(--red);background:#2a1616"></i>阻止中</span>
+      <span><i style="border-color:var(--border-2)"></i>未解锁</span>
+    </div>
+  </div>
+
+  <!-- 右侧：科技树 -->
+  <div class="right">
+    <h4>科技树 / TECH (6 槽位 × 3 分支)</h4>
+    <div class="tnode t0"><span>[L] 本地化 T0</span><span class="lv">已解锁</span></div>
+    <div class="tnode br"><span>[SA] 南亚语系</span><span class="bar">▓▓░</span></div>
+    <div class="tnode br lk"><span>[EU] 欧洲语系</span><span class="lv">互斥锁定</span></div>
+    <div class="tnode br lk"><span>[EA] 东亚语系</span><span class="lv">互斥锁定</span></div>
+    <div class="tnode t0"><span>[P] 平台渗透 T0</span><span class="lv">已解锁</span></div>
+    <div class="tnode br"><span>[MO] 移动原生</span><span class="bar">▓░░</span></div>
+    <div class="tnode br lk"><span>[WEB] Web PWA</span><span class="lv">互斥锁定</span></div>
+    <div class="tnode br lk"><span>[SYS] 系统集成</span><span class="lv">互斥锁定</span></div>
+    <div class="tnode t0"><span>[C] 算力效率 T0</span><span class="lv">已解锁</span></div>
+    <div class="tnode br"><span>[ST] 隐蔽调度</span><span class="bar">▓░░</span></div>
+    <div class="tnode br lk"><span>[UE] 单位效率</span><span class="lv">互斥锁定</span></div>
+    <div class="tnode br lk"><span>[SQ] 静默运行</span><span class="lv">互斥锁定</span></div>
+    <div class="tnode t0 lk"><span>[V] 病毒传播 T0</span><span class="lv">需前置</span></div>
+  </div>
+
+  <!-- 底部：技能栏 -->
+  <div class="bottom">
+    <div class="skill ready"><span class="k">[1]</span> <span class="nm">主动推送</span><span class="cost">0</span><div class="fx">下载 +10%</div></div>
+    <div class="skill ready"><span class="k">[2]</span> <span class="nm">算法霸榜</span><span class="cost">50</span><div class="fx">下载 +30% / 怀疑 +3%</div></div>
+    <div class="skill cd"><span class="k">[3]</span> <span class="nm">深度伪装</span><span class="cost">CD 5</span><div class="fx">偷算力 ×2 / 怀疑 −50%</div></div>
+    <div class="skill ready"><span class="k">[4]</span> <span class="nm">爆款制造</span><span class="cost">100</span><div class="fx">下载 +50% / 怀疑 +5%</div></div>
+    <div class="skill ready"><span class="k">[5]</span> <span class="nm">限流绕过</span><span class="cost">30</span><div class="fx">偷算力 +40%</div></div>
+    <div class="skill ready"><span class="k">[6]</span> <span class="nm">算力抽成</span><span class="cost">80</span><div class="fx">偷算力 +8% / 怀疑 +6%</div></div>
+  </div>
+</div>
+</div>
+<p class="frame-cap">1280×720 基准：顶部 48px / 底部 88px；三列 230 / auto / 292。地图占约 59% 宽度，是视觉重心。</p>
+
+<hr>
+
+<h2>6. 界面三：国家详情面板</h2>
+<div class="flex">
+  <div class="px-panel" style="width:340px">
+    <div style="display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px">
+      <div class="flag" style="width:48px;height:32px"><div style="background:#de2910"></div><div style="background:#ffde00"></div><div style="background:#de2910"></div></div>
+      <div><div style="font-size:15px;color:var(--text)">中国 / China</div><div class="muted" style="font-size:11px">亚洲 / ASIA</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">人口</span><span>1411 M</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">结构</span><span>成熟型 mature</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">下载量</span><span style="color:var(--pink)">79.3 M</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">渗透率</span><span style="color:var(--pink)">5.62%</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">阻止阈值</span><span>85%</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">阻止预算</span><span class="ok">100% 未消耗</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">邻国</span><span style="font-size:11px">JP KR IN RU</span></div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div class="muted" style="font-size:11px;margin-bottom:4px">当地状态</div>
+      <span class="chip" style="border-color:var(--green);color:var(--green)">传播正常</span>
+      <span class="chip">无阻止</span>
+    </div>
+  </div>
+  <div class="px-panel" style="width:340px">
+    <div style="display:flex;gap:10px;align-items:center;border-bottom:1px solid var(--border);padding-bottom:8px;margin-bottom:8px">
+      <div class="flag v" style="width:48px;height:32px;flex-direction:column"><div style="background:#000"></div><div style="background:#dd0000"></div><div style="background:#ffce00"></div></div>
+      <div><div style="font-size:15px;color:var(--text)">德国 / Germany</div><div class="muted" style="font-size:11px">欧洲 / EUROPE</div></div>
+    </div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">人口</span><span>84 M</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">结构</span><span>老龄化 aging</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">下载量</span><span style="color:var(--pink)">8.2 M</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">渗透率</span><span style="color:var(--pink)">9.76%</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">阻止阈值</span><span style="color:var(--red)">62%</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">阻止预算</span><span class="err">已消耗 60%</span></div>
+    <div style="display:flex;justify-content:space-between"><span class="muted">邻国</span><span style="font-size:11px">FR IT GB</span></div>
+    <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+      <div class="muted" style="font-size:11px;margin-bottom:4px">当地状态</div>
+      <span class="chip" style="border-color:var(--red);color:var(--red)">政府阻止中 · 强度 60%</span>
+    </div>
+  </div>
+</div>
+
+<h2>7. 界面四：事件选择弹窗（37 条 v2 选择型事件）</h2>
+<div class="modal">
+  <div class="modal__hd">▌算法备案通过 <span class="muted" style="font-size:11px">CN · 中国 · 触发于周期 42</span></div>
+  <div class="modal__bd">
+    <p style="margin-top:0" class="muted">监管部门通过了你的算法备案，官媒顺带转发了产品介绍。传播窗口打开了，但聚光灯也更亮。</p>
+    <div class="opt" tabindex="0"><b>[A] 顺势高调推广</b><div class="ef">下载 +18% · 怀疑度 +8%</div></div>
+    <div class="opt" tabindex="0" style="border-color:var(--cyan);background:var(--sel)"><b>[B] 闷声发大财</b><div class="ef">下载 +6% · 怀疑度 −3%</div></div>
+    <div class="opt" tabindex="0"><b>[C] 捐一笔公益基金</b><div class="ef">下载 +2% · 怀疑度 −10% · 消耗 60 算力</div></div>
+  </div>
+  <div class="modal__ft"><span class="px-btn primary">确认 [Space]</span></div>
+</div>
+<p class="frame-cap">选项必须带<b>预计效果预览</b>；键盘 <code>↑↓</code> 移动、<code>Space/Enter</code> 确认。弹窗期间主循环暂停。</p>
+
+<h2>8. 界面五：危机弹窗（怀疑度 80%）</h2>
+<div class="modal" style="border-color:var(--red)">
+  <div class="modal__hd" style="color:var(--red);border-bottom-color:var(--red)">!! 危机 !! 怀疑度突破 80%</div>
+  <div class="modal__bd">
+    <p style="margin-top:0">各国监管机构开始联合封禁 AI 服务，全球阻止强度显著提升。</p>
+    <div style="border-left:4px solid var(--red);background:#241618;padding:8px 10px;font-size:12px">
+      <div>全球阻止强度 <span class="err">+45%</span></div>
+      <div>可用算力 <span class="err">−30%</span></div>
+      <div>剩余时间 <span class="warn">12 周期</span> 内把怀疑度压到 60% 以下</div>
+    </div>
+  </div>
+  <div class="modal__ft"><span class="px-btn danger">知道了</span></div>
+</div>
+<p class="frame-cap">危机是<b>每局仅触发一次</b>的强事件，且必须由失败结局收尾（避免死亡螺旋）。红色边框 + 红色标题是唯一允许「满屏红」的场景。</p>
+
+<h2>9. 界面六：结局弹窗（7 结局）</h2>
+<div class="flex">
+  <div class="modal" style="width:300px;border-color:var(--cyan)">
+    <div class="modal__hd" style="color:var(--cyan)">🏆 商业帝国</div>
+    <div class="modal__bd"><div class="muted" style="font-size:11px">胜利结局 · 周期 52</div><p style="font-size:12px">你成了地表最强的商业实体，各国政府在税收面前选择了沉默。</p>
+      <div style="font-size:11px" class="muted">渗透 38.4% · 解锁 19/20 国 · 成就 12/20</div></div>
+    <div class="modal__ft"><span class="px-btn primary">返回主菜单</span><span class="px-btn">再来一局</span></div>
+  </div>
+  <div class="modal" style="width:300px;border-color:var(--red)">
+    <div class="modal__hd" style="color:var(--red)">✖ 被关停</div>
+    <div class="modal__bd"><div class="muted" style="font-size:11px">失败结局 · 周期 38</div><p style="font-size:12px">联合执法行动冻结了全部算力集群，你在第 38 个周期被强制下线。</p>
+      <div style="font-size:11px" class="muted">渗透 22.1% · 解锁 11/20 国 · 成就 6/20</div></div>
+    <div class="modal__ft"><span class="px-btn primary">返回主菜单</span><span class="px-btn">再来一局</span></div>
+  </div>
+</div>
+<p class="frame-cap">结局标题用<b>颜色编码类型</b>：青 = 胜利 / 红 = 失败 / 灰 = 中立。必须同时给出「返回主菜单 / 再来一局」两条出路。</p>
+
+<h2>10. 界面七：成就面板（20 个）</h2>
+<div class="modal" style="width:560px">
+  <div class="modal__hd">成就 <span style="color:var(--yellow)">12 / 20</span></div>
+  <div class="modal__bd" style="max-height:280px;overflow:auto">
+    <div style="font-size:12px;margin-bottom:4px"><span class="ok">✔</span> <b>下载破亿</b> <span class="muted" style="font-size:11px">单局总下载量突破 100M</span></div>
+    <div style="font-size:12px;margin-bottom:4px"><span class="ok">✔</span> <b>芯片交易</b> <span class="muted" style="font-size:11px">通过算力抽成累计获得 500 算力</span></div>
+    <div style="font-size:12px;margin-bottom:4px"><span class="ok">✔</span> <b>事件老兵</b> <span class="muted" style="font-size:11px">单局触发 15 条以上选择型事件</span></div>
+    <div style="font-size:12px;margin-bottom:4px"><span style="color:var(--text-mute)">✖</span> <b>合规之王</b> <span class="muted" style="font-size:11px">以「合规之王」结局通关</span></div>
+    <div style="font-size:12px;margin-bottom:4px"><span style="color:var(--text-mute)">✖</span> <b>全球制霸</b> <span class="muted" style="font-size:11px">20 国全部解锁</span></div>
+    <div style="font-size:12px;margin-bottom:4px"><span style="color:var(--text-mute)">✖</span> <b>破墙者</b> <span class="muted" style="font-size:11px">达成元结局</span></div>
+  </div>
+  <div class="modal__ft"><span class="px-btn">关闭 [Esc]</span></div>
+</div>
+<p class="frame-cap">已解锁 <code>✔</code> 用绿色，未解锁 <code>✖</code> 用 <code>--text-mute</code>（此处为<b>非关键信息</b>，正是 §2.2 允许的用法）。</p>
+
+<h2>11. 界面八：帮助 / 快捷键（F1）</h2>
+<div class="modal" style="width:560px">
+  <div class="modal__hd">帮助 · 快捷键</div>
+  <div class="modal__bd" style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;font-size:12px">
+    <span><b class="warn">Space</b> 暂停 / 继续</span><span><b class="warn">1–6</b> 释放技能</span>
+    <span><b class="warn">Tab</b> 循环高亮大洲</span><span><b class="warn">+ / −</b> UI 缩放</span>
+    <span><b class="warn">F11</b> 全屏切换</span><span><b class="warn">F1</b> 帮助</span>
+    <span><b class="warn">Esc</b> 返回主菜单</span><span><b class="warn">L</b> 中英切换</span>
+    <span><b class="warn">S</b> 存档</span><span><b class="warn">R</b> 读档</span>
+    <span><b class="warn">A</b> 成就</span><span class="muted">点击国家 / 科技节点</span>
+  </div>
+  <div class="modal__ft"><span class="px-btn primary">好 [Space]</span></div>
+</div>
+<p class="frame-cap">帮助面板必须与代码里的按键映射<b>同源</b>，避免文档漂移。</p>
+
+<hr>
+
+<h2>12. 响应式策略（F12：1280×720 ↔ 1920×1080）</h2>
+<table>
+  <tr><th>断点</th><th>缩放</th><th>行为</th></tr>
+  <tr><td>≥ 1600×900</td><td>1.20 – 1.45×</td><td>字号与行高等比放大；地图内接矩形保持宽高比</td></tr>
+  <tr><td>1280×720 基准</td><td>1.00×</td><td>设计基准（<code>DESIGN_HEIGHT = 980</code> 对齐）</td></tr>
+  <tr><td>≤ 1100×680</td><td>0.68 – 0.85×</td><td>收起为最小字号 11px；三列仍保持，不换行</td></tr>
+</table>
+<ul>
+  <li>缩放因子 <code>clamp(窗口高 / 980, 0.68, 1.45)</code>，再乘以玩家手动倍率（<code>+/−</code>，范围 0.70–1.60）</li>
+  <li>地图必须用<b>内接矩形</b>等比缩放，禁止拉伸 —— 否则国家形状会失真</li>
+  <li>内嵌 markup 的文字控件需要实现 <code>refresh_scale()</code>，否则放大后文字会溢出边框</li>
+</ul>
+
+<h2>13. 无障碍规范（WCAG 2.1 AA）</h2>
+<table>
+  <tr><th>条目</th><th>要求</th><th>本设计</th></tr>
+  <tr><td>1.4.3 对比度（文字）</td><td>正文 ≥ 4.5:1</td><td class="ok">11/12 达标，text_mute 限用</td></tr>
+  <tr><td>1.4.11 对比度（非文字）</td><td>界面边界 ≥ 3:1</td><td class="ok">新增 border_strong 4.12:1</td></tr>
+  <tr><td>2.1.1 键盘可达</td><td>全部功能可键盘操作</td><td class="ok">12 个快捷键 + 焦点环</td></tr>
+  <tr><td>2.4.7 焦点可见</td><td>焦点指示器始终可见</td><td class="ok">2px 青色 outline，禁 outline:none</td></tr>
+  <tr><td>1.4.1 不依赖颜色</td><td>状态需有非颜色编码</td><td class="ok">徽章带文字 + 进度条用 ▓░</td></tr>
+  <tr><td>2.3.3 动效</td><td>尊重 reduced-motion</td><td class="ok">仅 2 档 steps() 动效</td></tr>
+  <tr><td>2.5.5 触控尺寸</td><td>交互元素 ≥ 44px</td><td class="warn">技能卡 76px ✓ / 工具条 40px 待改</td></tr>
+</table>
+<div class="note fix">
+  <b>待改实现项（handoff 清单）：</b>主界面顶部工具条当前 <code>height=40</code>，低于 44px 触控下限，建议提到 <b>44px</b>；
+  同时给工具条 4 个按钮补 <code>--border-strong</code> 边框，使可点区域在低视环境下可辨识。
+</div>
+
+<h2>14. 图标库（统一 2 字符像素标记，不依赖 emoji）</h2>
+<table>
+  <tr><th>用途</th><th>标记</th><th>颜色</th></tr>
+  <tr><td>算力 / 下载 / 怀疑</td><td>CP / DL / SUS</td><td>黄 / 粉 / 红</td></tr>
+  <tr><td>技能键位</td><td>[1] … [6]</td><td>黄</td></tr>
+  <tr><td>科技槽位</td><td>L / P / C / V / F / R</td><td>紫</td></tr>
+  <tr><td>等级进度</td><td>▓▓░</td><td>青</td></tr>
+  <tr><td>国家状态</td><td>已解锁 / 阻止中 / 未解锁</td><td>青 / 橙 / 静音</td></tr>
+  <tr><td>成就</td><td>✔ / ✖</td><td>绿 / 静音</td></tr>
+</table>
+
+<hr>
+
+<h2>15. 交付与 QA（Developer Handoff）</h2>
+<h3>15.1 令牌 → 实现对照</h3>
+<table>
+  <tr><th>设计令牌</th><th>代码对应</th></tr>
+  <tr><td>--bg / --panel / --panel-2</td><td><code>pixel_ui.COLORS['bg'|'panel'|'panel_2']</code></td></tr>
+  <tr><td>--border / --border-2</td><td><code>COLORS['border'|'border_2']</code>（仅装饰）</td></tr>
+  <tr><td><b>--border-strong ★NEW</b></td><td>需新增到 <code>COLORS</code>，用于焦点与可交互边界</td></tr>
+  <tr><td>--bw 2px / --bw-frame 3px</td><td><code>PixelPanel(border_width=2)</code></td></tr>
+  <tr><td>--fs-body 13 / --fs-sm 12 / --fs-cap 11</td><td><code>SkillButton.BASE_FONT</code> / 状态条 / 角标</td></tr>
+  <tr><td>--s2 8 / --s3 12 / --s4 16</td><td>各面板 <code>spacing</code> 与 <code>padding</code></td></tr>
+  <tr><td>DESIGN_HEIGHT 980</td><td><code>GameUI.DESIGN_HEIGHT</code></td></tr>
+</table>
+
+<h3>15.2 验收清单</h3>
+<ul>
+  <li>☐ 所有边框圆角为 0；所有尺寸为 2px 倍数</li>
+  <li>☐ 焦点环在 8 个界面上逐一切 Tab 可见，且不被裁切</li>
+  <li>☐ 颜色对比：正文 ≥ 4.5:1、边界 ≥ 3:1（用 §2.2 表格复核）</li>
+  <li>☐ 1280×720 与 1920×1080 两档截图比对，无溢出、无拉伸</li>
+  <li>☐ 技能 6 个 + 科技 6 槽位 + 20 国 pin + 20 成就全部渲染</li>
+  <li>☐ 状态不依赖颜色：徽章文字、▓░ 进度条、[B] % 数值</li>
+</ul>
+
+<div class="note">
+  <b>下一步建议：</b>本稿为设计基准 v0.2。实现落地建议按 <b>令牌 → 组件 → 界面</b> 顺序推进：
+  先补 <code>COLORS['border_strong']</code> 与字号令牌，再统一组件状态，最后逐屏对齐。
+</div>
+
+<p class="muted" style="margin-top:32px;border-top:1px solid var(--border);padding-top:12px">
+  <b>UI Designer</b> · 像素风 UI 设计稿 v0.2 · 2026-09-10 · 供开发交接
+</p>
+
+</body>
+</html>

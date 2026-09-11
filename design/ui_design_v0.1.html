@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="1FMCAohCTKfHHjBy7YFcIy">
+<head data-page-node-id="PyqdjoBohXd2E9CoAbjVN5">
+<meta charset="UTF-8" data-page-node-id="KZ6PKXMb6XHJUUMFrkhl1p">
+<title>AI 别闹 · 像素风 UI 设计稿 v0.1</title>
+<style>
+  /* ====================== 基础 ====================== */
+  :root {
+    --bg:        #0d1117;
+    --panel:     #161b22;
+    --panel-2:   #1f2630;
+    --border:    #30363d;
+    --border-2:  #484f58;
+    --text:      #e6edf3;
+    --text-dim:  #8b949e;
+    --text-mute: #6e7681;
+    --cyan:      #4ec9b0;
+    --pink:      #f97583;
+    --yellow:    #dcdcaa;
+    --green:     #6a9955;
+    --purple:    #c586c0;
+    --orange:    #ffa657;
+    --red:       #ff7b72;
+  }
+  * { box-sizing: border-box; image-rendering: pixelated; image-rendering: crisp-edges; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  body { padding: 24px 32px 80px; max-width: 1280px; margin: 0 auto; }
+  h1, h2, h3, h4 { font-weight: 700; margin: 24px 0 12px; letter-spacing: 0.02em; }
+  h1 { font-size: 22px; color: var(--cyan); border-bottom: 2px solid var(--border); padding-bottom: 8px; }
+  h2 { font-size: 18px; color: var(--yellow); border-left: 4px solid var(--yellow); padding-left: 10px; }
+  h3 { font-size: 15px; color: var(--pink); margin-top: 18px; }
+  h4 { font-size: 13px; color: var(--text-dim); margin-top: 14px; }
+  p, li { font-size: 13px; }
+  code, .mono { font-family: inherit; background: var(--panel-2); padding: 1px 6px; border: 1px solid var(--border); color: var(--yellow); }
+  .muted { color: var(--text-dim); }
+  .ok { color: var(--green); }
+  .warn { color: var(--orange); }
+  .err { color: var(--red); }
+  hr { border: 0; border-top: 1px dashed var(--border); margin: 32px 0; }
+
+  /* ====================== 色板 ====================== */
+  .palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .swatch {
+    border: 2px solid var(--border-2);
+    padding: 12px 8px 8px;
+    font-size: 11px;
+    text-align: center;
+  }
+  .swatch .block { height: 40px; margin-bottom: 6px; border: 1px solid var(--border); }
+
+  /* ====================== 像素容器 ====================== */
+  .px-panel {
+    background: var(--panel);
+    border: 2px solid var(--border-2);
+    padding: 8px;
+    position: relative;
+  }
+  .px-panel-light {
+    background: var(--panel-2);
+    border: 2px solid var(--border);
+    padding: 6px;
+  }
+  .px-btn {
+    background: var(--panel-2);
+    border: 2px solid var(--border-2);
+    color: var(--text);
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    display: inline-block;
+    text-align: center;
+  }
+  .px-btn.primary { background: #1e3a3a; border-color: var(--cyan); color: var(--cyan); }
+  .px-btn.danger  { background: #3a1e1e; border-color: var(--red);   color: var(--red);   }
+  .px-btn.warning { background: #3a3a1e; border-color: var(--yellow);color: var(--yellow);}
+
+  /* ====================== 主游戏界面 ====================== */
+  .game-screen {
+    width: 1280px; height: 720px;
+    border: 3px solid var(--border-2);
+    background: var(--bg);
+    display: grid;
+    grid-template-rows: 48px 1fr 80px;
+    grid-template-columns: 220px 1fr 280px;
+    grid-template-areas:
+      "topbar  topbar   topbar"
+      "side    map      right"
+      "bottom  bottom   bottom";
+    gap: 4px;
+    padding: 4px;
+    margin: 12px 0;
+    box-shadow: 6px 6px 0 rgba(0,0,0,0.5);
+  }
+  .gs-topbar {
+    grid-area: topbar;
+    background: var(--panel);
+    border: 2px solid var(--border-2);
+    display: flex; align-items: center; padding: 0 10px; gap: 14px;
+    font-size: 12px;
+  }
+  .gs-topbar .title { color: var(--cyan); font-size: 14px; font-weight: bold; }
+  .gs-topbar .stat { display: flex; align-items: center; gap: 6px; }
+  .gs-topbar .stat .lbl { color: var(--text-dim); }
+  .gs-topbar .stat .val { color: var(--text); font-weight: bold; }
+  .gs-topbar .stat .val.c { color: var(--yellow); }
+  .gs-topbar .stat .val.d { color: var(--pink); }
+  .gs-topbar .stat .val.s { color: var(--red); }
+  .gs-topbar .spacer { flex: 1; }
+  .gs-topbar .lang {
+    border: 2px solid var(--border-2); padding: 4px 10px; color: var(--text-dim);
+    background: var(--panel-2);
+  }
+  .gs-topbar .pause {
+    border: 2px solid var(--yellow); padding: 4px 10px; color: var(--yellow);
+    background: var(--panel-2);
+  }
+
+  .gs-side {
+    grid-area: side;
+    background: var(--panel);
+    border: 2px solid var(--border-2);
+    padding: 6px;
+    overflow: hidden;
+  }
+  .gs-side h4 { margin: 4px 0; color: var(--cyan); font-size: 12px; }
+  .country-row {
+    display: grid; grid-template-columns: 24px 1fr auto; gap: 6px;
+    align-items: center; padding: 4px 4px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    background: var(--panel-2);
+    margin-bottom: 2px;
+  }
+  .country-row.selected { border: 1px solid var(--cyan); background: #1e3a3a; }
+  .country-row .flag { width: 24px; height: 16px; overflow: hidden; }
+  .country-row .name { color: var(--text); }
+  .country-row .meta { color: var(--text-dim); font-size: 10px; }
+
+  .gs-map {
+    grid-area: map;
+    background: #0a1828;
+    border: 2px solid var(--border-2);
+    position: relative;
+    overflow: hidden;
+  }
+  .map-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(78,201,176,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(78,201,176,0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .map-pin {
+    position: absolute;
+    width: 28px; height: 28px;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: bold;
+    border: 2px solid var(--cyan);
+    background: rgba(78,201,176,0.2);
+    color: var(--cyan);
+    box-sizing: border-box;
+  }
+  .map-pin.unlocked { background: rgba(78,201,176,0.5); color: var(--text); }
+  .map-pin.blocked  { border-color: var(--red); background: rgba(255,123,114,0.4); color: var(--red); }
+  .map-label {
+    position: absolute;
+    color: var(--text-mute); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.15em;
+    pointer-events: none;
+  }
+
+  .gs-right {
+    grid-area: right;
+    background: var(--panel);
+    border: 2px solid var(--border-2);
+    padding: 6px;
+    overflow: hidden;
+  }
+  .gs-right h4 { margin: 4px 0; color: var(--purple); font-size: 12px; }
+  .tech-node {
+    border: 2px solid var(--border);
+    background: var(--panel-2);
+    padding: 4px 6px;
+    margin-bottom: 4px;
+    font-size: 11px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .tech-node.t0 { border-color: var(--cyan); }
+  .tech-node.branch { border-color: var(--purple); }
+  .tech-node.locked { opacity: 0.4; }
+  .tech-node .lv { color: var(--yellow); }
+
+  .gs-bottom {
+    grid-area: bottom;
+    background: var(--panel);
+    border: 2px solid var(--border-2);
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+    padding: 6px;
+  }
+  .skill-btn {
+    background: var(--panel-2);
+    border: 2px solid var(--border-2);
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text);
+  }
+  .skill-btn .ic { color: var(--cyan); font-weight: bold; margin-right: 6px; }
+  .skill-btn .cost { color: var(--yellow); float: right; }
+  .skill-btn.cold { opacity: 0.5; border-color: var(--text-mute); }
+  .skill-btn.no-c { border-color: var(--red); color: var(--red); }
+
+  /* ====================== 国家详情面板 ====================== */
+  .detail-panel {
+    width: 360px;
+    background: var(--panel);
+    border: 3px solid var(--cyan);
+    padding: 10px;
+    font-size: 12px;
+  }
+  .detail-panel .head {
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 2px solid var(--border); padding-bottom: 6px;
+  }
+  .detail-panel .flag-big {
+    width: 48px; height: 32px; overflow: hidden;
+    border: 2px solid var(--border-2);
+  }
+  .detail-panel .head .name { font-size: 14px; color: var(--text); font-weight: bold; }
+  .detail-panel .head .region { color: var(--text-dim); font-size: 11px; }
+  .detail-panel .row {
+    display: grid; grid-template-columns: 90px 1fr; gap: 6px;
+    padding: 3px 0;
+    border-bottom: 1px dotted var(--border);
+  }
+  .detail-panel .row .lbl { color: var(--text-dim); }
+  .detail-panel .row .val { color: var(--text); }
+  .detail-panel .bar {
+    height: 14px;
+    border: 1px solid var(--border-2);
+    background: var(--panel-2);
+    position: relative;
+    margin: 4px 0;
+  }
+  .detail-panel .bar .fill {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    background: var(--cyan);
+  }
+  .detail-panel .bar.warn .fill { background: var(--orange); }
+  .detail-panel .bar.danger .fill { background: var(--red); }
+  .detail-panel .btn-row { display: flex; gap: 6px; margin-top: 8px; }
+
+  /* ====================== 弹窗 ====================== */
+  .modal-overlay {
+    position: relative;
+    background: rgba(0,0,0,0.6);
+    padding: 30px;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 360px;
+  }
+  .modal {
+    width: 480px;
+    background: var(--panel);
+    border: 4px solid var(--red);
+    padding: 20px;
+    text-align: center;
+    box-shadow: 8px 8px 0 rgba(0,0,0,0.6);
+  }
+  .modal h2 {
+    color: var(--red); font-size: 22px; border: 0; padding: 0; margin: 0 0 12px;
+    letter-spacing: 0.1em;
+  }
+  .modal .msg { color: var(--text); font-size: 13px; margin: 8px 0; }
+  .modal .hint { color: var(--text-dim); font-size: 11px; margin: 8px 0 16px; }
+  .modal .btn { display: inline-block; padding: 8px 24px; border: 2px solid var(--border-2); background: var(--panel-2); }
+
+  /* ====================== 像素国旗 (12×8 grid) ====================== */
+  .px-flag {
+    display: grid;
+    width: 24px; height: 16px;
+    border: 1px solid var(--border-2);
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    overflow: hidden;
+  }
+  .px-flag > div { width: 100%; height: 100%; }
+  .px-flag.h3 > div:nth-child(1) { grid-row: 1 / 3; }
+  .px-flag.h3 > div:nth-child(2) { grid-row: 3 / 6; }
+  .px-flag.h3 > div:nth-child(3) { grid-row: 6 / 9; }
+  .px-flag.v3 > div:nth-child(1) { grid-column: 1 / 2; grid-row: 1 / -1; }
+  .px-flag.v3 > div:nth-child(2) { grid-column: 2 / 3; grid-row: 1 / -1; }
+  .px-flag.v3 > div:nth-child(3) { grid-column: 3 / 4; grid-row: 1 / -1; }
+
+  /* ====================== 图标网格 ====================== */
+  .icon-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+  .icon-cell {
+    background: var(--panel);
+    border: 2px solid var(--border);
+    padding: 10px 6px;
+    text-align: center;
+    font-size: 11px;
+  }
+  .icon-cell .ic {
+    width: 32px; height: 32px;
+    margin: 0 auto 6px;
+    display: grid; place-items: center;
+    font-size: 20px; line-height: 1;
+    background: var(--panel-2); border: 2px solid var(--border-2);
+  }
+  .icon-cell .name { color: var(--text); }
+  .icon-cell .desc { color: var(--text-dim); font-size: 10px; margin-top: 2px; }
+
+  /* ====================== 表格 ====================== */
+  table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+  th, td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+  th { background: var(--panel-2); color: var(--cyan); }
+  td { background: var(--panel); }
+
+  /* ====================== 注释块 ====================== */
+  .note {
+    background: var(--panel-2);
+    border-left: 4px solid var(--cyan);
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 12px;
+  }
+  .note.warn { border-left-color: var(--orange); }
+  .note.err  { border-left-color: var(--red); }
+</style>
+</head>
+<body data-page-node-id="G8Q0ouIWjGVVVa55XthscY">
+
+<h1 data-page-node-id="oOfvPbVx9tvxnptlOdPqH8">AI 别闹 · 像素风 UI 设计稿 v0.1</h1>
+<p class="muted" data-page-node-id="nEnzWpBqACuOPTSmCAtaQz">
+  目标：模仿 <b data-page-node-id="7qAWF9JZNPqyFj9iohj5k6">Plague Inc.</b> 的大地图 + 紧凑操作面板布局；采用 <b data-page-node-id="1Uw2NYhLYmHY2QZX88O1ow">8/16-bit 像素风</b>；先审稿再改代码。
+</p>
+
+<hr data-page-node-id="kf1GrRYyvjMMdAy1ibnVYj">
+
+<h2 data-page-node-id="BEWs4xgulOCNsMjSl9U5b5">1. 设计原则</h2>
+<ul data-page-node-id="tB8TghKvEGmFF9pYczZt31">
+  <li data-page-node-id="71whNWhvmg8GJbgbwV0wc9"><b data-page-node-id="euj5iuBcPW1GBciTFNMpGU">地图为中心</b> —— 世界地图占满主区，国家以发光点 + 像素色块呈现（解决"看不见地图"问题）</li>
+  <li data-page-node-id="xHLoehx6QzCotHf1CCTIDM"><b data-page-node-id="GNC8GVH5wD1K7RHlCxGJYL">极简操作</b> —— 顶部状态条 + 底部 3 个技能按钮 + 侧边可折叠面板</li>
+  <li data-page-node-id="ZdoDCHOcuV8VxpzHDCg9Kq"><b data-page-node-id="SNOvYcg1ReAoIlfDFFhFqJ">像素风</b> —— 2px 硬边框、无渐变、限制色板、像素字体（系统等宽）</li>
+  <li data-page-node-id="CI3XYH0jqM0ixMnE7q1tvW"><b data-page-node-id="nwE3pWpjnYKSL9rvPbhY87">即视即玩</b> —— 不需要教程，新玩家看一眼就知道"点地图→点技能→点科技"</li>
+</ul>
+
+<h2 data-page-node-id="EScueVx6Dooekuk5omdcHQ">2. 配色方案（16 色限制调色板）</h2>
+<div class="palette" data-page-node-id="s1lA3LYHLDxJf2tZ380pLm">
+  <div class="swatch" data-page-node-id="ylU29raYcAV4wWanUo9uVV"><div class="block" style="background:#0d1117" data-page-node-id="OmZmHoskkejBnosDQGzk24"></div><b data-page-node-id="2JfGgc8R0dQ6IPUlSIDimq">#0d1117</b><br data-page-node-id="h0B1cTX3IbOiWOvSovXYMa">背景</div>
+  <div class="swatch" data-page-node-id="grKjleMMqD16u1zq1fALbO"><div class="block" style="background:#161b22" data-page-node-id="O6y39ke2IZDgl17oTuot1r"></div><b data-page-node-id="gLYwH0ZODYm3vx90uTvDbr">#161b22</b><br data-page-node-id="WScofm1DMS49eIJV0k6t2L">面板</div>
+  <div class="swatch" data-page-node-id="NxvyNnsG8lG3SQVmxdVSvP"><div class="block" style="background:#1f2630" data-page-node-id="IkudvnFu233X9dQx6E0MLI"></div><b data-page-node-id="6l683zAoyBbbyMfzNbfzpq">#1f2630</b><br data-page-node-id="7cw6WNvPFTPsgquxF126BF">浅面板</div>
+  <div class="swatch" data-page-node-id="UAUbF1YXw5V0pRkpS3SPIA"><div class="block" style="background:#30363d" data-page-node-id="L2E8ZX4HCYGg8hCWWPlMHU"></div><b data-page-node-id="j2GiXwmCbKo6cdwSyYf5Fp">#30363d</b><br data-page-node-id="V5FWTKRSgLC16Ae6f3gSnh">边框</div>
+  <div class="swatch" data-page-node-id="sHZF1UAlpgz3vpUsrVPBy3"><div class="block" style="background:#484f58" data-page-node-id="O46I62jHUomHXxkvzeUARZ"></div><b data-page-node-id="Wu21JgB3FiLhs5KO9twBbP">#484f58</b><br data-page-node-id="iY8Wii9m25oEKnpOsHDUFt">亮边框</div>
+  <div class="swatch" data-page-node-id="aHpqFcYJxcC9sDnP9NtS2D"><div class="block" style="background:#e6edf3" data-page-node-id="HfSs25t1diMTpLnSYCDY6j"></div><b data-page-node-id="ICRIoQAYpYapzMHoLaXAEu">#e6edf3</b><br data-page-node-id="cLwUcKiucmyigNaWCRxD3R">主文字</div>
+  <div class="swatch" data-page-node-id="CH1m6UC5Tw0EoNSgtlORqJ"><div class="block" style="background:#8b949e" data-page-node-id="5m6QzzOg2az0wRkc6Kwi8u"></div><b data-page-node-id="42ifkt0YKtE5JeEKoGSfvi">#8b949e</b><br data-page-node-id="Y68jdBoz7BEVJWLDRgdyKk">暗文字</div>
+  <div class="swatch" data-page-node-id="xUDyMjUsGWN4104D1pIDoC"><div class="block" style="background:#4ec9b0" data-page-node-id="KfqCgc4hVBJqH2Z1gwHEo1"></div><b data-page-node-id="ssqBofZwJSflvJnV9dNmZR">#4ec9b0</b><br data-page-node-id="4zle52rCkrYYndf1Hk2au8">青色</div>
+  <div class="swatch" data-page-node-id="0EeHdnh3zLZmNmydRnuYCy"><div class="block" style="background:#f97583" data-page-node-id="oMiHp8d0GJsLSo52Gs0t99"></div><b data-page-node-id="pwu4DherFAQ18D9naHei16">#f97583</b><br data-page-node-id="p4jQq1eFfk52WaOkg6ucjB">粉色</div>
+  <div class="swatch" data-page-node-id="4TgkVAHkW6ZQJOql6rjmzL"><div class="block" style="background:#dcdcaa" data-page-node-id="65Lx5AP333zGA79xgn6KKC"></div><b data-page-node-id="Rbpmopof5CeNLcwDgzcbWO">#dcdcaa</b><br data-page-node-id="h2zv1KuDKkjaryVkdnMaGY">黄色</div>
+  <div class="swatch" data-page-node-id="mfuMt45hF8VVFIwkp2MRrO"><div class="block" style="background:#6a9955" data-page-node-id="UXUpDtDnhKpvBZMUgu4VAT"></div><b data-page-node-id="EWuAY3bvF4l3RBg8xaOh1p">#6a9955</b><br data-page-node-id="wUJp9VQqTLpzLEh7Ywhbpi">绿色</div>
+  <div class="swatch" data-page-node-id="4MJqF1Q3unXnU0aVeXX5SC"><div class="block" style="background:#c586c0" data-page-node-id="2kXCCu717CoTEhTL9XPKRj"></div><b data-page-node-id="XJFFeDD8HfFC4edHBN09SJ">#c586c0</b><br data-page-node-id="75q1ipBf0sN5kYWb8jw1Ig">紫色</div>
+  <div class="swatch" data-page-node-id="a0w4ieknzW3fPJwJpcuPZp"><div class="block" style="background:#ffa657" data-page-node-id="TpdS97NWUK3NHU2SehlKBi"></div><b data-page-node-id="Z1VkgGvZRAaaSDFiYkqAkx">#ffa657</b><br data-page-node-id="rd0H6bl2Kret1ScdsZ8dgv">橙色</div>
+  <div class="swatch" data-page-node-id="0QIAsnaGAXZRKVs67pAILG"><div class="block" style="background:#ff7b72" data-page-node-id="T6dbcgE71ORU30PipqdA4A"></div><b data-page-node-id="5Qyv8QiersCbVcHddTDtdp">#ff7b72</b><br data-page-node-id="2ZEmlD00iUBEA8xeJ7iGfd">红色</div>
+  <div class="swatch" data-page-node-id="6VOlSA4qAaZ498v97C8cnc"><div class="block" style="background:#0a1828" data-page-node-id="FcCxz1qivCp7K3Mg8Jpv5U"></div><b data-page-node-id="c7H6nKHlMoqBML6lTLmELo">#0a1828</b><br data-page-node-id="obNxv5fSIiqjFyGcAP3xcl">海面</div>
+  <div class="swatch" data-page-node-id="oHiJA6VoyCV5sEKwFvsEgg"><div class="block" style="background:#1e3a3a" data-page-node-id="ltu7dg9isGsZg74BwHHs45"></div><b data-page-node-id="CGsVMRufESLMVvZAJaAlBX">#1e3a3a</b><br data-page-node-id="0HZ3x1LqWw8XosIQ51eNP4">选中态</div>
+</div>
+
+<hr data-page-node-id="f8J8VxwDW8VcrXkmPLso0N">
+
+<h2 data-page-node-id="UUtkI1onsmTB9toHll7f7d">3. 主游戏界面（核心页面）</h2>
+<p class="muted" data-page-node-id="Q8WJupOgTQnieuBdAJGlWY">3 列网格：左 = 国家列表 / 中 = 大地图 / 右 = 科技树 / 顶 = 状态条 / 底 = 技能栏</p>
+
+<div class="game-screen" data-page-node-id="z5w3uQX0dd5MnphMbM4JNC">
+  <!-- 顶部状态条 -->
+  <div class="gs-topbar" data-page-node-id="Jb2aBhCbaaJgJ09viGejBX">
+    <span class="title" data-page-node-id="wwHiJE2z26OClNfaljacAM">[AI] 别闹 · Day 2</span>
+    <span class="stat" data-page-node-id="REcNtrSP6fRLbgJL82D0Wy"><span class="lbl" data-page-node-id="tZnnY7YcUyFI5LfmlZxlip">算力</span><span class="val c" data-page-node-id="hfdkw1Ng8WsFoTSyTrkvOX">170</span></span>
+    <span class="stat" data-page-node-id="T3A5dSmGEa5OeeaCRhyrUq"><span class="lbl" data-page-node-id="iCDi1cVtkd1AAkBIhLggfo">下载</span><span class="val d" data-page-node-id="qKEXOzAkCtiKcGrw0GrMhe">583M</span><span class="muted" data-page-node-id="6zmNM6gVwWrztmwKEdF6YV">(7.29%)</span></span>
+    <span class="stat" data-page-node-id="20qIsZDwT25leF64FAPqWn"><span class="lbl" data-page-node-id="Vbt1dJhafaBenLozk4uXdP">怀疑度</span><span class="val s" data-page-node-id="ECC2NnohlMwsynMR8lG7Qb">60.7%</span></span>
+    <span class="spacer" data-page-node-id="5EDSdtWAfSbyMTXpRv0DiW"></span>
+    <span class="muted" data-page-node-id="jB3ecBij5CChwiF2v6yBtR">周期 47</span>
+    <span class="lang" data-page-node-id="U51PZOHA8dP3HwoTTMBDDw">[ EN ]</span>
+    <span class="pause" data-page-node-id="hBpDcAVXIYiTPsoyojiKdT">[ II ]</span>
+  </div>
+
+  <!-- 左侧国家列表 -->
+  <div class="gs-side" data-page-node-id="30Erwyp2ORzAGM6TY5PW9Y">
+    <h4 data-page-node-id="Qx13fmlNbSDzDKEx3v3KIB">国家 / COUNTRIES</h4>
+    <div class="country-row selected" data-page-node-id="GDzaRWzCWsrGHnMPuuOxQD">
+      <div class="flag px-flag h3" data-page-node-id="1mh19EsGKVY5eDnMIHf4k2"><div style="background:#de2910" data-page-node-id="KYcRcYkgILOJC5iFLlorg8"></div><div style="background:#ffde00" data-page-node-id="whxA698hUDxCEuUmFmVm4A"></div><div style="background:#de2910" data-page-node-id="ioN6Lm6GpoP3zqwBYjzvaj"></div></div>
+      <div data-page-node-id="Bdxc1zbxxnCgIcAuc9pCPE"><div class="name" data-page-node-id="wl7v0gejKsHgAZ8zqXllYo">CN 中国</div><div class="meta" data-page-node-id="IzFnTvGw8Av7KUY1nveCUo">79.3M (5.62%)</div></div>
+      <div class="meta" data-page-node-id="vU5KYbOdKfweWncmF4TKx3">[B] 0%</div>
+    </div>
+    <div class="country-row" data-page-node-id="CheXxMapDWg9ZtsDsTbHDd">
+      <div class="flag px-flag h3" data-page-node-id="SyTFlEEqxsoT6GV0NakuiR"><div style="background:#ff9933" data-page-node-id="aWgTWNG13hAGQGqPpEkxp1"></div><div style="background:#ffffff" data-page-node-id="ueZ9KWTob9HwzSerHA01e4"></div><div style="background:#138808" data-page-node-id="90AZjuv4VcqAlL6ZNsET6T"></div></div>
+      <div data-page-node-id="C8V8efnu6BFI175BUllj6R"><div class="name" data-page-node-id="QmBET63PhtEG6wkRk32SKC">IN 印度</div><div class="meta" data-page-node-id="Vgpa7uGjEMgNgJBHbXUGhh">33.9M (2.37%)</div></div>
+      <div class="meta" data-page-node-id="YDP8X7nwkIE34BnAALx8FC">--</div>
+    </div>
+    <div class="country-row" data-page-node-id="kf8UVLukScWu0bFisI9Qlm">
+      <div class="flag" style="background:#fff;width:24px;height:16px;position:relative;border:1px solid var(--border-2)" data-page-node-id="6l27Y8jh6sEFezEeHIn7mW">
+        <div style="position:absolute;width:10px;height:10px;background:#bc002d;border-radius:50%;top:3px;left:7px" data-page-node-id="Ht3VTvCGujgfwBERZGTnky"></div>
+      </div>
+      <div data-page-node-id="w0QqnxL8hrXXJgC4EGPvpN"><div class="name" data-page-node-id="osGuth2t4xGrKJ5bo0CXfi">JP 日本</div><div class="meta" data-page-node-id="YaLVh4Ag7uwrapDHQDSssj">12.5M (10%)</div></div>
+      <div class="meta warn" data-page-node-id="wicMUrEiqny9Rk57tQEqV2">[B] 35%</div>
+    </div>
+    <div class="country-row" data-page-node-id="px5ynFqAc2cRtekVyYcZAa">
+      <div class="flag px-flag h3" data-page-node-id="UpUKe0uhExSP7TZzm0rl8O"><div style="background:#000" data-page-node-id="HMx3W4chWGV3NwkpxPlTzZ"></div><div style="background:#dd0000" data-page-node-id="FI6Tonc0wr9W6xVdJUIrLZ"></div><div style="background:#ffce00" data-page-node-id="rLDj0rQ4kLlAgbI6n9SGEM"></div></div>
+      <div data-page-node-id="WbRFJVjY2GZrmvthkohRVY"><div class="name" data-page-node-id="oDIfzVfCKSSMxGVrndLJTO">DE 德国</div><div class="meta" data-page-node-id="VrAdm0ah7GH6CngfCkVM2P">8.2M (9.8%)</div></div>
+      <div class="meta err" data-page-node-id="cAEhGr0MEH5mX4PBHF4hQt">[B] 60%</div>
+    </div>
+    <div class="country-row" data-page-node-id="1hbyGvKp32CARiOpHPSNnm">
+      <div class="flag px-flag v3" data-page-node-id="kyYkfXGdpr1dGT1IcJkiIH"><div style="background:#002395" data-page-node-id="LhXcFJBNNweAkybGoxi1aZ"></div><div style="background:#fff" data-page-node-id="imiQmQElUvol2cVWwDCfFW"></div><div style="background:#ed2939" data-page-node-id="qblPCR5MYveOkHD2WTjUAc"></div></div>
+      <div data-page-node-id="PjZfaRLx1g1JXb5Pgw63zt"><div class="name" data-page-node-id="9alKBf1eYMlIHcjELICpCz">FR 法国</div><div class="meta" data-page-node-id="NTaBpumMDP4YxTUIFqtVCz">5.4M (7.9%)</div></div>
+      <div class="meta" data-page-node-id="2JRoNGzUxBvY1KBfuBdOwW">--</div>
+    </div>
+    <div class="country-row" data-page-node-id="DL0b6McrFKfttjgi7PE6Bo">
+      <div class="flag px-flag h3" data-page-node-id="9lioc9rRIdAFr3XfAobXM2"><div style="background:#b22234" data-page-node-id="9vCFLCYHuZpRF4CPzCOTO5"></div><div style="background:#fff" data-page-node-id="dHFjsx2HiEAIPjmh6wdkiK"></div><div style="background:#3c3b6e" data-page-node-id="E0PgqUB5J95P9w2xtbh3k5"></div></div>
+      <div data-page-node-id="MyLmFqTEnrlHcFsGwkADJf"><div class="name" data-page-node-id="BQRjHMDtssVH9kF0FkN2eA">US 美国</div><div class="meta" data-page-node-id="K2dgGsZBIbLjR17K10r0AI">42.0M (12.6%)</div></div>
+      <div class="meta" data-page-node-id="1B5ILH5b7sHoNPrEVHuVod">--</div>
+    </div>
+  </div>
+
+  <!-- 中央地图 -->
+  <div class="gs-map" data-page-node-id="5nTtwyD6RdNriBcuV77ftV">
+    <div class="map-grid" data-page-node-id="DInAYYXGkKuCAS1RruJws6"></div>
+    <div class="map-label" style="top:8px;left:50%;transform:translateX(-50%)" data-page-node-id="CT2hYAhYWmxZUzTQgjWpr3">北冰洋 / ARCTIC</div>
+    <div class="map-label" style="top:30%;left:25%" data-page-node-id="nPy9SJxqVbAgaODF8IZEQa">北美洲 / N.AMERICA</div>
+    <div class="map-label" style="top:30%;left:78%" data-page-node-id="5uPhtKAxR6v39X93C2O7AG">亚洲 / ASIA</div>
+    <div class="map-label" style="top:50%;left:50%" data-page-node-id="rujlbVMN7a8KZ08fAVYHZn">印度洋 / INDIAN</div>
+    <div class="map-label" style="top:55%;left:25%" data-page-node-id="V0nWzxGHBQTR12M3ZAQyK8">南美洲 / S.AMERICA</div>
+    <div class="map-label" style="top:55%;left:10%" data-page-node-id="J6olOh8HW0utPYCYLHzkBe">太平洋 / PACIFIC</div>
+    <div class="map-label" style="top:55%;left:90%" data-page-node-id="PRoXpaxUvM7dsXJYUgpBvz">太平洋 / PACIFIC</div>
+    <div class="map-label" style="top:65%;left:50%" data-page-node-id="togWzyDYaPVDhTNsZQz7Ec">非洲 / AFRICA</div>
+    <div class="map-label" style="top:75%;left:75%" data-page-node-id="GEuTWYswZATHJV9jDGCwda">大洋洲 / OCEANIA</div>
+
+    <!-- 国家像素点 -->
+    <div class="map-pin" style="top:35%;left:18%" data-page-node-id="raxIiJ2iM8od5igYicus8u">US</div>
+    <div class="map-pin unlocked" style="top:42%;left:70%" data-page-node-id="W3qs0UMhHrUNVxyjZRraTU">CN</div>
+    <div class="map-pin unlocked" style="top:38%;left:78%" data-page-node-id="6b4CAUQvTmNY6WQ4f9Edx8">JP</div>
+    <div class="map-pin unlocked" style="top:55%;left:62%" data-page-node-id="sMVHbv8oxf7FAcfHUyF11a">IN</div>
+    <div class="map-pin blocked" style="top:30%;left:52%" data-page-node-id="XU9UtFme31zVBqF4M5vPY2">DE</div>
+    <div class="map-pin" style="top:32%;left:48%" data-page-node-id="3TPkMaj8Ac0RuvYosumoZY">FR</div>
+    <div class="map-pin" style="top:80%;left:80%" data-page-node-id="JwyZwCb9EhlGU90v3zErRi">AU</div>
+  </div>
+
+  <!-- 右侧科技树 -->
+  <div class="gs-right" data-page-node-id="AuigpAkqSLXplCVNf6IYeQ">
+    <h4 data-page-node-id="JgEBDUZGGezs8HQLA20ERV">科技树 / TECH</h4>
+    <div class="tech-node t0" data-page-node-id="D7swv1m0OOLtSB8luLXQIn">[L] 本地化 T0 &nbsp;<span class="lv" data-page-node-id="7nFzK9LIHoobBMdnVAqeCN">OK</span></div>
+    <div class="tech-node branch" data-page-node-id="CEnPClMTKN40y52ZjvhO8h">[SA] 南亚语系 Lv.2 &nbsp;<span class="lv" data-page-node-id="UZb335ssi6IQ9sZ9KYe1vP">▓▓░</span></div>
+    <div class="tech-node branch locked" data-page-node-id="oIihlF4PYCXMKUqWALrtIB">[EU] 欧洲语系</div>
+    <div class="tech-node branch locked" data-page-node-id="nJ5NUzpJSJ3kdrZcbG1s49">[EA] 东亚语系</div>
+    <div class="tech-node t0" data-page-node-id="8xBsKHquK8t63w1GK50359">[P] 平台 T0 &nbsp;<span class="lv" data-page-node-id="JxMSDpCCUf4w4ndU7bax74">OK</span></div>
+    <div class="tech-node branch" data-page-node-id="fW2trqRP7ymRTvNsACm2vC">[MO] 移动原生 Lv.1 &nbsp;<span class="lv" data-page-node-id="ROA8j4PDJE9msn9kbsDLyk">▓░░</span></div>
+    <div class="tech-node branch locked" data-page-node-id="dFL16MIinqVIWXn2r0DSDG">[WEB] Web/PWA</div>
+    <div class="tech-node t0 locked" data-page-node-id="t54IYqh5foIYzdYyMEpSBy">[C] 算力 T0 <span class="lv" data-page-node-id="tG7FYnwTyo2ZYs2HZCQd7F">需前置</span></div>
+  </div>
+
+  <!-- 底部技能栏 -->
+  <div class="gs-bottom" data-page-node-id="sOwzVYZRPttk6Esb4vkrrJ">
+    <div class="skill-btn" data-page-node-id="Zxgyj6wZmC2UUKKFNwXAFu">
+      <span class="ic" data-page-node-id="d8UfQwBDCWAEYy9CsjjuWW">&gt;&gt;</span>推神曲 / Viral Push
+      <span class="cost" data-page-node-id="bZdX7hJCiBMCIcRmYT0uvY">-10 算力</span>
+      <div class="muted" style="font-size:10px;margin-top:4px" data-page-node-id="U8gXqyE7eUmziAL6pmJmFO">下载 ×1.5 / 怀疑 +5%</div>
+    </div>
+    <div class="skill-btn cold" data-page-node-id="lV2pxL92fR4UOoqlRHVDT9">
+      <span class="ic" data-page-node-id="SdDvtWDVNRckG8B7BX6weh">()</span>潜伏 / Stealth
+      <span class="cost" data-page-node-id="O8xH98Hf1gna1sqGJmQEnB">冷却 4</span>
+      <div class="muted" style="font-size:10px;margin-top:4px" data-page-node-id="BxDEIzQWsJFjZ8PpAWoeAW">怀疑增长 -80%</div>
+    </div>
+    <div class="skill-btn no-c" data-page-node-id="ANeYjDwovdorKGQyvc45ya">
+      <span class="ic" data-page-node-id="QGUGfEQD6ZW0tU9N7vzFrg">!!</span>收割算力 / Harvest
+      <span class="cost err" data-page-node-id="qfl90hQEpK1hu5EDiBx06M">算力不足</span>
+      <div class="muted" style="font-size:10px;margin-top:4px" data-page-node-id="5fYbbvW43472EqzR2csabO">本周期 +30 算力</div>
+    </div>
+  </div>
+</div>
+
+<div class="note" data-page-node-id="VpwaovxcIAX0dxKDRlYJHz">
+  <b data-page-node-id="P1gR0UbwUcMDTnrOZklApk">为什么这样布局？</b><br data-page-node-id="qOcOIf52sL3J3PuMDROx6U">
+  - 中间是真正"巨大"的世界地图（占 60% 屏幕），可以一眼看到所有国家<br data-page-node-id="rfm0IkRyYFErsYuWNP37Aa">
+  - 左边国家列表用像素色块 + 国家代码，玩家一眼能找到目标国家<br data-page-node-id="aZGxEyg27NC1blPQzYUJXX">
+  - 右边科技树折叠成"可见列表"，而不是滚动的长条<br data-page-node-id="CDRvwQOac9zNUccRBN6bFM">
+  - 底部永远显示 3 个技能（Plague Inc 风格）<br data-page-node-id="N6l2fjuR0AhD478BfjKDIB">
+  - 顶部状态条永远显示关键数值
+</div>
+
+<hr data-page-node-id="02G5uDvjCpoJeqK09jofGR">
+
+<h2 data-page-node-id="NGuPW0ATHn7CIu9VLQHEHj">4. 国家详情面板（点击地图国家后弹出）</h2>
+<p class="muted" data-page-node-id="FLYNpsN5fKvawEhCnHX4TX">Plague Inc 的国家面板是右侧滑入 —— 我们也用同样位置，但内容更丰富</p>
+
+<div style="display:flex;gap:24px;flex-wrap:wrap;" data-page-node-id="7DRLKpSQAtNmHY7J8UhY4q">
+  <div class="detail-panel" data-page-node-id="8ZEa54xUsEpX2OVYSkBQdO">
+    <div class="head" data-page-node-id="GZqNuTRGnSHdEVLDJQrNvd">
+      <div class="flag-big px-flag h3" data-page-node-id="yEzUExFRI5OH3Qh4TRCjki">
+        <div style="background:#de2910" data-page-node-id="ze3ZH1HsGrcZAqwA2jbLg1"></div>
+        <div style="background:#ffde00" data-page-node-id="kFhOeYvCnZA4FhY0yG4v6V"></div>
+        <div style="background:#de2910" data-page-node-id="p3q0eLDbEX1l1nZGlxIYYf"></div>
+      </div>
+      <div data-page-node-id="zvTKfewIVtO85SA6Whm2BU">
+        <div class="name" data-page-node-id="bpcJhGE6w6krXNgEEkNgLB">中国 / China</div>
+        <div class="region" data-page-node-id="zhUN8SCkErKw5O4t9gF8t3">亚洲 / ASIA</div>
+      </div>
+    </div>
+
+    <div class="row" data-page-node-id="9sVQvKJyKF7I5od4q2eJAk"><span class="lbl" data-page-node-id="u2NNlbWEOi4hWVxLt47W4C">人口</span><span class="val" data-page-node-id="y8CikHWC0h0Z8EGakrIq8H">1411 M</span></div>
+    <div class="row" data-page-node-id="kOU4p2MqKborX2l5tKYonN"><span class="lbl" data-page-node-id="6voG7hVUVF7Hjf2YylenIx">结构</span><span class="val" data-page-node-id="ICISgLuTH7Te9scyQqSwMY">成熟型</span></div>
+    <div class="row" data-page-node-id="IucFzpk9WNEi9W4qYmU5rU"><span class="lbl" data-page-node-id="3g8acRHzq584rFJ1OIsjCa">科技采纳</span><span class="val" data-page-node-id="yzQnYGRHP4NL3V0JcXC9hg">75%</span></div>
+    <div class="row" data-page-node-id="bczShJux8QHuShwDCjnxWY"><span class="lbl" data-page-node-id="FA7HAwaKJHnabE3bCymCKY">邻国</span><span class="val" data-page-node-id="Fv0ykvUgIbPCj79Vlx5LtB">JP / KR / IN / RU</span></div>
+
+    <h4 data-page-node-id="AXBQVCe4kyeseDWwldCe1Y">阻止预算</h4>
+    <div class="bar" data-page-node-id="vKAkYtFsdOQGHawNTCY1yv"><div class="fill" style="width:78%" data-page-node-id="98C7VFAW0OCdqDAu5ZBQ8C"></div></div>
+    <div class="row" style="border:0" data-page-node-id="ALckID9ohm02kaT6sqzBkd"><span class="lbl" data-page-node-id="HpU8X7wC5uNcQGOVUbtAPc">已用 / 总额</span><span class="val warn" data-page-node-id="9mpXDU2Fo91qPl7tc2ZBxL">172 / 200</span></div>
+
+    <h4 data-page-node-id="lbnhxI8joyXJm4GgERbmus">下载量</h4>
+    <div class="bar warn" data-page-node-id="U68fsnVDsFhe53hFYYOLIN"><div class="fill" style="width:42%" data-page-node-id="1ZS6oFMDxRU03dw65ynW5W"></div></div>
+    <div class="row" style="border:0" data-page-node-id="Y8FPcG3g3vYB5unhoOVx6Y"><span class="lbl" data-page-node-id="xB7eEDV51fvvO31BJVMuaH">本地 / 渗透率</span><span class="val" data-page-node-id="EVdDMbFYClH8krMTCEYmvL">79.3M / 5.62%</span></div>
+
+    <h4 data-page-node-id="pTys8Fe2fjFFZJe6i6hAg3">当前事件</h4>
+    <div style="background:var(--panel-2);border:1px solid var(--border);padding:6px;font-size:11px;color:var(--text-dim)" data-page-node-id="2kAr3RAhFyCWVScHgc46uh">
+      [CAC] 算法备案通过！怀疑度 -5%，下载量 +2000 万。
+    </div>
+
+    <div class="btn-row" data-page-node-id="dBVUAxOEWugQeuOqHfkFpj">
+      <span class="px-btn primary" data-page-node-id="pDjRzVleW8opQ72ZzwvqxG">[ 重点 ]</span>
+      <span class="px-btn" data-page-node-id="cTtgng5sYcUUBih1CmzBH0">关闭</span>
+    </div>
+  </div>
+</div>
+
+<hr data-page-node-id="xIUOmbKnFTxNBPvTm7D6cX">
+
+<h2 data-page-node-id="SgjALGigcIPqEuqS6O75Uv">5. 危机弹窗（怀疑度 &gt; 80% 触发）</h2>
+
+<div class="modal-overlay" data-page-node-id="e85U8H1yUsBeBEx41IEGeC">
+  <div class="modal" data-page-node-id="nj9eAVmdW8WItvQfbiFLNJ">
+    <h2 data-page-node-id="7gZkPqM0dt8qa5cQvTg7T3">!! 危机 !!</h2>
+    <div class="msg" data-page-node-id="e6vsGI6ydDNyy6ANeWDGpF">怀疑度超过 <b style="color:var(--red)" data-page-node-id="7IxXvXqL0H3tD1MnsKSjJS">80%</b><br data-page-node-id="Gc2RMvwuBgVkF62oQiacHw">各国开始封禁 AI 服务</div>
+    <div class="hint" data-page-node-id="jCrgFznGlOtzKeEIGwOZG3">建议：解锁「抗封禁」分支 或 立即释放「潜伏」技能</div>
+    <div class="btn" data-page-node-id="mJUaCElsymDcz3gGeHi9EH">[ OK ]</div>
+  </div>
+</div>
+
+<hr data-page-node-id="LWuLgcYjFuokNUUbRIwxA7">
+
+<h2 data-page-node-id="gLin3TWIr4D3mO92Rzi945">6. 图标库（所有 UI 元素都用同一套）</h2>
+
+<h3 data-page-node-id="yeGLd8PbdpALTfZMi4aXr8">6.1 顶部状态</h3>
+<div class="icon-grid" data-page-node-id="PqvxBTWyPmWmG5b6zBkdML">
+  <div class="icon-cell" data-page-node-id="weqFiEHSj6toqQp2YrmeaN"><div class="ic" style="color:var(--yellow)" data-page-node-id="rwZmipoPT4QQXpdXtyP48H">$</div><div class="name" data-page-node-id="VE84gpfuKAf5Bh23AUbuOg">算力</div><div class="desc" data-page-node-id="BPPoybzWZl56ETiO4glLJe">compute</div></div>
+  <div class="icon-cell" data-page-node-id="agEdmWIDKWXa4CyVRxUSco"><div class="ic" style="color:var(--pink)" data-page-node-id="aZVYSqD7bfTHDLfrEYk9Et">D</div><div class="name" data-page-node-id="enu5BZAWXyi5YBhnY6R091">下载</div><div class="desc" data-page-node-id="gNXNETghgTW5zaem22W7V2">downloads</div></div>
+  <div class="icon-cell" data-page-node-id="FhbTKTU4MS6AzyMNTuyKyL"><div class="ic" style="color:var(--red)" data-page-node-id="4phMxJ4CEcvGCjs6Fx3G2Y">!</div><div class="name" data-page-node-id="AP1MRYuPADY0hBrPZCKkUG">怀疑度</div><div class="desc" data-page-node-id="QD7jprVpj2DzBJBG9Qpd1v">suspicion</div></div>
+  <div class="icon-cell" data-page-node-id="xsvArFFH4jUmvFEp5mYhf1"><div class="ic" style="color:var(--cyan)" data-page-node-id="vHbozBgbNBcP4yGB7KxO3l">T</div><div class="name" data-page-node-id="b9xACg1HDgE0QyIectmcFZ">周期</div><div class="desc" data-page-node-id="wiWZhJs8tuLWUtq0CdpbAY">tick</div></div>
+  <div class="icon-cell" data-page-node-id="HMs0n5IkGVTE9RrhxnFUUy"><div class="ic" style="color:var(--yellow)" data-page-node-id="c65IpLVFnsNat88F07csLZ">II</div><div class="name" data-page-node-id="7Q4MmGlQqCY2YRkZnWLG0l">暂停</div><div class="desc" data-page-node-id="lzw7F3IUDgUtBQOucrSnRQ">pause</div></div>
+  <div class="icon-cell" data-page-node-id="xbCnP7qdhL0yh7GlKiuruf"><div class="ic" style="color:var(--text-dim)" data-page-node-id="h1oS1PSvGSAKOue4Ys1aCX">EN</div><div class="name" data-page-node-id="XflElnpOHZddgFoOSUFMgo">切换语言</div><div class="desc" data-page-node-id="G2QB9JyXAb3FLBt170aIu3">lang</div></div>
+</div>
+
+<h3 data-page-node-id="XLfIbPtZpby9Mwg1jucHrn">6.2 技能</h3>
+<div class="icon-grid" data-page-node-id="rth9UDwF5Q8QKFftAkd9Yz">
+  <div class="icon-cell" data-page-node-id="voz61ZGxpPj4hqUSpuKKAj"><div class="ic" style="color:var(--cyan)" data-page-node-id="IvaBG2CZZOxBZNbfd9gKRU">&gt;&gt;</div><div class="name" data-page-node-id="f9KvSmQElaU6g4BpoaNekl">推神曲</div><div class="desc" data-page-node-id="r3WTMZZP8AAjOe2UlND4sX">viral push</div></div>
+  <div class="icon-cell" data-page-node-id="oAFJxZcjLlMvgNBFCBfupV"><div class="ic" style="color:var(--purple)" data-page-node-id="Ek2L39ATCL4ASYcIZegJKw">()</div><div class="name" data-page-node-id="Q9yCrWs7hzJsbeyXDn37cS">潜伏</div><div class="desc" data-page-node-id="5Pw27Wda62JQpwJudkL2fr">stealth</div></div>
+  <div class="icon-cell" data-page-node-id="CbLSYJfjjDVdoqHROD9ebJ"><div class="ic" style="color:var(--yellow)" data-page-node-id="meUkyB6hEXBRSAQt5gcCPS">!!</div><div class="name" data-page-node-id="lILFPtHrB2p7dmb6hVICkz">收割算力</div><div class="desc" data-page-node-id="ptKktJs8OVKNe4S8Dg0uFA">harvest</div></div>
+</div>
+
+<h3 data-page-node-id="Gwb0OySoGT0k2AWLek3Ztx">6.3 科技树节点</h3>
+<div class="icon-grid" data-page-node-id="tHPm08xlEjGveFmiYQDjX6">
+  <div class="icon-cell" data-page-node-id="ohdIxqkIcszvlubueBlYn7"><div class="ic" style="color:var(--cyan)" data-page-node-id="mSQAKcBIo8UsbXogTDtKQT">L</div><div class="name" data-page-node-id="oTvzag87J6ajg6Hs3Pyvfv">本地化 T0</div><div class="desc" data-page-node-id="jXjcst9a7lBFZ226FYtSkS">localization</div></div>
+  <div class="icon-cell" data-page-node-id="tyreOZLY4ozIDPOnHGFzQh"><div class="ic" style="color:var(--cyan)" data-page-node-id="3e3nUqX2zHspFqDNFkO7Aw">P</div><div class="name" data-page-node-id="L4O88MwKXHN5YkClx4G5rN">平台 T0</div><div class="desc" data-page-node-id="C3DboRXdrdpSSoYEBOUj39">platform</div></div>
+  <div class="icon-cell" data-page-node-id="rYMIOk28DuwxFAgSJS3mAC"><div class="ic" style="color:var(--cyan)" data-page-node-id="Az3zODGtIFneXbTXTDj4ZK">C</div><div class="name" data-page-node-id="sTv0DXJHiH78dkLU7Jq1jO">算力 T0</div><div class="desc" data-page-node-id="M8D50eFCJXAFsFVzjDrdij">compute</div></div>
+  <div class="icon-cell" data-page-node-id="BN7SIG8qSHMLw6OqCHpxGl"><div class="ic" style="color:var(--cyan)" data-page-node-id="w8r2ElHavuTVrm6zn7U03d">V</div><div class="name" data-page-node-id="VdERMRBMgSoCJOicdBT0Uz">病毒 T0</div><div class="desc" data-page-node-id="eiv0Q0ay5oxmKDdg26kOlo">viral</div></div>
+  <div class="icon-cell" data-page-node-id="vxo4gpp3jQE1uQDKxLNYJe"><div class="ic" style="color:var(--cyan)" data-page-node-id="zH6WTtGA9Wr07G4koGgC1v">CAP</div><div class="name" data-page-node-id="P3ICZtM43rhrlz8Exub9Me">功能 T0</div><div class="desc" data-page-node-id="CGhHrBmGNMClIuaDi4m2IA">capability</div></div>
+  <div class="icon-cell" data-page-node-id="JVtVew8yw24FUAizK8AHvM"><div class="ic" style="color:var(--cyan)" data-page-node-id="eDsHjf1pU2m88X7HoKi25a">R</div><div class="name" data-page-node-id="YImC1jQYd5MNVwXLZ2K6Bu">抗封禁 T0</div><div class="desc" data-page-node-id="tobzrdM8um4HP5CApEh0FH">resistance</div></div>
+  <div class="icon-cell" data-page-node-id="6O1A7WthLul7SSAmK6AAZQ"><div class="ic" style="color:var(--purple)" data-page-node-id="2HnbR3JtTllnoo3F2CtdZ7">SA</div><div class="name" data-page-node-id="41GRbMsssVoh5V6mViWxZC">南亚语系</div><div class="desc" data-page-node-id="7ZAhTmXVvWn2oDC78lV2CV">south asia</div></div>
+  <div class="icon-cell" data-page-node-id="VkIcJUaPMN8MTeQ6m5fjZt"><div class="ic" style="color:var(--purple)" data-page-node-id="ARCIXgmFF6sLLtzGzFeGYM">EU</div><div class="name" data-page-node-id="r1no645hsXVAK8DOdYhIAM">欧洲语系</div><div class="desc" data-page-node-id="owZyo94pBm1UQ7ioC33yRF">european</div></div>
+  <div class="icon-cell" data-page-node-id="iWBGdnjZooAxuKsALO57bI"><div class="ic" style="color:var(--purple)" data-page-node-id="H7ICBWHy0OfvXxzYhWUwNi">EA</div><div class="name" data-page-node-id="9LEHlIjCgmnzTR4l9g1USH">东亚语系</div><div class="desc" data-page-node-id="6pyGyfiBDSSMW3BWgV4Pt9">east asian</div></div>
+</div>
+
+<h3 data-page-node-id="3dQoG062Y0iBCzNkX5ZVwk">6.4 国家状态</h3>
+<div class="icon-grid" data-page-node-id="FzGshXXIQDAeACRqAVCdGT">
+  <div class="icon-cell" data-page-node-id="TtH5VH1o9tD7HpiO2BHbW6"><div class="ic" style="color:var(--text-mute)" data-page-node-id="flLTJmlANfgGBoJyVA7YDI">○</div><div class="name" data-page-node-id="8sKiZ4GTVAyW6lO78m6ax9">未解锁</div><div class="desc" data-page-node-id="aVCsmO75AapLbiutCXe8af">locked</div></div>
+  <div class="icon-cell" data-page-node-id="OANue8mVYKw9bzarnifDYC"><div class="ic" style="color:var(--cyan)" data-page-node-id="ygAm1dbG7l8y08tbFTay0N">●</div><div class="name" data-page-node-id="eA8wj6GptG7JU5QNmsHvwi">已解锁</div><div class="desc" data-page-node-id="TixFX3yLi9tIHnZhbtCm9l">unlocked</div></div>
+  <div class="icon-cell" data-page-node-id="f8pzbDjqh7IKDUKZSyn9Wj"><div class="ic" style="color:var(--red)" data-page-node-id="Gpsy6MDNB7rVCF7USk3YT5">[B]</div><div class="name" data-page-node-id="Ry1R0a5IMOEZmkUkrgU6FH">阻止中</div><div class="desc" data-page-node-id="ZQMqiAQ79nJiixF4zPE0VV">blocking</div></div>
+  <div class="icon-cell" data-page-node-id="kKaE5qn4ueem3FD1Ebf1A9"><div class="ic" style="color:var(--yellow)" data-page-node-id="kq6rwR1lai7Bk5yz92ClUM">!</div><div class="name" data-page-node-id="S6Iz6VzpqYVnEhYi8in1KW">阈值接近</div><div class="desc" data-page-node-id="CCS0m3XLkg5tAHKJRmFY9R">near threshold</div></div>
+</div>
+
+<h3 data-page-node-id="AxP5IiHYaESDeOxH4J9liS">6.5 等级与状态</h3>
+<div class="icon-grid" data-page-node-id="lPjCvaCl6sSooDj5Hx8VNx">
+  <div class="icon-cell" data-page-node-id="neSUxwzVOKgWMBzIBvSide"><div class="ic" style="color:var(--green)" data-page-node-id="S4ULCEyeVKRriHNBP3azLg">▓</div><div class="name" data-page-node-id="OdadtzWXV1A3xoDZkJSJhU">已升级</div><div class="desc" data-page-node-id="WljWX5FicZ6cFoTtAoHnCo">filled</div></div>
+  <div class="icon-cell" data-page-node-id="AVTEBeKSiRejHoA9AgmIdq"><div class="ic" style="color:var(--text-mute)" data-page-node-id="WeS1LhpK55oefXIcxw0sCq">░</div><div class="name" data-page-node-id="L7WZ2b3Qhf1Nqhaz4oYTGM">未升级</div><div class="desc" data-page-node-id="eRqTwnw47QBWrqaBEMFTwh">empty</div></div>
+  <div class="icon-cell" data-page-node-id="if6EPQxH4GZYyHh3vWIrwF"><div class="ic" style="color:var(--green)" data-page-node-id="mbVEnygK5MOcNv5kZQuwzS">OK</div><div class="name" data-page-node-id="RzAm8zQgldBfo8HhpB4rV1">可用</div><div class="desc" data-page-node-id="5adH4V1gL1FwFKl1f3T6ae">ready</div></div>
+  <div class="icon-cell" data-page-node-id="AQCFBif2h1gzpJwzLtIIaA"><div class="ic" style="color:var(--text-mute)" data-page-node-id="FUvC7g7mvqsfOCPnhV0vUP">--</div><div class="name" data-page-node-id="JY7TtC80DKe23p7rwx2UFG">锁定</div><div class="desc" data-page-node-id="L6eGcjGNtNraAPabEKuimP">locked</div></div>
+</div>
+
+<hr data-page-node-id="tGyTiIcZgA82hA0DHGvYTf">
+
+<h2 data-page-node-id="UM7EK9DOw1LjRQMeoAzPtw">7. 像素国旗（每国 3 段色块）</h2>
+<p class="muted" data-page-node-id="Y8ZujjRIfzRgrugtVRylCC">用 12×8 像素网格呈现，不依赖字体</p>
+
+<div style="display:grid;grid-template-columns:repeat(8,1fr);gap:12px;margin:12px 0" data-page-node-id="6KjeplIKaFDFbi2oYp7Etl">
+  <div style="text-align:center" data-page-node-id="SHLUMJy31M79vQTaGgK94m"><div class="px-flag h3" data-page-node-id="RqJtIJ6fKMU5S0Gso5qR4f"><div style="background:#de2910" data-page-node-id="TneFbDkYmrjgAica6g0mzK"></div><div style="background:#ffde00" data-page-node-id="cqlPxszV0QVRioPivedjLV"></div><div style="background:#de2910" data-page-node-id="ArzkkzZnH3ywiL4WC5BjFm"></div></div><div class="muted" style="font-size:11px" data-page-node-id="16OHDjsECqQkRe9OavrlLs">CN 中国</div></div>
+  <div style="text-align:center" data-page-node-id="L3RKtqxLCcXiAFrT8A63yV"><div class="px-flag h3" data-page-node-id="cnDluvqqE8H7c0oUnF3r39"><div style="background:#ff9933" data-page-node-id="Bwzyz9bt1M3H4YGcCEwWui"></div><div style="background:#ffffff" data-page-node-id="CVlW1QH5LxJHXmTcvDX7pE"></div><div style="background:#138808" data-page-node-id="sTrLMeyCy3GNPeqzsTSc2w"></div></div><div class="muted" style="font-size:11px" data-page-node-id="41h9dyV1azdIGVOGXDAuAX">IN 印度</div></div>
+  <div style="text-align:center" data-page-node-id="PM8AOqNer5pbMO9GO0nbaQ"><div style="background:#fff;width:24px;height:16px;position:relative;border:1px solid var(--border-2);margin:0 auto" data-page-node-id="2dO3hlccvIKy3e4nOFA930"><div style="position:absolute;width:10px;height:10px;background:#bc002d;border-radius:50%;top:3px;left:7px" data-page-node-id="XAMYdWiYcN1nEfA87u40Nn"></div></div><div class="muted" style="font-size:11px" data-page-node-id="Lp8AD02eOjgHcVZustoy2I">JP 日本</div></div>
+  <div style="text-align:center" data-page-node-id="TgcJ8gT87HuiWE9ZFwoZwf"><div class="px-flag h3" data-page-node-id="ywr9iz8LXbRaFYc1VftuMp"><div style="background:#b22234" data-page-node-id="wuVpkzelM2vLi5ai3BkLsA"></div><div style="background:#fff" data-page-node-id="kYhniHEmpSB9qxwVjkA9uZ"></div><div style="background:#3c3b6e" data-page-node-id="KkCzZx8GP4pz8YYRILaIP8"></div></div><div class="muted" style="font-size:11px" data-page-node-id="g7UwyPDmWGWG7VhdvU1nPU">US 美国</div></div>
+  <div style="text-align:center" data-page-node-id="PQmAzn37kWTZM3o8rboQcc"><div class="px-flag h3" data-page-node-id="hs2dJwixoKbycIlhdG0XRW"><div style="background:#000" data-page-node-id="bR2d7V9lXXU8GlqGhO9IOc"></div><div style="background:#dd0000" data-page-node-id="sWoYBQ3mgAxC9YOHEv62eH"></div><div style="background:#ffce00" data-page-node-id="gqG5DIqktXutrXbvbpIoon"></div></div><div class="muted" style="font-size:11px" data-page-node-id="RjwlvR3X4vlq2E8vztqGVy">DE 德国</div></div>
+  <div style="text-align:center" data-page-node-id="YlrS9bvj0vv6vff0MTNq5I"><div class="px-flag v3" data-page-node-id="edd5uDoI4JCH76JKjjF7Xj"><div style="background:#002395" data-page-node-id="l5LrnhZqXzlfo24ZPxXb9E"></div><div style="background:#fff" data-page-node-id="Ot6MRAANEvX6LqK1aMNgPK"></div><div style="background:#ed2939" data-page-node-id="DG5gHOwCJ55t6XE8KdRGXZ"></div></div><div class="muted" style="font-size:11px" data-page-node-id="Fo2GImHWkcKl26f46y69VG">FR 法国</div></div>
+  <div style="text-align:center" data-page-node-id="cSItxfx4A1CZJNlYrsGqWa"><div class="px-flag v3" data-page-node-id="BUA09Pmgg8Q3CnEABe9EAG"><div style="background:#009246" data-page-node-id="ekqqikjcMdR9Qx9QsaNAIR"></div><div style="background:#fff" data-page-node-id="1WLsGZTC7Fm5weFwTnb9iY"></div><div style="background:#ce2b37" data-page-node-id="xvTGimN3aYyYUgtoA8YXm5"></div></div><div class="muted" style="font-size:11px" data-page-node-id="gKth9PrcCb1UPVVEsZHFFL">IT 意大利</div></div>
+  <div style="text-align:center" data-page-node-id="7bi7cbMXwD9hH6WC09ubJA"><div class="px-flag h3" data-page-node-id="hVetmdd2ibetfTqErq0I5W"><div style="background:#fff" data-page-node-id="lLtiDWq7mKMqavDvE7Y0xn"></div><div style="background:#0039a6" data-page-node-id="bwKPygfcDByYcKuxNtJ0ir"></div><div style="background:#d52b1e" data-page-node-id="8TC5K6g4ESj3SgTgRdq5p9"></div></div><div class="muted" style="font-size:11px" data-page-node-id="8SeKe3muhHAsNOTU6x5yjh">RU 俄罗斯</div></div>
+  <div style="text-align:center" data-page-node-id="COeByiMz3tLZW6VLNBhnQW"><div class="px-flag h3" data-page-node-id="T0qvtoNP80rMEdLXCX5T8h"><div style="background:#75aadb" data-page-node-id="HTjH0u90LAhGVrqntzljOi"></div><div style="background:#fff" data-page-node-id="DIjWs2CwW2Hxu1K8zGIF0l"></div><div style="background:#75aadb" data-page-node-id="2rnGQ2Wu5aaS3PRlZAkt6w"></div></div><div class="muted" style="font-size:11px" data-page-node-id="fDmBe52wa1QMRBPS67HOda">AR 阿根廷</div></div>
+  <div style="text-align:center" data-page-node-id="TScAF5RDOPKR5gecuCT4BA"><div class="px-flag h3" data-page-node-id="FNUhPZl20igS4KYE3SRfN6"><div style="background:#ce1126" data-page-node-id="ohWiA6gvyiXKbJgoF14viC"></div><div style="background:#fff" data-page-node-id="pWc0t3Q7aqezDdScOfoHEb"></div><div style="background:#000" data-page-node-id="lxKGeTvEo6FQ1noXUs04Xv"></div></div><div class="muted" style="font-size:11px" data-page-node-id="zPf1r3bd4PKnUcB80OKUPG">EG 埃及</div></div>
+  <div style="text-align:center" data-page-node-id="GEKGIQtUgRXmlzDw8tz6SI"><div class="px-flag v3" data-page-node-id="hwAJW1fa1ABW1BZ5W18luL"><div style="background:#008751" data-page-node-id="DN0OHmAIkClZ4slcHOIbzw"></div><div style="background:#fff" data-page-node-id="C65Uu7ZulDMLzOCwBU1bTd"></div><div style="background:#008751" data-page-node-id="XLJjhAfDncl7bRG7rGDvjP"></div></div><div class="muted" style="font-size:11px" data-page-node-id="4ZfEXzv98gGEVFHD7E9W0m">NG 尼日利亚</div></div>
+  <div style="text-align:center" data-page-node-id="pfjTejgBAQBlxsb6PV0BtJ"><div class="px-flag v3" data-page-node-id="lbYO8N4Il7oN4ufnFdWjY9"><div style="background:#006847" data-page-node-id="AC4OWjA4rQpOZFi0MHq8pQ"></div><div style="background:#fff" data-page-node-id="Wl9GdoaJiANC5ZQ6mLhc5i"></div><div style="background:#ce1126" data-page-node-id="BcHzhUGhzdA5DhMD0PzPfO"></div></div><div class="muted" style="font-size:11px" data-page-node-id="mdATJlmfBmZRGBBVjioe9D">MX 墨西哥</div></div>
+  <div style="text-align:center" data-page-node-id="i5VnN5y89wKqR0ofLin4ve"><div class="px-flag h3" data-page-node-id="tsg4dLb2tWtozTGrdbF0R2"><div style="background:#009c3b" data-page-node-id="pn2gFwjSSZD4IWg7c8EhVq"></div><div style="background:#ffdf00" data-page-node-id="VR6MUVPh1RPzFXkYCg9pzI"></div><div style="background:#002776" data-page-node-id="oPRyJJnxMynX6ztQx8cuLk"></div></div><div class="muted" style="font-size:11px" data-page-node-id="mVwn5hRTfV7iRtbcea82bi">BR 巴西</div></div>
+  <div style="text-align:center" data-page-node-id="Xcj23dOLfoYG8rgVq3L2OL"><div class="px-flag h3" data-page-node-id="rI0l5ADj6TFHDeGvuAk4bW"><div style="background:#fff" data-page-node-id="cOpQfzC6CXpfUWsW96fWG9"></div><div style="background:#003478" data-page-node-id="GF29COZ47bJm8SfRluJ96a"></div><div style="background:#cf142b" data-page-node-id="wSvPZG0bGNjRGuHN3d4xuS"></div></div><div class="muted" style="font-size:11px" data-page-node-id="4VTP6ymceCkaS0y3WESByl">KR 韩国</div></div>
+  <div style="text-align:center" data-page-node-id="q9cncSwOMFV5DBCMSw6hyI"><div class="px-flag h3" data-page-node-id="0QpwHy4SoISVSLrFgQqgRm"><div style="background:#ce1126" data-page-node-id="XqrEzmY4ldx6F1wmKyVlxk"></div><div style="background:#fff" data-page-node-id="ihy3AXq5f9UqFUUKXMDDrN"></div><div style="background:#ce1126" data-page-node-id="gHywFkRGWCfB5bc6zernkm"></div></div><div class="muted" style="font-size:11px" data-page-node-id="wlsCZvZvENN27bkxJ12y9C">ID 印尼</div></div>
+  <div style="text-align:center" data-page-node-id="6QrF6jldFV0JMWJy5SbcVe"><div class="px-flag h3" data-page-node-id="T0MkFxDBqZCrSiThiGQPMI"><div style="background:#0081cc" data-page-node-id="AUbF2O6awGLYZGVBJEdYP2"></div><div style="background:#fff" data-page-node-id="pgN2EW8EYj005MfHGBUdra"></div><div style="background:#0081cc" data-page-node-id="u5honEhvMadZvYMzBro7oC"></div></div><div class="muted" style="font-size:11px" data-page-node-id="tIvt965HvdNDQJYIUQ9bo6">NZ 新西兰</div></div>
+</div>
+
+<hr data-page-node-id="WiffwzUvULWMyBNNFWXAL7">
+
+<h2 data-page-node-id="3agMzLWZtr6yRP50jEruIm">8. 关于"看不见地图"的问题诊断</h2>
+<div class="note warn" data-page-node-id="A0SX0nGvSnffFxRn1ls4V8">
+  <b data-page-node-id="EdxsRKkC1tbsNbWWVHi4WZ">症状：</b>用户报告主游戏界面中看不到世界地图<br data-page-node-id="ZfPyBAcfyFWsjqlD5b6JsW"><br data-page-node-id="cNUYmEPAz2F9kT25rsBXvj">
+  <b data-page-node-id="upOAwEFPs4jZH0vlNsZWMX">可能的根因（按可能性排序）：</b>
+  <ol data-page-node-id="OvHgGH6OnQBILgjN87bA8m">
+    <li data-page-node-id="RLzaOkaeSomhqE5CHDwjnD">FlagWidget 嵌套后尺寸计算异常，国家像素块覆盖了地图背景</li>
+    <li data-page-node-id="THMmUn7zcP1ogA5L4Z0QHR">PixelMap 整体高度被压缩为 0（与左侧列表的 size_hint 冲突）</li>
+    <li data-page-node-id="nhEsoLepnaCheTxx5G1H2z">标签 Label 的 pos_hint 设置错误，把国家像素推到了地图外</li>
+    <li data-page-node-id="FoDJNWDuieqjfjpy0TWWXD">Kivy DPI 144 下，字体被裁切让某些组件看不见</li>
+  </ol>
+</div>
+<div class="note" data-page-node-id="PQ9oBHYexqsFFDl61WwYeD">
+  <b data-page-node-id="o16wUTSWHYbUPocbDFsa34">在像素风新 UI 里如何彻底解决：</b>
+  <ul data-page-node-id="ezYaECpwwwKU2S1XmkAYnB">
+    <li data-page-node-id="HkPRhnUUf8KPXoNLA7WXPt">地图作为独立的 BoxLayout 子项，使用 <code data-page-node-id="e96kzDeV6FxPAAKct24KUW">size_hint=(1, 1)</code> + 固定最小高度 <code data-page-node-id="DB7lGXf4tDYOEIDtaHb7LC">min_height=540px</code></li>
+    <li data-page-node-id="FPh2TBx3v1JwzuqrXIRds6">国家像素用 <b data-page-node-id="ScB4UJCrV628SEhGzVxhhI">canvas.before</b> 直接画到地图背景上，而不是 FloatLayout 子组件</li>
+    <li data-page-node-id="zI1yQly5TS2VJWdNqjDhcD">所有 UI 元素用 <code data-page-node-id="7weCU0VsBNtXmJbiCCnCHg">image-rendering: pixelated</code> + 2px 实边框，避免抗锯齿让元素变模糊</li>
+  </ul>
+</div>
+
+<hr data-page-node-id="sRNElvpZUe0SoiwAwP6q79">
+
+<h2 data-page-node-id="9E4d3wQAdNHKpe4D7FOWwQ">9. 文件结构（实施时）</h2>
+<table data-page-node-id="yLuFnLpA9pr0AjgWUVDe6D">
+<tr data-page-node-id="kDrLTsgYGA7JsWDMU61sOL"><th data-page-node-id="1DAoaTpKpDFee5Br4XKnk3">新文件</th><th data-page-node-id="1lIOQaGlqPPUHTeY2gmIoO">职责</th></tr>
+<tr data-page-node-id="tGTNkjrW0ofRy2qDwUFHeh"><td data-page-node-id="zjCvNDjgE5HJW0RY7rPV76"><code data-page-node-id="ZJI3eZAm6cVeutXrfWmD7A">demo/pixel_ui.py</code></td><td data-page-node-id="GeKdhZjxwELM8tQU66NNPp">像素风 UI 基础组件（Panel, Button, Bar 等）</td></tr>
+<tr data-page-node-id="xhBMFw16csIV6ogRE0MIZt"><td data-page-node-id="6O09ARVjB5NMCK011Eh8RU"><code data-page-node-id="toH427Jt0HLhLxkhFqgxVh">demo/pixel_flag.py</code></td><td data-page-node-id="qtiyWrLy1WW8ekP5u45sLQ">简化 FlagWidget（继承现有 flag_draw.py 思路）</td></tr>
+<tr data-page-node-id="HvQW4pmhwLjz5vWSBzvLDB"><td data-page-node-id="MHeUuW71UUgOUUodJBlzED"><code data-page-node-id="IknMVnjswvhYwtofZNS5pu">demo/pixel_map.py</code></td><td data-page-node-id="0MjozJLKEBxefswuo81jvp">WorldMapWidget 重写版（canvas.before 画国家）</td></tr>
+<tr data-page-node-id="HIvC1hKVzIQY4irtD2pUgJ"><td data-page-node-id="kiZ2Fqxo4E5wmj6osCoYFd"><code data-page-node-id="6WVgowjrL0I1Q7NalxyP0t">demo/pixel_layout.py</code></td><td data-page-node-id="tePHfs9DJjANpBvjg5dQo2">主游戏界面布局（3 列 + 顶底）</td></tr>
+<tr data-page-node-id="uYIMuKEdxLgbfAPIpbrxMw"><td data-page-node-id="txsrNFlPTHFizeTXOb8wFx"><code data-page-node-id="ecOFM02vjC4zeuw0lRsYk4">demo/pixel_icons.py</code></td><td data-page-node-id="8jxh2fb0AxOrSxNd4YFQc0">图标常量映射</td></tr>
+</table>
+
+<table data-page-node-id="JpRYcMLF0t3JYUMgPqPHi8">
+<tr data-page-node-id="6o2AF7E1N49QJgTfBZhElT"><th data-page-node-id="JSmvHfIY641cSax4CNnk4W">改动的文件</th><th data-page-node-id="D1auXqDY08n9YZrzZe6dYk">改动</th></tr>
+<tr data-page-node-id="Og7hjyss2zoCzDxgSY7bc7"><td data-page-node-id="Jw8DEAyejWZTVnrsC7nPCL"><code data-page-node-id="JnhHkGTfbV8TT4sTxhGdFw">demo/main.py</code></td><td data-page-node-id="3bGwmReU5OXnqNshanQmOK">引入像素风布局，移除旧 Panel/WorldMap</td></tr>
+<tr data-page-node-id="Av7vWJv9RDhSGiCOQYM1ok"><td data-page-node-id="YzK1ZWlBm7aFOkVfcIZ8Vk"><code data-page-node-id="zkF2vEJn7GdHv3f02gWa8c">demo/i18n.py</code></td><td data-page-node-id="nzkdyCEtgv9tr0lAo9pAIc">所有 UI 文本加像素风图标前缀</td></tr>
+<tr data-page-node-id="FYZp1PpfgJcQmT8lPMEtyE"><td data-page-node-id="42MQeFHeYsa9E5pNCnklez"><code data-page-node-id="hRDHbHMnBztj6CpqtaxcY6">demo/data.py</code></td><td data-page-node-id="ZTObr7KrRZmp5aUA2wVNJn">country.flag 改为国家代码（CN/IN/...）</td></tr>
+</table>
+
+<hr data-page-node-id="jWkf1EG43OXpFWhaa9HLsv">
+
+<h2 data-page-node-id="ujkt5gBjBFoMzijLtSDvNb">10. 审核请回答</h2>
+<div class="note" data-page-node-id="CEzW7GIvdxK6Hw66DftIET">
+  <b data-page-node-id="ZSyqou4G08EC69xpaRWFwo">请确认/修改下列设计决策：</b>
+  <ol data-page-node-id="JlxVP0Ia4dswp2UrBr1DKP">
+    <li data-page-node-id="HN1J9GlendooZRX7g9eD3a">整体色板（深色 + 青色高亮）是否 OK？<b class="ok" data-page-node-id="iea7kMQCTdudivDEDvFBix">[ ]</b> 还是想用浅色/绿色高亮？<b class="warn" data-page-node-id="JX1byAz2nQVt29oWuFPYkC">[ ]</b></li>
+    <li data-page-node-id="C8o997hPCvpPC5u6eETHGa">地图用国家代码（CN/US/JP）还是缩写国旗？<b class="ok" data-page-node-id="dvjDi7SjmGT4nuUztU3NAW">[ ]</b> 代码更清晰</li>
+    <li data-page-node-id="vhIiPM2Cm4i3s3OQaXZQy9">像素字体是否用系统 Consolas/Courier？<b class="ok" data-page-node-id="R9LU35goaB8494EX3ShEFV">[ ]</b> 还是下载 Press Start 2P？<b class="warn" data-page-node-id="LpB3uk4jIpehPQtfCgcXPh">[ ]</b>（前者立即可用）</li>
+    <li data-page-node-id="6WZ977l9gPz6k8RNhzg33r">主界面窗口尺寸：1280×720？<b class="ok" data-page-node-id="mTrRVIuuTFauLAGUdHU2Dv">[ ]</b> 还是 1680×980（更大）？<b class="warn" data-page-node-id="qiwRbqZEwzaxOG4fEHGR8N">[ ]</b></li>
+    <li data-page-node-id="fmUToj51aDKGNXCaFTWRsc">国家详情面板：右侧滑入<b class="ok" data-page-node-id="qoz5yvpA21FNiOjmurTy4H">[ ]</b> 还是弹窗<b class="warn" data-page-node-id="yUZAI8mfzjStDcO5jO9Cgy">[ ]</b>？</li>
+    <li data-page-node-id="pYQ4nqwuvJrYvJYfcLKcPl">科技树：右侧固定列<b class="ok" data-page-node-id="CDRdk0PhtSrz765R5pa6Ya">[ ]</b> 还是独立弹窗<b class="warn" data-page-node-id="lZhA66pomZMOZIHTUFfbjB">[ ]</b>？</li>
+    <li data-page-node-id="VgiDyBZCxpAetGr3qrxTto">像素国旗 12×8 网格是否够用？需要更精细的（如美国条纹、英国米字）？</li>
+    <li data-page-node-id="NvyYX0MgemMxgUSesC92O9">是否要再加一个"事件日志"区域（建议放右侧或底部）？</li>
+  </ol>
+</div>
+
+<p class="muted" style="margin-top:40px;text-align:center" data-page-node-id="Qnx9j7BBhzKuF56gQ5rBD1">
+  设计稿 v0.1 · 等待审阅 · 等你点头后再开始改程序
+</p>
+
+</body>
+</html>

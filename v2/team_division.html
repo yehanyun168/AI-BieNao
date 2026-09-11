@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="iLIPdmtP0gJY3ymejZcSDm">
+<head data-page-node-id="R15nwtEhP8HM58Vf2deCFe">
+<meta charset="UTF-8" data-page-node-id="QhINoygtBg2dJSVvMpTnqj">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="7n2wy8JOyMFDFD9lH2LJTp">
+<title>《AI 别闹》两人团队分工方案</title>
+<style>
+:root{
+  --bg:#0F1419; --panel:#1A2028; --panel2:#222B36; --border:#2D3742;
+  --text:#E8EDF2; --muted:#9AA5B1; --accent:#4ECDC4; --accent2:#FF6B6B;
+  --gold:#FFD93D; --green:#6BCB77; --blue:#4D96FF; --purple:#C56CF0;
+  --orange:#FFA500; --red:#FF5252;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.75;font-size:15px}
+.container{max-width:1180px;margin:0 auto;padding:32px 24px 80px}
+h1{font-size:32px;letter-spacing:1px;background:linear-gradient(90deg,#4D96FF,#FFD93D);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;font-weight:800}
+.subtitle{color:var(--muted);font-size:14px;margin-bottom:32px;border-left:3px solid var(--accent);padding-left:12px}
+h2{font-size:24px;margin:48px 0 16px;padding:12px 16px;background:var(--panel);border-left:4px solid var(--accent);border-radius:6px;color:var(--accent)}
+h3{font-size:18px;margin:28px 0 12px;color:var(--gold);border-bottom:1px dashed var(--border);padding-bottom:6px}
+h4{font-size:16px;margin:20px 0 10px;color:var(--accent2)}
+p{margin:10px 0;color:var(--text)}
+strong{color:var(--gold);font-weight:600}
+em{color:var(--muted);font-style:normal;background:var(--panel2);padding:1px 6px;border-radius:3px;font-size:13px}
+code{background:var(--panel2);padding:2px 8px;border-radius:4px;color:var(--accent);font-family:"Fira Code",Consolas,monospace;font-size:13px}
+pre{background:#0B0F14;border:1px solid var(--border);border-radius:8px;padding:16px;overflow-x:auto;margin:12px 0;font-size:13px;line-height:1.6;color:#A0E7E5}
+pre code{background:none;padding:0;color:inherit}
+ul,ol{margin:8px 0 12px 24px}
+li{margin:6px 0}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border:1px solid var(--border);vertical-align:top}
+th{background:var(--panel2);color:var(--accent);font-weight:600;font-size:13px}
+tr:nth-child(even){background:var(--panel)}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 22px;margin:14px 0}
+.card.good{border-left:4px solid var(--green)}
+.card.bad{border-left:4px solid var(--red)}
+.card.tip{border-left:4px solid var(--gold)}
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;margin-right:6px;color:#000;font-weight:600}
+.t-a{background:#4D96FF;color:#fff}.t-b{background:#FF6B6B;color:#fff}
+.t-blue{background:#4D96FF;color:#fff}.t-green{background:#6BCB77}.t-red{background:#FF6B6B;color:#fff}
+.t-purple{background:#C56CF0;color:#fff}.t-orange{background:#FFA500}
+.t-yellow{background:#FFD93D}.t-cyan{background:#4ECDC4}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:768px){.grid2{grid-template-columns:1fr}}
+.role-card{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:18px;margin:10px 0}
+.role-card.a{border-left:4px solid var(--blue)}
+.role-card.b{border-left:4px solid var(--red)}
+.role-card h4{margin-top:0;color:var(--gold)}
+.role-card .meta{font-size:12px;color:var(--muted);margin-bottom:10px}
+.divider{height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent);margin:40px 0}
+.toc{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 24px;margin:24px 0}
+.toc h3{margin:0 0 12px;border:none;color:var(--accent)}
+.toc ol{margin-left:20px;columns:2;column-gap:24px}
+.toc li{break-inside:avoid}
+.toc a{color:var(--text);text-decoration:none}
+.toc a:hover{color:var(--accent)}
+.checklist li{margin:6px 0;font-size:14px}
+.kbd{background:#000;border:1px solid var(--border);border-radius:4px;padding:1px 6px;font-family:monospace;font-size:12px;color:var(--accent)}
+.flow{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;margin:20px 0;font-size:14px}
+.flow .step{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;flex:1;min-width:140px;text-align:center}
+.flow .arrow{color:var(--accent);font-size:20px}
+.interface{background:var(--panel);border:1px solid var(--gold);border-radius:10px;padding:18px;margin:14px 0}
+.interface h4{margin-top:0;color:var(--gold)}
+.interface pre{margin:8px 0}
+</style>
+</head>
+<body data-page-node-id="KaNXyJbHT6vpdPNGt2bqAx">
+<div class="container" data-page-node-id="N3TfXh96awoLbIW0FC125z">
+
+<h1 data-page-node-id="qIFnA7kt0mFXfI6LN0OxBK">《AI 别闹》两人团队分工方案</h1>
+<div class="subtitle" data-page-node-id="atftEK0V0P2pbOa2b0X1Nd">Python + Kivy 全栈 · PC 优先 · 5 天冲刺 · 一份可执行的分工契约</div>
+
+<div class="card tip" data-page-node-id="iohtv1mif6iqhTcKRg4iCw">
+<h4 data-page-node-id="n9XYvaTP5i8FSsyaiIBDbc">核心原则</h4>
+<p data-page-node-id="ZhEXwof7jD1G4m7dN7fFHZ"><strong data-page-node-id="YxArgeeryZmiDvMfLGNeur">Kivy 不是典型的"前端/后端"框架</strong>——它是 GUI + 业务逻辑一体。所以"前后端"分工要<strong data-page-node-id="xKq8L5szu4mInXyxkd0SuV">按"职责边界"划分</strong>，而不是按"文件类型"。</p>
+<p data-page-node-id="bwuw4960W7b0sGDGRlP7UX">我们约定：</p>
+<ul data-page-node-id="Zb1lr4dwNvCzsJgj3Bs5YK">
+<li data-page-node-id="OeYo0NHIxvY7n0kWoxIaXv"><span class="tag t-a" data-page-node-id="CaZpScrDVcidGDk7Li8Fcy">A 同学</span> 负责<strong data-page-node-id="VQqBUHbGhFcB4PWpGPfcka">业务逻辑、数据模型、算法、引擎</strong>——所有不画在屏幕上的东西</li>
+<li data-page-node-id="0c4LTIq6NBvgK4ijqfOH2Q"><span class="tag t-b" data-page-node-id="KASI6m4SiEfZGFTiARMQI6">B 同学</span> 负责<strong data-page-node-id="vriJScLQxmn62WpSuNBd3n">UI 布局、视觉设计、用户交互、配置数据</strong>——所有画在屏幕上的东西</li>
+<li data-page-node-id="9raugd53CTSWmObRHrRUeC"><strong data-page-node-id="FARVVOQ88yYrGuQvrCHB7O">接口（Interface）是合作的命脉</strong>——前后端约定好接口后，可并行开发</li>
+</ul>
+</div>
+
+<div class="toc" data-page-node-id="zXhkAZbd46Lk8UVjwyVWtJ">
+<h3 data-page-node-id="vDxzDmO8IMKwTuCoih0qHw">目录</h3>
+<ol data-page-node-id="8a9pz8B1GnB4demt2x6NhR">
+<li data-page-node-id="9HFxJdw0oUJ9ndqz2SHGZ5"><a href="#role" data-page-node-id="UzgEX2jSIm2yDNrB7JVXub">角色定位与边界</a></li>
+<li data-page-node-id="bokY20Fr7Ed77N995jeWOZ"><a href="#interface" data-page-node-id="v5U3wg8YHF1sE2J6pdcQ6T">接口契约（Day1 第一小时定稿）</a></li>
+<li data-page-node-id="U5tR7SD1iGAVyNo1suzjs6"><a href="#files" data-page-node-id="VsbdR31Pac8tCi6wHBofdh">文件归属矩阵</a></li>
+<li data-page-node-id="xhK2CICCmjrhYfXphhAQzR"><a href="#schedule" data-page-node-id="Q9M2bdnPD5FtagJFfFljrV">5 天详细分工</a></li>
+<li data-page-node-id="5yeMpwzTBSU27EAPIAuUEm"><a href="#collab" data-page-node-id="OKUw2AwBzjIdZruuHxi04F">协作机制</a></li>
+<li data-page-node-id="NO8isJTP2JgSCglF2iWu1j"><a href="#git" data-page-node-id="XL5Laj6brVCuHzygbABaRK">Git 分支策略</a></li>
+<li data-page-node-id="L5XPbTBSf59IlmNtVqLAPZ"><a href="#risks" data-page-node-id="yIWyCL9CbcTsBWibbR9PBi">风险预案</a></li>
+<li data-page-node-id="jvYF8cYG3Cawo1QbxuiN0b"><a href="#checklist" data-page-node-id="WRQRbzUKTrdEmIDwO38nDq">每日检查清单</a></li>
+</ol>
+</div>
+
+<div id="role" data-page-node-id="BDhocnxlbEZzbRfGg35cUU"></div>
+<h2 data-page-node-id="GzruVhCjGCEZWXRyiJ3t76">一、角色定位与边界</h2>
+
+<div class="grid2" data-page-node-id="m5DElqiAURRiInfggAwF0o">
+<div class="role-card a" data-page-node-id="DKLThEbzLEUuwkvM24swCz">
+<h4 data-page-node-id="d9VXoNR0vTxm3tDFDYsQrc">🔵 A 同学 · 引擎 / 后端工程师</h4>
+<div class="meta" data-page-node-id="ZKedbvO2VwiFqiy4gNS1y4">"看不见的代码"</div>
+<p data-page-node-id="C9lpQxf5TfdBdJnbCcqy0c"><strong data-page-node-id="28fCj0suOEHCyQljDda1iu">核心职责：让游戏"跑起来"</strong></p>
+<h4 data-page-node-id="AgHskOH6f9kPJ0tT615xJv">负责模块</h4>
+<ul data-page-node-id="PYojeDtVEH8kV3scCGxhce">
+<li data-page-node-id="QdK8wxqrPnkpdzwhl1wyhO"><code data-page-node-id="RBgBjKULh0ayl1c1SL6nUu">models.py</code> — 数据模型（Country/Player/TechNode/Event）</li>
+<li data-page-node-id="gOah85tg04mPQSTEdcKRzW"><code data-page-node-id="w0hFpOsAid1RDUuLLB5eIP">compute_engine.py</code> — 算力系统主循环</li>
+<li data-page-node-id="t0pdyIzxGTfAtrBUBnuolG"><code data-page-node-id="ml2E1fH8iJ6PdRAXsQA6l9">downloads_engine.py</code> — 下载量增长算法</li>
+<li data-page-node-id="cVxL9r5r2lO0AOev8YKVmy"><code data-page-node-id="WrrHXk2v34an7mWqwOUY4G">tech_tree.py</code> — 科技树解锁/效果聚合</li>
+<li data-page-node-id="UZ1VTX0xdCuMPshK4ohTig"><code data-page-node-id="AKF4DPxGb3GjrEkI12QfZr">event_manager.py</code> — 事件触发逻辑</li>
+<li data-page-node-id="sLkN8ulwVnDLcudscW4N8C"><code data-page-node-id="HysnhqFsHmUF84f0I9a10M">achievement_system.py</code> — 成就检测</li>
+<li data-page-node-id="dsB4OHA1VkU26tPeL3wROw"><code data-page-node-id="4sH2N3yvdEQEXCFUnnGcgy">save_manager.py</code> — 存档/读档</li>
+<li data-page-node-id="JtDH5RqQocTAApEns9cEVh"><code data-page-node-id="cuHF28rSdnyITS6wkC8kqk">main.py</code> — 应用入口 + Kivy 启动配置</li>
+</ul>
+<h4 data-page-node-id="XDXEyC74a7RBFfmf9emwxA">技能要求</h4>
+<p data-page-node-id="lwEoJTQudCAKQ4GqLLy4Tb">Python 数据类、算法实现、Kivy Clock 调度、JSON 序列化</p>
+</div>
+
+<div class="role-card b" data-page-node-id="m80slhHQ3JxZnP9aM4k5YE">
+<h4 data-page-node-id="tXLlIwDVHOJ4sMRcTVQRK0">🔴 B 同学 · UI / UX 工程师</h4>
+<div class="meta" data-page-node-id="SII8eT6QWxvAVzeP5ACqW1">"看得见的代码"</div>
+<p data-page-node-id="yT8JQUSjQWAGGLMA2hjm3h"><strong data-page-node-id="m9Vgq1Qh81MFY2wTEZrwiF">核心职责：让游戏"看得过去"</strong></p>
+<h4 data-page-node-id="sBezYKv9cDe9zeyVNd1DHL">负责模块</h4>
+<li data-page-node-id="cYXUdm0q9bWimhoeJCsfMT"><code data-page-node-id="2wukTQgGXGsw0FvJ82NbKR">config.py</code> — 静态数据（国家/科技/技能/事件/结局/成就的 JSON）</li>
+<li data-page-node-id="AtxSDJQ2QwLbGlm51IsElP"><code data-page-node-id="KzYLZFXRL5B7jMRqPEy9AR">main.kv</code> — Kivy 布局定义</li>
+<li data-page-node-id="0YI9e0FGyD3nqgFgJnK40L"><code data-page-node-id="WYcVqOSYRZZhlpVOttHmhr">ui_controller.py</code> — UI 更新/事件绑定/键盘事件</li>
+<li data-page-node-id="pwUHBBOZhIFiNV6yErPmtF">所有 <code data-page-node-id="kmZLhHL7IDjMClFgnUI27J">.kv</code> 子文件（地图、弹窗、面板组件）</li>
+<li data-page-node-id="IWtOcok9AA66FfKKMDZfQt">图标、配色、字体、动画</li>
+<li data-page-node-id="AOqkZH6TGDfq9MzWSHpIWC">README、演示视频文案</li>
+</ul>
+<h4 data-page-node-id="mjUMEsvwR2lcE4cmGGLLvG">技能要求</h4>
+<p data-page-node-id="G1UXECbqHLSJqLZb63HFGD">Kivy 布局、Kivy Canvas 绘图、KV 语言、视觉设计基础、文档写作</p>
+</div>
+</div>
+
+<h3 data-page-node-id="80soPZMgaRTAc0teFc9UTX">1.1 关键边界（防止推诿）</h3>
+
+<table data-page-node-id="uTbjarD1m42awOUhDMyk1A">
+<thead data-page-node-id="wp0bmpJejHKiujKTSzGKTm"><tr data-page-node-id="AF0kOuW3nUEwqSBBB9QXyF"><th data-page-node-id="kKEBGJ2W0dvKTo2a9181zh">事项</th><th data-page-node-id="hu2LiJ8QA17b6BCS60gGlf">负责人</th><th data-page-node-id="emCHCilFUQlwH8KgRcKmMc">说明</th></tr></thead>
+<tbody data-page-node-id="GbyPSDRcMcS2GeiHhhJZnr">
+<tr data-page-node-id="fQoaCBPEN1vPgprPMp305E"><td data-page-node-id="Ma9EHyeXO8AF1ljnF1scYq">数据类定义（属性）</td><td data-page-node-id="FzgHIA8DzngylNxQRWmxH8"><span class="tag t-a" data-page-node-id="qeCB9CCyDQrQTtcLf9JG9g">A</span></td><td data-page-node-id="rjTyjeY8aPHzRteqfUucxp">在 <code data-page-node-id="YM3iUNQA9iUMCD7ax7Q2Vt">models.py</code>，B 不能改</td></tr>
+<tr data-page-node-id="iG4SWcGSVjws8Yhenavy2z"><td data-page-node-id="26M7ktKQ5AuO90yOPeTwAk">数据类初始化参数</td><td data-page-node-id="e4CNzcLKy1LylfKsn8AaRJ"><span class="tag t-a" data-page-node-id="qzS9qQZSx4697CFvYQqs8h">A</span> 主导，<span class="tag t-b" data-page-node-id="dA8CGYKtf6DAXH8cBQEmlf">B</span> 参与</td><td data-page-node-id="R56PPCXAeLVy7IHmC1cSZ5">决定 JSON 配置怎么写</td></tr>
+<tr data-page-node-id="8XsIeSvfHrdjiVjcDKbs4m"><td data-page-node-id="JRpvEDzc8Mwk86tbQWCTJE">UI 调用后端方法</td><td data-page-node-id="zrS4cOcs6sU4Ti4VT6Td6K"><span class="tag t-b" data-page-node-id="xPMlRh7yhCSp1ki3XDNzGl">B</span> 写调用，<span class="tag t-a" data-page-node-id="Grux3TKXnQwkWTONL92bYN">A</span> 提供方法</td><td data-page-node-id="BGKTIH5YOCI2FWpB4h5uO6">谁写 <code data-page-node-id="7tcmeYe4GnnoH1CGGRlZlQ">on_press</code> 谁就要写对应的方法签名</td></tr>
+<tr data-page-node-id="5GO5HDB01BRGStVupQXVrH"><td data-page-node-id="5LiBNdFilccWBFCdYlu47K">事件效果实现</td><td data-page-node-id="LBGX89vkHupbORsNkoxbeu"><span class="tag t-a" data-page-node-id="ewksOaTrEdxplmnF5m9Hxh">A</span></td><td data-page-node-id="NR8X2rm6Zb0QEx0uzQRfPL">B 写的事件选项 → A 实现 <code data-page-node-id="q9ZHJa1A4VaHaHfVf6ZLTk">effects</code> 解析器</td></tr>
+<tr data-page-node-id="4jwYVImMPkbqpDxGiNnI0Y"><td data-page-node-id="nTdQqWNgC2YdDnMLgzGGxr">UI 弹窗内容</td><td data-page-node-id="w9MDWaXlGjoqO81oetdyOi"><span class="tag t-b" data-page-node-id="CwD0YuIwqlRq0SmCoQTA0a">B</span></td><td data-page-node-id="93omkGRzC5JrqFis7KIZsT">标题/文案/按钮文字</td></tr>
+<tr data-page-node-id="1kRJkk5JT6xJLmpn5CXsjX"><td data-page-node-id="w0CaUCXRPhRiw1iltJMrHO">科技效果实现</td><td data-page-node-id="RkQPeBbeFCWAAZGa5gECiq"><span class="tag t-a" data-page-node-id="wNiJtBRR0lyywbJm6zMphd">A</span></td><td data-page-node-id="nOR291BcdwkvAKhj9BqjUB">B 提供 <code data-page-node-id="Ckc41CzsgeWfhRpA0dTvgU">tech_tree.json</code> 数据</td></tr>
+<tr data-page-node-id="QdB2jTGf7yEuFNmHK66Cw1"><td data-page-node-id="exGX7ehp3N5DK0Rm5TRlj1">国家数据</td><td data-page-node-id="KqCCDeLkpF2PE8HdFxWJqM"><span class="tag t-b" data-page-node-id="DBRCLhTxHEy0uMlQ5M4Azo">B</span></td><td data-page-node-id="Xw911ofp0yJCCcokRSCEJF">20 国属性写进 <code data-page-node-id="6WZoyDmj5oihWwMfcAWLww">config.py</code>，A 不能改数据</td></tr>
+<tr data-page-node-id="6eWxjRakdklN8G1pGKxzay"><td data-page-node-id="56wg4MFcP7fEZXwJGoXSSZ">数据有 Bug 时</td><td data-page-node-id="EI0HW9X6kgnwgXls11lCTi"><span class="tag t-a" data-page-node-id="E5MNoP5OHJQUhUzpMfvtQm">A</span> 报告给 <span class="tag t-b" data-page-node-id="LsDL3pkeb4E9TQtUYpGGhn">B</span> 改</td><td data-page-node-id="qkP2UtHWpJxldUk5JseytS">例：A 发现某个国家属性不对，发 issue 给 B</td></tr>
+</tbody>
+</table>
+
+<div id="interface" data-page-node-id="BEKQ96Q4IFy72W9YtLWMIy"></div>
+<h2 data-page-node-id="GUcxYkEWTItojdgVlLLMVn">二、接口契约（Day1 第一小时必须定稿）</h2>
+
+<div class="card tip" data-page-node-id="rpeyvTev1sab21o7SrDLnL">
+<h4 data-page-node-id="ChlM4toS7AcMlnQJXInEfG">为什么要先定接口？</h4>
+<p data-page-node-id="ugB30BqDU4tZ4BKPdNh6xA">前后端合作最怕"我等你，你等我"。定下接口后，<strong data-page-node-id="497hVPZcAKHYP7QRAyQgd3">A 写方法、B 写界面，可以并行</strong>。Day1 第一小时就坐在电脑前一起写 5 个接口。</p>
+</div>
+
+<h3 data-page-node-id="NJxFMGuuCEO0v6K2HGl8Cf">接口 1：数据模型（models.py）</h3>
+<div class="interface" data-page-node-id="vTmAuflHchNKU8xeO4aENt">
+<pre data-page-node-id="zjq3HgvCnfY3j4qkXzngGo"><code data-page-node-id="EeWd8DmGxd4e3WacbXmApE"># A 负责实现，B 负责知道有哪些属性
+@dataclass
+class Country:
+    id: str
+    name: str
+    flag: str
+    continent: str
+    population_m: int
+    tech_level: float          # 1-10
+    ai_trust: float            # 0-1
+    openness: float            # 0-1
+    preferred_features: List[str]
+    neighbors: List[str]
+    vibe: str
+
+    # 运行时状态（A 拥有，B 只读）
+    downloads: int = 0
+    unlocked: bool = False
+    suspicion: float = 0.0
+
+@dataclass
+class Player:
+    compute: int = 0
+    total_downloads: int = 0
+    global_suspicion: float = 0.0
+    tech_unlocked: List[str] = field(default_factory=list)
+    achievements: List[str] = field(default_factory=list)
+    suspicious_countries: List[str] = field(default_factory=list)</code></pre>
+</div>
+
+<h3 data-page-node-id="jkl86jMuU9TvXE01F5q6Ty">接口 2：引擎主循环（compute_engine.py）</h3>
+<div class="interface" data-page-node-id="8zMms2TjK87oJF0a0MhAZF">
+<pre data-page-node-id="MZt72qq0e1YOGkPdJHAxik"><code data-page-node-id="1KVpQygLjUzA7f8GdEJg3X">class ComputeEngine:
+    def __init__(self, player, countries: Dict[str, Country]): ...
+
+    # 每 2 秒调用一次（Kivy Clock 调度，A 实现）
+    def tick(self) -> dict:
+        """
+        返回值（UI 关心的）：
+        {
+          "tick": 1,
+          "new_downloads": 110000,
+          "compute_stolen": 0.5,
+          "global_suspicion": 0.005,
+          "country_details": {
+              "US": {"downloads": 10000, "stolen_compute": 0.2, "suspicion": 0.001},
+              "CN": {...},
+          },
+          "crisis_triggered": False,
+          "defeat_triggered": False,
+        }
+        """
+        ...
+
+    # B 在 UI 调用
+    def unlock_country(self, country_id: str): ...
+    def purchase_tech(self, tech_id: str) -> bool: ...
+    def use_skill(self, skill_id: str, target: str = None) -> bool: ...
+    def resolve_event(self, choice_index: int): ...</code></pre>
+</div>
+
+<h3 data-page-node-id="gFC2HP7VJGwKs0sVWqQqSD">接口 3：事件数据（events.json）</h3>
+<div class="interface" data-page-node-id="J83BuGU799X3CUMTdWIppl">
+<pre data-page-node-id="TpUFjRqY2v3pHB5e8sFKJh"><code data-page-node-id="Jp4yz8tUYYgQRTvBjRrY70">// B 维护，A 实现解析器
+{
+  "id": "evt_us_openai",
+  "title": "🚀 美国大模型发布",
+  "flavor": "美国一家明星 AI 公司发布了新模型...",
+  "category": "positive",          // A 用于加权
+  "weight": 10,                    // A 用于加权随机
+  "cooldown": 50,                  // A 用于冷却
+  "trigger": {                     // A 用于前置条件
+    "country_focus": "US",
+    "min_downloads": 1000
+  },
+  "options": [
+    {
+      "text": "蹭热度，立刻跟进",
+      "cost": 0,
+      "effects": [                  // A 必须能解析以下 type
+        {"type": "add_downloads", "country": "all", "value": "10%"},
+        {"type": "add_suspicion", "value": 3}
+      ]
+    }
+  ]
+}</code></pre>
+<p data-page-node-id="UDB9SZQ7qaYENcR99VltgD"><strong data-page-node-id="qprdTKCh7lxNZE3qeHHLLE">约定</strong>：A 必须支持的所有 effect type：<code data-page-node-id="Sz6dwJkaFNiHbugEcrdUHB">add_downloads</code>, <code data-page-node-id="iunV8vQuCDdHdWF8DIajx3">add_suspicion</code>, <code data-page-node-id="DNZx4V1yoUACSH9nLQGGiO">reduce_suspicion</code>, <code data-page-node-id="KNbTerIbVpOS2FLWKaIcCP">add_compute_income</code>, <code data-page-node-id="nna7qSxJgt3dhRTJMdCH0k">unlock_achievement</code>, <code data-page-node-id="mAjGg2nkFSBOGbvGqDyNT9">trigger_ending</code>, <code data-page-node-id="nMq5xQ6hprRvUbVjIkalIo">chain_event</code>。B 写事件时只能用这些 type。</p>
+</div>
+
+<h3 data-page-node-id="PMDY1ql1s0OsPLO96cKWAj">接口 4：科技效果（tech_tree.py）</h3>
+<div class="interface" data-page-node-id="gOAaC2geiu2T7m4g4JfzTZ">
+<pre data-page-node-id="AFtU7R7GzqJfuD0gGCWjsN"><code data-page-node-id="SGoq0hmRQPGkpLQYWlqDz9"># B 写 tech_tree.json，A 实现聚合逻辑
+TECH_EFFECTS = {
+    "dist_t0": {"downloads_mult": 1.15},                # 唯一数字效果字段
+    "dist_t1": {"downloads_mult": 1.25, "needs": ["dist_t0"]},
+    "stealth_t0": {"suspicion_mult": 0.80, "stealth_ratio_bonus": 0.02},
+    "stealth_t3": {"suspicion_mult": 0.50, "duration_no_suspicion": 30},
+    "comp_t0": {"unlocks_countries": ["DE", "FR", ...]},
+    "rnd_t0": {"unlocks_features": ["image", "voice"], "downloads_mult": 1.20},
+    # ...
+}
+
+# A 必须实现的字段（聚合函数会读这些 key）：
+# - downloads_mult
+# - stealth_ratio_bonus
+# - compute_per_user_mult
+# - active_user_mult
+# - suspicion_mult
+# - suspicion_max_bonus
+# - unlocks_countries (list)
+# - duration_no_suspicion (int)
+# - needs (前置科技 ID)</code></pre>
+</div>
+
+<h3 data-page-node-id="XRkoXgaW7MFdUUuqv9eTw6">接口 5：UI 控制器（ui_controller.py）</h3>
+<div class="interface" data-page-node-id="wGxDweF3SW1A43DDLTXuJJ">
+<pre data-page-node-id="AFAuckdaEg4oSMMGFwXQUL"><code data-page-node-id="yZZ7ACCJI79xy6bZqHjiFe"># 这是 B 主导的文件（因为 B 知道 UI 要什么数据）
+class UIController:
+    def __init__(self, engine, root_widget):
+        self.engine = engine  # A 的引擎
+        self.root = root      # B 的 main.kv 根组件
+
+    # 0.5 秒刷新一次（A 调用，B 实现 UI 更新）
+    def update_all(self): ...
+
+    # B 在 Kivy 按钮的 on_press 中调用
+    def on_country_clicked(self, country_id): ...
+    def on_skill_clicked(self, skill_id): ...
+    def on_tech_clicked(self, tech_id): ...
+    def on_event_option_clicked(self, choice_index): ...
+    def on_save_clicked(self): ...
+    def on_load_clicked(self): ...
+
+    # A 通过这个方法把事件推送给 B
+    def show_event_popup(self, event_data: dict): ...
+    def show_ending_screen(self, ending_id: str): ...
+    def show_achievement_notification(self, ach_data: dict): ...</code></pre>
+</div>
+
+<div id="files" data-page-node-id="RiTCnvem8JuBqWCTlEEF7U"></div>
+<h2 data-page-node-id="Z0SyjLpDVhgS2R2hALBKRs">三、文件归属矩阵</h2>
+
+<table data-page-node-id="eFfcDvNwAw790tb40QQag9">
+<thead data-page-node-id="ma7mF6mDgavGNdJ4ihJSU8"><tr data-page-node-id="nSsruv7kHhFOvYU551VnWv"><th data-page-node-id="5ESVSRVlKvzSxBMJwQPP4N">文件</th><th data-page-node-id="QNvV9FSGRjA90ElFyp2E5G">行数</th><th data-page-node-id="6RVAFWRSMSbDWUudYlQgDz">归属</th><th data-page-node-id="XGpsC4gTpgArkTJXCNXyWb">协作方式</th></tr></thead>
+<tbody data-page-node-id="qvamZhVMtiPmJXut3PHC40">
+<tr data-page-node-id="43KUVgAYX4NTpImwCyrycW"><td data-page-node-id="iuCoIgox047BIUXQU35PeL"><code data-page-node-id="PHWIerJO4GGI3eLYOsKEFL">main.py</code></td><td data-page-node-id="WazuBBgvkIDHIbdYm285sq">100</td><td data-page-node-id="r5JafLz9PxbNo1yI3TFIt6"><span class="tag t-a" data-page-node-id="1orJam1yGTmFYnrf4rECiR">A</span></td><td data-page-node-id="q2joFjZk1UTWwuSKcjV8Fb">A 主导，Day1 第一小时一起定启动配置</td></tr>
+<tr data-page-node-id="l9vGlIULWESKmQGLvfOkWO"><td data-page-node-id="DAXEft45GmlG4CsSCaPkSk"><code data-page-node-id="YSL31HpxqPQyGuGJed8Flv">main.kv</code></td><td data-page-node-id="naAgghDj2CAKpgoaOix55Q">200</td><td data-page-node-id="peS5lQmY7o7mNdeAVZiU9b"><span class="tag t-b" data-page-node-id="sDUL4S9juGSGn90hLxrSl5">B</span></td><td data-page-node-id="ld7BAmUjavmOA50wgGcNo2">B 完全负责，A 只读不写</td></tr>
+<tr data-page-node-id="OUZBbotAO2ppL84yV4krLC"><td data-page-node-id="0nhF9vujY7Bwm5UuAZFlqC"><code data-page-node-id="m24EaegNm8HV1G0wBCazvy">config.py</code></td><td data-page-node-id="aE8AWeuFbQOvGdZfhcMe3i">400</td><td data-page-node-id="qTDA3nVoKrcmJF9qC7zkQB"><span class="tag t-b" data-page-node-id="V6VMqQwZjPwIx4LTvQ6Wvs">B</span></td><td data-page-node-id="aApnD1gBUYPoGd4kGAL3EN">JSON 数据，B 拥有最终解释权</td></tr>
+<tr data-page-node-id="C15ZRWI2GdyPzRxBgdgawf"><td data-page-node-id="KVRiMYMDq8TJMPFl0Xljrl"><code data-page-node-id="1bohoMDd61yyNTzhQIridl">models.py</code></td><td data-page-node-id="ZNQJq40T31BjUtED2mi1z3">150</td><td data-page-node-id="3aAEM2v2UX0AdbZzfA66TP"><span class="tag t-a" data-page-node-id="04ioPPj4sXf9jjCL44Cs8J">A</span></td><td data-page-node-id="7UjVvaC3vQhZd8gM2FF9bt">数据类定义，A 主导</td></tr>
+<tr data-page-node-id="neFbCtCyKJFzcIRgVeg8Uc"><td data-page-node-id="0WE2ZUSAAKxFqq0dmIEzIT"><code data-page-node-id="uCyCLPqvn2fh4huzx5IYqd">compute_engine.py</code></td><td data-page-node-id="3RHitRzGiNvzGvvKhcM62y">200</td><td data-page-node-id="0FT3nQbpAyBVvLI5OOCW1V"><span class="tag t-a" data-page-node-id="qGoMpNcZCDsXBj7Oecdujo">A</span></td><td data-page-node-id="WgBrVKS2S2fWbVYQOLdop5">核心算法，A 完全负责</td></tr>
+<tr data-page-node-id="anmXsIYkfold5Z6qVHyVr8"><td data-page-node-id="LoAEuC1PmhVGIEg6r5vHwI"><code data-page-node-id="pzcQmcZmM6bCFcbWCTduVl">downloads_engine.py</code></td><td data-page-node-id="qCM1hrG3egQB9LyHFEJQWt">100</td><td data-page-node-id="sNHbNFY85Xn9BBCF98uTs7"><span class="tag t-a" data-page-node-id="y6hOK1qwZaB3TgPTR6aKLp">A</span></td><td data-page-node-id="DSm6i2w6r6KRyXfodEl1SS">A 完全负责</td></tr>
+<tr data-page-node-id="Zy8boqQBUxDRraIecPoX1A"><td data-page-node-id="d4lTNZmQEK7rXZwos68N3L"><code data-page-node-id="yVVGA2b2xFsVLYMDDHtEAR">tech_tree.py</code></td><td data-page-node-id="Ao9SEX6nsJiUD8ZIwKUA8g">120</td><td data-page-node-id="FslScSY60WkgFNCqlAGVFB"><span class="tag t-a" data-page-node-id="n8akoH0trgevBU8vLN8Zng">A</span></td><td data-page-node-id="cNLfeUzvqWyYoOMCv7tP6y">A 实现聚合，B 提供 JSON</td></tr>
+<tr data-page-node-id="y0dlcM4yIbgQBRac5WdpeG"><td data-page-node-id="xUlHQLwHDaWAcvfSWVFITL"><code data-page-node-id="1UIl2kGOWc1JejA3NIUAH4">event_manager.py</code></td><td data-page-node-id="1BFyJWBSwQGzxyBX4bMXqw">150</td><td data-page-node-id="PlHdrI6J1FuzFneJCUlUVF"><span class="tag t-a" data-page-node-id="EFa3e9h4UcxUitKHPm7DUW">A</span></td><td data-page-node-id="FVhQGJ2MgY18TnbPlwkHhf">A 实现触发，B 提供事件数据</td></tr>
+<tr data-page-node-id="GRwsAIX3B8iJyBvEj6WKmQ"><td data-page-node-id="inhdZHaoUGkqfpAUwB6PZP"><code data-page-node-id="OwXVsGeK3GDwte8EOCAVtx">achievement_system.py</code></td><td data-page-node-id="Hh2IkilxFfRlBPyvO3JeJu">100</td><td data-page-node-id="EWxlhMemvECkGVNpYDONoL"><span class="tag t-a" data-page-node-id="NHyzozlTo5NMUtbLq7KJMr">A</span></td><td data-page-node-id="9cjhnAtt6hFddB5mikSbMl">A 实现检测逻辑</td></tr>
+<tr data-page-node-id="uxkYSxUHU9gkpzshjpYpun"><td data-page-node-id="kbuwXLq18HgOUOVAsjBw3v"><code data-page-node-id="kkUoddM0zH96FxglQbCZGL">save_manager.py</code></td><td data-page-node-id="jJffgKW0AXm70cRMA7FTVN">80</td><td data-page-node-id="Gdua8rV8mxiaDAI05aGVlp"><span class="tag t-a" data-page-node-id="6tE03IurSZ6ZAlcYVPHMiI">A</span></td><td data-page-node-id="6oeS3eaWqXUVDwX7F0VIqo">A 完全负责</td></tr>
+<tr data-page-node-id="VF3MhXWlux8vrdMvXJHTd0"><td data-page-node-id="OA0hdTsnruHflJaxnSJ2qQ"><code data-page-node-id="OFWOW5MmtoR43yUTThroQa">ui_controller.py</code></td><td data-page-node-id="JFy4FDrpoiFzRRJwFpV9hu">150</td><td data-page-node-id="JZ5DbhvwDLTyM7A9jvTrhM"><span class="tag t-b" data-page-node-id="7Gxa5uG3PJbB8tfrxA9jD5">B</span></td><td data-page-node-id="wGm79xGIUSlcQWxnHUiDsz">B 主导（因为对接 UI），A 提供引擎引用</td></tr>
+<tr data-page-node-id="njauJwL3VupIAiNNrhk4UA"><td data-page-node-id="21oJ9PQmBvf1H5wJee6nBW"><code data-page-node-id="36ElS6IXykdjAmlmg12ByY">README.md</code></td><td data-page-node-id="AseUYXBGtvD8NRWhzVvRdq">200</td><td data-page-node-id="PDFOed7Hb7ejv4nLfeOHLa"><span class="tag t-b" data-page-node-id="NC3fGEK6vI9cAE5uY31dz3">B</span></td><td data-page-node-id="BoYOP65hcqCxhgphNTblHh">B 写，A 补充技术细节</td></tr>
+<tr data-page-node-id="KeBElNkqUTt1W9AavlUCEm"><td data-page-node-id="QJZwaIK853FqsMBRUaPrhM"><code data-page-node-id="HNN3JHvyLmlCVhJ8iGLIXS">tests/test_compute.py</code></td><td data-page-node-id="nSU7JBDcffbxl6CqvcDB6Z">100</td><td data-page-node-id="iCARgLxFjace2lBafeYGcm"><span class="tag t-a" data-page-node-id="BcKgI8A7MZ0eAEW5EkIDYh">A</span></td><td data-page-node-id="pZOLfHaK906aJJqcQ3LUJU">A 写核心算法单测</td></tr>
+<tr data-page-node-id="dO5IvYD2gICABLnYGBOl8O"><td data-page-node-id="CVBaLLIw4ecW1LUCDq4Fmm"><code data-page-node-id="sp0Rl7EE2SQYolL88TfXgg">tests/test_event.py</code></td><td data-page-node-id="qDMcsAHz7fvtPt9Hm6PYGa">80</td><td data-page-node-id="4YagIpDC4PdObdzGg3Ol0I"><span class="tag t-a" data-page-node-id="OrJ9H8bi04a14zUebcAksB">A</span></td><td data-page-node-id="J3YKuI2RPEGoZrb3GfMidO">A 写事件系统单测</td></tr>
+</tbody>
+</table>
+
+<p data-page-node-id="qvHIa4xFCMwhr69XdotnGH"><strong data-page-node-id="RmqIXscXaHexZ91Xi42eRp">代码所有权规则</strong>：每人拥有 5-6 个文件的"所有权"。另一人修改对方文件需先 PR + review。<strong data-page-node-id="Zhp3m1DRBgUOc0jibPTIBy">配置文件（<code data-page-node-id="DtbVB2ymX0rUwQS1ryi13H">config.py</code>、<code data-page-node-id="SK7nGktT54QWF6O3PKcxPX">tech_tree.json</code>、<code data-page-node-id="Q8YV3h3LcEgyAX5MMR0jhi">events.json</code>）只能由 B 修改</strong>，A 通过 issue 提出修改建议。</p>
+
+<div id="schedule" data-page-node-id="pMpCHOoAAHa9KP06ujJqYR"></div>
+<h2 data-page-node-id="cY5lZdJFcxapkh5nQGgexw">四、5 天详细分工</h2>
+
+<h3 data-page-node-id="PtSQPA8UVUu3HlqcSGDFxG">Day 1 — 接口定稿 + 数据层</h3>
+<table data-page-node-id="c8qCzIuPqwnHXxpxqjMK76">
+<thead data-page-node-id="yQguR50wvESLzIbCEd7Mbk"><tr data-page-node-id="xYYGwj5IUmG6hAGzsBlySM"><th data-page-node-id="77SwDPLUlwdvvIEFo0CftN">时间段</th><th data-page-node-id="g3HBUgieP6sF51INtw5bxu"><span class="tag t-a" data-page-node-id="Fnf3o53xXqwB96lkrDe0pB">A 同学</span></th><th data-page-node-id="FzGcc9N1NsrFQ4GUwhKoIh"><span class="tag t-b" data-page-node-id="3H7PZg53QiV1r1xPUUulvK">B 同学</span></th></tr></thead>
+<tbody data-page-node-id="OOVLpls67N9605Z25bE1Wv">
+<tr data-page-node-id="Be3xz1FplEbf9ji0GdRlJ5"><td data-page-node-id="HS2NHbiLbXu41JdEIIYtwq">0:00-1:00</td><td colspan="2" style="text-align:center;background:var(--panel2)" data-page-node-id="5h7XJZDnOZrVnNhGCab80u"><strong data-page-node-id="7hWugE44iujW9kLpYV6nM8">🤝 共同：定接口（5 个接口契约）</strong></td></tr>
+<tr data-page-node-id="Rec3qgpVTmVRzyjmjSc6MB"><td data-page-node-id="Rrx5v39DaiqcldOUWP0zI9">1:00-3:00</td><td data-page-node-id="XI0jjZWTmUPuiRxJPaT4ng">搭 Kivy 环境、跑通空白窗口、写 <code data-page-node-id="Appg9MinTYrI388BCkBXHM">main.py</code> 启动框架</td><td data-page-node-id="tDWDaDS6WQLMAuHmqmFoT9">写 <code data-page-node-id="SHxoRuqAPs6q0BU1KqH4V4">config.py</code> 接入 20 国数据</td></tr>
+<tr data-page-node-id="3GhI9TpYvEWtcFVVHjCEp0"><td data-page-node-id="3EspuJ0l1rjhbm1iKX4sto">3:00-5:00</td><td data-page-node-id="XjkpRb1ZTYaqqEwMwDotlO">写 <code data-page-node-id="LST3GCMEfAhxEWQPhyP6Vg">models.py</code>（Country/Player/TechNode/Event）</td><td data-page-node-id="NLCA8vuqyK5knhqNQenS1a">画世界地图草图（按大洲布局 20 国）、确定配色</td></tr>
+<tr data-page-node-id="OrrJmM0LmK8kVXgmYyl686"><td data-page-node-id="fMlFSYdpD5P3ydfuDjeBqX">5:00-7:00</td><td data-page-node-id="WLEdZuHAEHLhgKdErwq8yD">写 <code data-page-node-id="2hN6gFpBMUFLspt6mw0Cxo">compute_engine.py</code> 主循环 + tick()</td><td data-page-node-id="RnkTNRz26rCNkdWYoTyqrp">写 <code data-page-node-id="qrtVcUh1MvMI4hVkIctZ3f">main.kv</code> 主界面布局（状态栏/地图区/技能栏）</td></tr>
+<tr data-page-node-id="WAp3V5WI1fEjZRV27A8EWQ"><td data-page-node-id="dMs8q7ngEVGWxSCWHXGX9q">7:00-8:00</td><td colspan="2" style="text-align:center;background:var(--panel2)" data-page-node-id="SgUefCORmsYvoLRT9795Un"><strong data-page-node-id="YhrPe1ooFLjPtmYecOq45C">🤝 共同：联调，确认引擎数据能传到 UI</strong></td></tr>
+</tbody>
+</table>
+
+<div class="card good" data-page-node-id="x1Acr0CGELzra1eQptpYOh">
+<strong data-page-node-id="wlpFihG8UKLNdAyguaCBZB">Day1 验收：</strong>空白窗口能跑，控制台打印 <code data-page-node-id="DJ47fIS9wuPHFqWBmKWxXi">tick()</code> 返回的字典；20 国数据加载无报错。
+</div>
+
+<h3 data-page-node-id="BPYnlci7ASC2dv6i4aUSuR">Day 2 — 算法 + 内容</h3>
+<table data-page-node-id="FDPQVES9hPK6fxKYwsdXEw">
+<thead data-page-node-id="qsUQxokzEG2nTu2duC1NEI"><tr data-page-node-id="Vk1prI2a8t8JUb1nwsq8fb"><th data-page-node-id="5kScv9YNY7OO8whn4RIbAM">时间段</th><th data-page-node-id="CfbAD4ifLL8VW8HvHBS5HA"><span class="tag t-a" data-page-node-id="QM5m3vYbAmEDTKBjXfaEzN">A 同学</span></th><th data-page-node-id="K9EYAcA6IwFbwd8HESL0Mm"><span class="tag t-b" data-page-node-id="5L97LH9B2E5iri5QO2nDDc">B 同学</span></th></tr></thead>
+<tbody data-page-node-id="924mGy2KjVX9byHfIJxdRI">
+<tr data-page-node-id="CDzMIWLDCZk4xllOMHEoPx"><td data-page-node-id="OesjT7SRRsVYW0uhLV80aA">0:00-2:00</td><td data-page-node-id="HG2hZrzhLWpfHlfAQUanKb">写 <code data-page-node-id="kv1s50C8kozGuLPMq2eN7h">downloads_engine.py</code> 国家差异化增长算法</td><td data-page-node-id="SUTIeF9AdxA0tikjqtDpvR">配合 A 调参、写 37 条事件文案</td></tr>
+<tr data-page-node-id="lUNw4vYTefFOEJCLTv6S1T"><td data-page-node-id="5tmjQe3bEXmw15E964DBId">2:00-4:00</td><td data-page-node-id="ZSm2L3qSP0qkp40Wblv64k">写 <code data-page-node-id="rKYdOdQt0IPZm1UHX1qWt3">tech_tree.py</code> 科技效果聚合逻辑</td><td data-page-node-id="RCV4GUN9uwSQQoEB918hMw">完善 <code data-page-node-id="EB0ozOZ1oRdoz9r1BB3HQb">tech_tree.json</code> 5 分支 20 节点</td></tr>
+<tr data-page-node-id="ylgccPrBowqUIy4nwmCD57"><td data-page-node-id="yVvSrfaV9yA4wAYX2THHnQ">4:00-6:00</td><td data-page-node-id="IrORouppkXb446qXljrqxC">写 6 个主动技能的实现</td><td data-page-node-id="xou5Qk71sNi7nKMAEK4XRe">设计技能图标（emoji 即可）</td></tr>
+<tr data-page-node-id="sCVKO7m59vB9XGyWlivoPB"><td data-page-node-id="NeVPMQgoiJTAH3uVBwGEu9">6:00-8:00</td><td data-page-node-id="RY8TdkNkJW2qD0BSAgLcwB">写 <code data-page-node-id="vooDuuAFKwgMtvj2OlDYDA">tests/test_compute.py</code> 单测</td><td data-page-node-id="fh029QXCiIDef6DiqAtN5O">在 <code data-page-node-id="Dl9hdIpeH2mDeEAGNhNhgX">main.kv</code> 画 20 国位置（按经纬度近似）</td></tr>
+</tbody>
+</table>
+
+<div class="card good" data-page-node-id="oU1JCeZ8GtPhm0eJfNQIrh">
+<strong data-page-node-id="4Kz2tHqgr1rjsprG94OMhT">Day2 验收：</strong>tech 树加点后 <code data-page-node-id="6HQarQBv7rDPKgr1nvCqOk">downloads_mult</code> 真的生效；下载量按国家差异化增长。
+</div>
+
+<h3 data-page-node-id="VygEAuyTnEiBLiuriaAHRO">Day 3 — 事件系统 + UI 联调</h3>
+<table data-page-node-id="AEFMwmtXj5yET7nTdJT0hR">
+<thead data-page-node-id="9pU4zhSDW0JVjabIAWmGMO"><tr data-page-node-id="uAIIwlM3q6BWKjiNj0ncLQ"><th data-page-node-id="OW7AerUclte6IQvPD8hXwb">时间段</th><th data-page-node-id="EDtGyTUDaCn2Zru5ZEKW3B"><span class="tag t-a" data-page-node-id="YkwcjBM60OHLU2Dh7JtmWA">A 同学</span></th><th data-page-node-id="iKZVy0klPclAYOCAvUfbYw"><span class="tag t-b" data-page-node-id="cXPEenWl3B0OLIR7X3a0HF">B 同学</span></th></tr></thead>
+<tbody data-page-node-id="LGsernAN3izIv8dU12k48A">
+<tr data-page-node-id="s8xH857nWCkBhXCQIVTsXr"><td data-page-node-id="9SmRhCKJCJ5Ds4zqes64hR">0:00-3:00</td><td data-page-node-id="RsOuiwCciImFg3z9X6C9vD">写 <code data-page-node-id="NfogyvwUYTP7LilT9LPCe0">event_manager.py</code> 加权触发 + 冷却 + effects 解析</td><td data-page-node-id="nTkLZrL9JRsPqZPXMCBa3a">写事件弹窗组件（<code data-page-node-id="JUTO43shMDHnrblC4mhMSB">event_popup.kv</code>）</td></tr>
+<tr data-page-node-id="1BxbD1nkUDvZ1Shutxla54"><td data-page-node-id="OfFpQQbuc2nKTUZCtslCXC">3:00-5:00</td><td data-page-node-id="ENBwRPLSuVYdhINVk2JOsH">写 <code data-page-node-id="tN2yQs0wDYFGJtCXyM1ZMj">ui_controller.py</code> 主框架</td><td data-page-node-id="2cjPS2CJf5DnPDFOsDNHHb">写键盘事件绑定（F1-F11、Space、1-6）</td></tr>
+<tr data-page-node-id="Ch4md37Blg82Hp1SuVWxhV"><td data-page-node-id="SSqci74qnS2cbHHmSFJi5R">5:00-7:00</td><td data-page-node-id="oqfK2XqeAgtWFYHF1ExeRh">实现事件 effects 的 6 种 type（add_downloads 等）</td><td data-page-node-id="nAB84NImvi3tOGdCCX76BY">写国家详情面板、国家 tooltip</td></tr>
+<tr data-page-node-id="2Kze8Hb1l76K2DgWXqhKwj"><td data-page-node-id="GwnyR957LJPPPk2tnyVgj8">7:00-8:00</td><td colspan="2" style="text-align:center;background:var(--panel2)" data-page-node-id="sZBHRzj6YrmqbVXcU46UQk"><strong data-page-node-id="DKD1ZtJidKsj5sumUSC6pm">🤝 共同：完整跑通一次，事件能触发并影响数据</strong></td></tr>
+</tbody>
+</table>
+
+<div class="card good" data-page-node-id="cMPTw2RzMKyydEFzaqUBqc">
+<strong data-page-node-id="2kjUb1JxgHoyDic8gWlNYh">Day3 验收：</strong>触发事件后，弹窗显示选项，点击后数据真的变化（下载量 +10% 等）。
+</div>
+
+<h3 data-page-node-id="ccD2lGSvD2hS0JVNxZ5Iyh">Day 4 — 存档 + 成就 + 技能</h3>
+<table data-page-node-id="RMfGbPXAuUlGhL7cX9zxnG">
+<thead data-page-node-id="xNJUFV7IYhN2EvrC3wCcYi"><tr data-page-node-id="42dYRgj9oJcyIMsgULdiWV"><th data-page-node-id="i0TuWoyicMDFVST7Qm3xHE">时间段</th><th data-page-node-id="ohRP3Xsijvt82YKyZox1HD"><span class="tag t-a" data-page-node-id="jMs1aRyelEIEojBOEIVrDD">A 同学</span></th><th data-page-node-id="TD2tBz6X4CUb97wfNPhqNe"><span class="tag t-b" data-page-node-id="1jBl0CAF5NAghmrTbEWDmr">B 同学</span></th></tr></thead>
+<tbody data-page-node-id="RHFkYhTRRD4JxjHN28qNNn">
+<tr data-page-node-id="pdglT3z3mUwEVcYTnk6IcY"><td data-page-node-id="AlNmXzSP425UJKpXM4SBIw">0:00-2:00</td><td data-page-node-id="E8ezblHNX7l61wHQtAl781">写 <code data-page-node-id="wDH475jwJkobDYChHOhuLq">save_manager.py</code> 手动/自动存档</td><td data-page-node-id="LshtTAwjioMrYn6i9ekfGK">写存档面板 UI（<code data-page-node-id="jucS8WdeatVhwWpolcqYNj">save_panel.kv</code>）</td></tr>
+<tr data-page-node-id="f94CyC4oNhjJO2TF5IrtZQ"><td data-page-node-id="nhyX24nNfvz7BFcXMzCuBZ">2:00-4:00</td><td data-page-node-id="BISi2oki2ropKNabb6IPRx">写 <code data-page-node-id="FEeGaHPSS304yGV99HhsAQ">achievement_system.py</code> 成就检测逻辑</td><td data-page-node-id="HBfnnr93ImhGxSd1Hhs8FJ">写成就通知弹窗（顶部飞出）</td></tr>
+<tr data-page-node-id="zomqJsLqgZndelGeM6fUdA"><td data-page-node-id="mHzuvDcl3YsTTOVeKXpAMF">4:00-6:00</td><td data-page-node-id="FaX3g1G7lhXyyZ2hqIleLM">写 7 结局判定逻辑</td><td data-page-node-id="woBHgiA5BNBtQ7wDWBl15z">写结局画面 + 7 个结局的"遗言"</td></tr>
+<tr data-page-node-id="n8QI56h3MwIPzJm8Ir09pn"><td data-page-node-id="OwhPXP069jzb8kHjFSZpB6">6:00-8:00</td><td data-page-node-id="lyTSDVUEvgsyj3iGFVKGJ0">联调数值平衡（用 <code data-page-node-id="WzPaWKAhAq4TbHpCSI17mk">DEBUG_MODE</code> 调参）</td><td data-page-node-id="JxOO9YYnY2p9FMqBGxQLHl">写新手引导（首次启动的 3 步提示）</td></tr>
+</tbody>
+</table>
+
+<div class="card good" data-page-node-id="lfPrSMlaKigdArry4mOk2A">
+<strong data-page-node-id="fx3cxzRBcxyXUELDsHysKd">Day4 验收：</strong>完整流程能跑通（开局→购买科技→触发事件→触发结局）；存档读档正常。
+</div>
+
+<h3 data-page-node-id="BUXEmsCtWCN76GzfYI7KMU">Day 5 — PC 适配 + 打包 + 文档</h3>
+<table data-page-node-id="YhrICVzFfjNA9noqyjzsR2">
+<thead data-page-node-id="qHpnluqgg4aesrcLnCcDd2"><tr data-page-node-id="eftm9dZlqtKw8YEnYFWB2c"><th data-page-node-id="DM0Q6hvoAn60EZRhpCOBkL">时间段</th><th data-page-node-id="Kg8l9U1CQ2Pa77FHRuZsDt"><span class="tag t-a" data-page-node-id="37CbgQa5OYjX9gHzXs66uS">A 同学</span></th><th data-page-node-id="Ufu70auKxkWGFTd51F5bJ6"><span class="tag t-b" data-page-node-id="RGSGbKHyux6U5XVBmsAXQC">B 同学</span></th></tr></thead>
+<tbody data-page-node-id="EbefCPTKCcoZn5siskXjGB">
+<tr data-page-node-id="pUt4npVglbg1PoIESnHBqS"><td data-page-node-id="GpSUBoRaMX4BAsbDqHzYgV">0:00-3:00</td><td data-page-node-id="5V9SaW0JuzqbKeVAY8ScTi">PC 端适配（窗口缩放、DPI、字体测试）</td><td data-page-node-id="8givozP0Tq9N5dKCCkilmj">写 README.md（项目说明 + 操作指南）</td></tr>
+<tr data-page-node-id="cZsSSKpiG8tLMrlKHTnMeq"><td data-page-node-id="3YuDMhIkB82zG4XCl9Bi0T">3:00-5:00</td><td data-page-node-id="36Ukwr5NIJkR6oo2FMT4Xs">buildozer 打包（可选）或 PC 演示版打包</td><td data-page-node-id="oirDtFKiZBc8ZK9dCfhukT">录演示视频（3 分钟 OBS）</td></tr>
+<tr data-page-node-id="2db6d4wm51TJDVh4g7HKA9"><td data-page-node-id="EJUf6FABulvHnY2Kaw4DQA">5:00-7:00</td><td colspan="2" style="text-align:center;background:var(--panel2)" data-page-node-id="EoOAgUwuE8Y1y2ZUEJMgGU"><strong data-page-node-id="yggagHQwN3rGZIVgQDi3an">🤝 共同：全局调参、修 bug、最终验收</strong></td></tr>
+<tr data-page-node-id="V3Ioxxcnn03SfAjXnBqcFz"><td data-page-node-id="L7Lfto4Dd1SVVjvWbQkkGu">7:00-8:00</td><td colspan="2" style="text-align:center;background:var(--panel2)" data-page-node-id="ReGFfs1mvGlT2N5mUayoVG"><strong data-page-node-id="tJHfFUlU9vqm1UMOoCGP10">🎉 收工，准备路演</strong></td></tr>
+</tbody>
+</table>
+
+<div id="collab" data-page-node-id="Ox8fKGqPeOHpMLXIgJzzZT"></div>
+<h2 data-page-node-id="21n6mTIiOJlzKd03acehOF">五、协作机制</h2>
+
+<h3 data-page-node-id="EvMT1MJw6uTmErVyrLZzKI">5.1 每日站会（15 分钟）</h3>
+<div class="card" data-page-node-id="LgwiFlDn3jFwHy3PofCxat">
+<ul data-page-node-id="hfd95TJdNIPM7FrJwEHjwS">
+<li data-page-node-id="FhNahp59lnqyDkxAaGO3vS"><strong data-page-node-id="OxTIbfIuVBkgPtGxxon830">时间</strong>：每天开工前 15 分钟（早上 9:00 或开工前）</li>
+<li data-page-node-id="Bg9uuiy3zJM8F8D3H0lBld"><strong data-page-node-id="PJcc5eTLr5ISIhvo6OI6Bz">形式</strong>：线下或语音，不超过 15 分钟</li>
+<li data-page-node-id="QvtXqdNsBUxzzS4lHAJUcC"><strong data-page-node-id="o4kiRl5ROD3yQQEEFWylOI">三个问题</strong>（每人 5 分钟）：
+  <ol data-page-node-id="7S2CsSyHAKf8ZneI8zNGlH">
+    <li data-page-node-id="5V8IVHizN1flzNyaJvWG1q">昨天完成了什么？</li>
+    <li data-page-node-id="pcm9lhiQV5aGYEgZMSKwnA">今天要做什么？</li>
+    <li data-page-node-id="AOwhg9aolRIiVLbrHGFmWA">有什么阻塞需要对方帮助？</li>
+  </ol>
+</li>
+<li data-page-node-id="vu0BIeRsbn3gXLQIOHqGxJ"><strong data-page-node-id="bEPoXQD2XPpNU6zmmzr9QE">记录</strong>：用记事本记录要点，发到群里</li>
+</ul>
+</div>
+
+<h3 data-page-node-id="Ov2cOvVV4WoYpxfUdDZp1W">5.2 阻塞处理流程</h3>
+
+<div class="flow" data-page-node-id="84o2FbxjMVgWJGLzIZTjwj">
+  <div class="step" data-page-node-id="4zPGND5d1I8uormpZ0kyUD">A 等 B 的接口</div>
+  <span class="arrow" data-page-node-id="7De4tVu5HShKiN5q2AFJwC">→</span>
+  <div class="step" data-page-node-id="7yrqOjEqC0bLUXKSyOVI9O">A 立刻发消息给 B</div>
+  <span class="arrow" data-page-node-id="cONDEsliZOdkElIirlDYM1">→</span>
+  <div class="step" data-page-node-id="wo7Ujj0iddVrJc4fAG6HC4">B 在 1 小时内响应</div>
+  <span class="arrow" data-page-node-id="rAPAca4YDgWOHg2rpOi4bh">→</span>
+  <div class="step" data-page-node-id="jyKP2HM1AWQaDGLCzmZIRr">1 小时内解决不了，升级到 30 分钟同步</div>
+</div>
+
+<div class="card bad" data-page-node-id="WlgcWtZzTvP8MXs7j3aa9D">
+<strong data-page-node-id="BzWAytUaaBZHtNxVsZhnQM">⚠️ 禁止"沉默等待"</strong>：如果你等对方超过 30 分钟没响应，<strong data-page-node-id="PxIqbJMftHMw5HBzRyjG38">立刻发消息</strong>。不要傻等 1 小时。
+</div>
+
+<h3 data-page-node-id="ra3PKzbEdDmFsWaoDE3M8c">5.3 文件修改通知</h3>
+<ul data-page-node-id="ZomKBN2iR5ExwM9tjZTL9t">
+<li data-page-node-id="T5V7ImIK0gQMFp4bTldDcr">任何一方修改对方拥有的文件（如 A 改 <code data-page-node-id="Jp1JM37epkwoWArYICNuqj">config.py</code>）→ 必须先在群里说明</li>
+<li data-page-node-id="EeT6kvEJ6xDEpazqi4XemF">修改配置文件（<code data-page-node-id="e9WeJAkAGOxvBCCN8BVufC">tech_tree.json</code>、<code data-page-node-id="R4zWUprIe9djlo9TJoeBGU">events.json</code>）→ 必须 commit message 写明</li>
+<li data-page-node-id="UswYG199H9ihEcxBCTuxA3">数据格式变更（如新增字段）→ 必须先通知对方再改</li>
+</ul>
+
+<h3 data-page-node-id="rwLre5oFs8qktKqrh3lIon">5.4 沟通工具建议</h3>
+<table data-page-node-id="Reg3szRylLjWVAy9b94CLd">
+<thead data-page-node-id="ziwyaEJCAcLwq2rQdBgpYH"><tr data-page-node-id="qThHaBs69E5R269qK4xFdX"><th data-page-node-id="ky44qPvk1cEsCT4HwWWnGr">场景</th><th data-page-node-id="AnJH7NzfIrOCL9G8oAFEe5">工具</th><th data-page-node-id="nmMv13kIE2G0gkBUxcsNdT">响应时间</th></tr></thead>
+<tbody data-page-node-id="XEWGKc0xHTj4u2OmULeXDI">
+<tr data-page-node-id="v7DyXKF8wBqL2DWaFakDnJ"><td data-page-node-id="YXpgsvZxmiucXyJ4ax8bnE">紧急阻塞</td><td data-page-node-id="m6l2KYsM3He94eS3G1TztN">微信/钉钉</td><td data-page-node-id="yWFW7iwN9S94hBKgdEZnpz">≤ 30 分钟</td></tr>
+<tr data-page-node-id="Oj6asZbuUe8kmQ9Nhs24HA"><td data-page-node-id="ncYUafNhXk90ZO3UxOEB9A">代码 review</td><td data-page-node-id="cQeWuHG53fV6a8KmiS3GmC">Git PR + 评论</td><td data-page-node-id="Iu8wHpDcHZEcEZe5Emexnb">≤ 4 小时</td></tr>
+<tr data-page-node-id="33JREnJzALYwDe02aiBWGe"><td data-page-node-id="SbxzzC5BVhK1FvAx1BuVLv">日常同步</td><td data-page-node-id="qjG4PCBplJCyCfALOUvEL7">微信群</td><td data-page-node-id="zb5niE60IwnU5UCehOsQgI">每日站会</td></tr>
+<tr data-page-node-id="3EqebYCfn4GE6cUEHgAxg9"><td data-page-node-id="S5AJquLL1YcnezCF2NvfNY">文档/决策</td><td data-page-node-id="ROCvM22mlwz5zGMPWGCHbD">Markdown 文件 + Git</td><td data-page-node-id="PKa3MM4jr3JPEzsIfUh9oA">—</td></tr>
+</tbody>
+</table>
+
+<div id="git" data-page-node-id="eOFZCDjnyb3Le7wbWroBMB"></div>
+<h2 data-page-node-id="oZ6sTNQgRHXbORUNjNhwvD">六、Git 分支策略</h2>
+
+<div class="card tip" data-page-node-id="8S3rsjmZbq7ZCXakEKgXwK">
+<h4 data-page-node-id="lAC50R5azC49FHUOnMJ9HK">分支模型</h4>
+<pre data-page-node-id="J8bQvjtS9E8EwzIrsguYev"><code data-page-node-id="FuaIRocsAO16KtG68Win12">main
+  ├── dev/A         ← A 同学日常开发
+  │     ├── feature/compute-engine
+  │     ├── feature/tech-tree
+  │     └── feature/save-manager
+  └── dev/B         ← B 同学日常开发
+        ├── feature/config
+        ├── feature/main-kv
+        └── feature/ui-controller</code></pre>
+</div>
+
+<h3 data-page-node-id="7XCYkfWAQ5GT7HS4AONoR2">6.1 关键规则</h3>
+<ul data-page-node-id="kbgSGRTuurhJvASAeug2Pm">
+<li data-page-node-id="UztZ1KAsTvGcxmWGaNEuBZ"><strong data-page-node-id="6k1oNLFbsNFauDH6dOy1qg">main 分支</strong>：只保存可运行的稳定版本，<strong data-page-node-id="qRlkbt5mwvfHviVCCH9A4i">每天下班前合并一次</strong></li>
+<li data-page-node-id="oAENxSQOtKW8dHKVE0DTXB"><strong data-page-node-id="Esl5k9YIMRVkf7448rOjRN">dev/A、dev/B</strong>：日常开发分支，每人一个</li>
+<li data-page-node-id="CFXpN104un2Xk5eozRduMx"><strong data-page-node-id="pZ4DaTDrs4EsSCqDKmpVGA">feature/*</strong>：具体功能分支（如 feature/event-manager），完成后合并回 dev/A 或 dev/B</li>
+<li data-page-node-id="gkHYHb3KiOJFZpx14uowJH"><strong data-page-node-id="pwhMVWoNBWPtwlHdCJFaHf">合并冲突</strong>：由<strong data-page-node-id="GW7iDKDdBEjDgoIthh8Bp4">文件的"所有者"解决</strong>（如 <code data-page-node-id="7D7yCgMhIpuJQlXCwz39KE">main.kv</code> 冲突由 B 解决）</li>
+<li data-page-node-id="UxuNkPAyWLJW2vGVtG9mLn"><strong data-page-node-id="C3I9lRuG3O2lT7GuBRIiev">提交粒度</strong>：每个 commit 一个完整功能，不要一次提交 500 行</li>
+<li data-page-node-id="NdWSEpHVjnEYzbip7toBu3"><strong data-page-node-id="qFm1QEAJmcAFUXfj6PE4K1">commit 规范</strong>：<code data-page-node-id="ehUFlmH4CN6CoHbxtL2vt1">[A] feat: 实现算力系统主循环</code> 或 <code data-page-node-id="41gMoNlZLfMtUdwuGPDEs7">[B] style: 调整地图配色</code></li>
+</ul>
+
+<h3 data-page-node-id="kZatMVpgrFt2sJWHTCsXyR">6.2 每日合并流程</h3>
+<ol data-page-node-id="jA3CmlWJ3NQT3cngpfJNdW">
+<li data-page-node-id="xVbUjNCsdillFl9ta9bATV">下班前 30 分钟，A 把 dev/A 合并到 main</li>
+<li data-page-node-id="RtH3WgdkfymRsjw9hOd3pq">B 拉最新 main，跑一遍，确认 B 的代码没坏</li>
+<li data-page-node-id="9HH1UGnFn87YXdCgPiSh22">B 把 dev/B 合并到 main</li>
+<li data-page-node-id="8lxAx9lBsYMasc7XOSNFJg">两人一起跑一次完整游戏</li>
+</ol>
+
+<div id="risks" data-page-node-id="59tVnOqEqXs4XZmqXfkGmO"></div>
+<h2 data-page-node-id="UZEBPzZdooUpvL0MjCcMTQ">七、风险预案</h2>
+
+<table data-page-node-id="eKXdbyZwYZ3wKNDwxbF4mh">
+<thead data-page-node-id="jAltH8Zyp4mq0YHzVNN82e"><tr data-page-node-id="ReDrhFq2oeC9Fq8UbNwThr"><th data-page-node-id="PU5vpB98SNRhT7btWIjAfA">风险</th><th data-page-node-id="IIDTIy4fweUO63wsubBu22">等级</th><th data-page-node-id="Utaiw1GndqJwzBmAFWlWXW">应对</th></tr></thead>
+<tbody data-page-node-id="AnAVY8leotpEEKrro3h1kj">
+<tr data-page-node-id="Fd16XRL00EuA6YeH189sx5"><td data-page-node-id="6KXHErCqpePAckqe59ixVX">Day1 接口没定好，导致后期返工</td><td data-page-node-id="wr6sj9hvkoWMBEOQ38M3X0">高</td><td data-page-node-id="lWDsgO24m4KImFd2OaKoFR">Day1 第一小时<strong data-page-node-id="DH5MwfagvJHis3L9JlcAsk">必须</strong>一起定接口，<strong data-page-node-id="hLiK7Cp3KDlNqQCFEjtST9">不可推迟</strong></td></tr>
+<tr data-page-node-id="jDNKjW4sNBjcSEFiOmpw38"><td data-page-node-id="m4AxybhzY7MklBmI8eGN24">A 写完引擎，B 的 UI 还没好</td><td data-page-node-id="5ZzGRZMHjWvcQKQWEqdBDZ">中</td><td data-page-node-id="vzLWLOOkft1eJXK4BD22JZ">A 用 <code data-page-node-id="OaRyuFzCaR6jMKlXfA5w81">print()</code> 输出调试，B 用静态 mock 数据先调 UI</td></tr>
+<tr data-page-node-id="gzLJaeopuIduVerlQldLH3"><td data-page-node-id="77DlnmucscDiCYqUAgOCt1">数据格式不一致（int vs float）</td><td data-page-node-id="0K6gr5GI9cEta5dkEmukBY">中</td><td data-page-node-id="8PbNMaygSKRBJs6MKFVASz">Day1 定接口时明确定义字段类型，写到 README</td></tr>
+<tr data-page-node-id="M8G5bMTTIvyoPGkrUVymYe"><td data-page-node-id="1rN5citUEapACdMXsVojVn">Git 冲突频繁</td><td data-page-node-id="LiHziapbR5ZJtFxfIcOpW5">中</td><td data-page-node-id="OLc0O1gsdbHFz8FbZE4Sue">按文件归属矩阵严格执行，<strong data-page-node-id="cnleNHA8p9bzODPRlLwPbm">不要改对方文件</strong></td></tr>
+<tr data-page-node-id="8wQCD52cJAcwRh4WEJbAnU"><td data-page-node-id="8CCdXWJW9kn4VCzvEYkx00">工作量不均（A 偏多 B 偏少）</td><td data-page-node-id="N4agNrih1PAaddYmcHsDtn">中</td><td data-page-node-id="4DByDRCQz1nf6p5KDjtoAC">Day3 评估，<strong data-page-node-id="XENp5ENwEa0s1CYVrtGhfw">B 可以帮 A 写单元测试</strong>，A 可以帮 B 调 UI 参数</td></tr>
+<tr data-page-node-id="dvEHCwBIHPAFCF8fRatlOG"><td data-page-node-id="fvpUcGQoavcmkfGfZZvkxL">PC 端字体/DPI 问题卡住</td><td data-page-node-id="lHJk0dqVKO8fozITUr9eZ2">中</td><td data-page-node-id="7nr6vfNqa7C96UWZwYCea8">Day5 才处理，前期用标准 DPI 即可</td></tr>
+<tr data-page-node-id="Qyknq1QHshH62l3Bun48Qg"><td data-page-node-id="RX177vNnTmwsxprJHfIU5A">数值平衡不达标</td><td data-page-node-id="lGg8bVVqQDoGUz9auZgQZJ">高</td><td data-page-node-id="lZ8eJQZpytRcsAvBtnhKbY">Day4 留 4 小时专门调参，<code data-page-node-id="aZGncXpFFp9t1n9JKqTRQb">DEBUG_MODE</code> 加速 10x</td></tr>
+<tr data-page-node-id="kieAAiZlpPThawEScmNw0Q"><td data-page-node-id="kwWH6J9lCt6jPlQLbuwLEY">5 天做不完</td><td data-page-node-id="ocNHSsIDNkTXIvGQbcfdFd">低</td><td data-page-node-id="MCGH380aSrrWZXkTVHoiRe">Day3 评估 P0 功能完成度，<strong data-page-node-id="L5b40BCO8cpbrdUdevMn6O">砍 P2/P3</strong>（皮肤/音效）</td></tr>
+</tbody>
+</table>
+
+<div id="checklist" data-page-node-id="RmXE7Ykt2nHekGkpu5Auuj"></div>
+<h2 data-page-node-id="gUdC7xjL1xHJGREJzu7s7I">八、每日检查清单</h2>
+
+<h3 data-page-node-id="LJaq6IbipL0v15ZExaquqi">Day1 检查清单</h3>
+<ul class="checklist" data-page-node-id="OH7TlHi2UwVx2YLmPexEF1">
+<li data-page-node-id="UDFtiJn77N0fKc78LFyB1B">[ ] <strong data-page-node-id="TNHo1S3AzcKhtpWuynprvJ">共同</strong>：5 个接口契约全部定稿，写到 <code data-page-node-id="4wAyN3UVi93NNKZjuA1KWG">INTERFACES.md</code></li>
+<li data-page-node-id="oQm524Q3FrpkcWAPzdtFbu">[ ] A：Kivy 环境跑通，<code data-page-node-id="PJFNRqZJDuWywxWEK4zKV8">main.py</code> 能启动空白窗口</li>
+<li data-page-node-id="eEOFBsB1q8eFzxhFF1nCSu">[ ] A：<code data-page-node-id="CPdug5bwSaSFVnu2VUNBS0">models.py</code> 4 个数据类完成</li>
+<li data-page-node-id="xqcxkEkNHfVMHE3jxtjzt0">[ ] A：<code data-page-node-id="z33ULOytwdgrqvaCPgkeop">compute_engine.tick()</code> 能返回字典</li>
+<li-[ ] B：<code data-page-node-id="tfAjPWmPwdywiEycpyyxL9">config.py</code> 20 国数据完成</li>
+<li data-page-node-id="4lNDGc3LTwYBOvALIAL4FL">[ ] B：<code data-page-node-id="LHInC6pGvbNFSv0qaQnqrX">main.kv</code> 主框架（状态栏 + 地图占位 + 技能栏占位）</li>
+<li data-page-node-id="W7wPdFHph9pjkJfMpLKeGl">[ ] B：键盘事件绑定（F11、Space）</li>
+<li-[ ] <strong data-page-node-id="DJxP9m08lMuLtDUJ5veCmx">共同</strong>：引擎数据能成功传到 UI 显示</li>
+</ul>
+
+<h3 data-page-node-id="CSx0FzMezU8UwLTHBJt4pv">Day2 检查清单</h3>
+<ul class="checklist" data-page-node-id="HvlVQzOH0m1Mq6gyKGoT9q">
+<li data-page-node-id="uAhcHu80qjgPyUKXdfB19h">[ ] A：<code data-page-node-id="r6ndHaAc3wP1yQmriTbClz">downloads_engine</code> 国家差异化增长生效（印度快、德国慢）</li>
+<li data-page-node-id="zn5ljmIBUpVH6AJn1HOxK2">[ ] A：<code data-page-node-id="akMuGAdTH7vJnlPNLdP9NA">tech_tree</code> 5 个 T0 科技可解锁</li>
+<li-[ ] A：<code data-page-node-id="m6kQscgNqBpEpIXzhKZW4m">tests/test_compute.py</code> 5 个测试用例</li>
+<li data-page-node-id="FNovT2DEAlknZwzp9ySVj7">[ ] B：<code data-page-node-id="g3SdAbRo6h6tfxGSGRzDFD">tech_tree.json</code> 20 个节点数据完整</li>
+<li-[ ] B：<code data-page-node-id="f8ws7GmiDKMw7PvyfGWQUQ">events.json</code> 至少 25 条事件</li>
+<li data-page-node-id="Xgv61Z0o5HVBBqMi0qE7o8">[ ] B：<code data-page-node-id="mdWbpvEHuxk0NxsCE3PxgR">main.kv</code> 20 国在地图上的位置确定</li>
+</ul>
+
+<h3 data-page-node-id="2z6LT5YosHZCqRi2MrnrJ6">Day3 检查清单</h3>
+<ul class="checklist" data-page-node-id="z8PU81DCf2jDyuuxgHjL5l">
+<li-[ ] A：<code data-page-node-id="jSSfAyQ0JWaISKoimFa0bT">event_manager</code> 能根据 trigger 条件过滤并加权触发</li>
+<li-[ ] A：<code data-page-node-id="R3sKY5YblCnhzkB3iSWqam">ui_controller</code> 框架就绪，能调用引擎方法</li>
+<li-[ ] A：effects 解析支持全部 6 种 type</li>
+<li-[ ] B：事件弹窗可显示，选项按钮点击触发回调</li>
+<li-[ ] B：键盘 1-6 触发技能</li>
+<li-[ ] <strong data-page-node-id="yaNKn2e48wbhBfW2iBx1bA">共同</strong>：完整跑一次流程，事件能影响数据</li>
+</ul>
+
+<h3 data-page-node-id="C8tOoCSWniSEjFvkZP92D4">Day4 检查清单</h3>
+<ul class="checklist" data-page-node-id="WMfCfOOib7UHCaKfkEDHOe">
+<li-[ ] A：<code data-page-node-id="4DJToWZ8nzzTvlrIyqx8oE">save_manager</code> 手动/自动存档可读可写</li>
+<li-[ ] A：<code data-page-node-id="iMZKIfKxENeYD1gl80HjoQ">achievement_system</code> 检测逻辑生效</li>
+<li-[ ] A：7 结局判定函数完成</li>
+<li-[ ] B：存档面板 UI 完成</li>
+<li-[ ] B：成就通知弹出动画完成</li>
+<li-[ ] B：7 结局画面 + 遗言文案完成</li>
+<li-[ ] <strong data-page-node-id="xlbJAsndtpOyMh0kIUyhnt">共同</strong>：能完整通关一次（含触发结局）</li>
+</ul>
+
+<h3 data-page-node-id="Ky8kiMMfAaj6veHns3rX6P">Day5 检查清单</h3>
+<ul class="checklist" data-page-node-id="H2ZjpWqcdx3EPJM322TAXc">
+<li-[ ] A：PC 端字体/DPI 在 1280×720 / 1920×1080 下正常</li>
+<li-[ ] A：buildozer 打包 APK（可选）或 PC 单文件 exe</li>
+<li-[ ] B：README.md 写完（项目介绍 + 操作指南 + 快捷键）</li>
+<li-[ ] B：录 3 分钟演示视频</li>
+<li-[ ] <strong data-page-node-id="5uUAWaJ8R2BofI2UsSRbWo">共同</strong>：跑通 12 项功能验收清单</li>
+<li-[ ] <strong data-page-node-id="tuB8vjLgwZcIkCPdHzdq7m">共同</strong>：合并 dev/A、dev/B 到 main，无冲突</li>
+</ul>
+
+<div class="divider" data-page-node-id="qVUsGKP5tpX5vGpiC1ez07"></div>
+
+<h2 data-page-node-id="Wm08UXZivelDsjarTZOZnK">📋 一页纸分工表（打印用）</h2>
+
+<table data-page-node-id="cMDwqTwinuUT9Zvtsa5YSm">
+<thead data-page-node-id="D0gVP7zXET4CVUGWI5v9Hn"><tr data-page-node-id="KedjBRe9mt2b4rKv9jc9t2"><th data-page-node-id="ALOEPh9ypxz98hJe8OmdWC">天</th><th data-page-node-id="fA7EK8e7c6S1NFXB6ddNkB"><span class="tag t-a" data-page-node-id="yYHScB1W2I6EivSm6nn2a1">A 同学 · 引擎</span></th><th data-page-node-id="bunTopxqrDzjgX0JEJEIBB"><span class="tag t-b" data-page-node-id="EKZV18fpeJrmHyczBMibvy">B 同学 · UI</span></th><th data-page-node-id="Cxefnly82bcATbpdDdOzqa">🤝 共同</th></tr></thead>
+<tbody data-page-node-id="6t8Rhd0AFFAhxIH57q8Agn">
+<tr data-page-node-id="oz4U20vQSMOTgdTKxtm4x7"><td data-page-node-id="HxtEeZKonpreVgQBfAYrr3"><strong data-page-node-id="MLwSpLkNOrIHidDvlJPlRH">Day1</strong></td><td data-page-node-id="8vfS0sib7WdZQTPfEzRBuW">环境+main.py+models+compute_engine 框架</td><td data-page-node-id="6rLBYYr1g9U2kKuioQSah3">config.py (20国)+main.kv 主框架</td><td data-page-node-id="Uw4neJ6sNfEEajxotFQDvT">5 个接口定稿</td></tr>
+<tr data-page-node-id="LqZxHEJQJNY7XRDxEBjW8B"><td data-page-node-id="8osI4B4ee2rKXKfWUCE5PL"><strong data-page-node-id="AwR8lCZFm8xqKG6W6nHTnn">Day2</strong></td><td data-page-node-id="BVDqDBNnOuYyGJQQtV0cCQ">downloads+tech_tree+技能+单测</td><td data-page-node-id="QOUJ0SlW2sujvxUsraVg4M">tech_tree.json+events.json+地图布局</td><td data-page-node-id="eaUQUJlgyUZEI5eUcR7Qde">数值调参</td></tr>
+<tr data-page-node-id="c3VhfopDg0PwRkXeRgckcN"><td data-page-node-id="98Mb1rzUkcn7LcmeBP0rxZ"><strong data-page-node-id="guVzgQmN6yhHElpAeluljt">Day3</strong></td><td data-page-node-id="pwsFIpM3B8FEiD1PM0VzHz">event_manager+ui_controller 框架+effects</td><td data-page-node-id="xMwr4oYrfso3rdqB3Cr8uv">事件弹窗+键盘事件+国家面板</td><td data-page-node-id="CcWtvemLxjGHvWhT2E67yG">完整跑通</td></tr>
+<tr data-page-node-id="bPvCufmR1a2V9Bz6oe1Oo5"><td data-page-node-id="YVXfWjyFbz8yvFbMLcFgST"><strong data-page-node-id="4Xz3XP5uJM1mbKrf0MH3kG">Day4</strong></td><td data-page-node-id="dmOHP4f7fF8SaMsKb2kZhZ">save+achievement+结局判定</td><td data-page-node-id="OhShsEpbffODmr3RwP9Bod">存档 UI+成就通知+结局画面</td><td data-page-node-id="gA5lSWMnK6BzLalgEvCbsx">完整通关</td></tr>
+<tr data-page-node-id="K0qqhwDvK7GQzCkkGIlf9g"><td data-page-node-id="W1Emystl1ran9sMLphL8NP"><strong data-page-node-id="PDrNew2Ff2SfYFr4XkrGwW">Day5</strong></td><td data-page-node-id="2BNxF9JRk0XgFr5ImjDSHz">PC 适配+打包</td><td data-page-node-id="5WhjVWxGhKmbqc6KjBthoi">README+演示视频</td><td data-page-node-id="B4Fiox84v5y1BETGnk0IHL">最终验收</td></tr>
+</tbody>
+</table>
+
+<div class="divider" data-page-node-id="smpZGvzpsVdQBCKOJB3GPB"></div>
+
+<h2 data-page-node-id="AiMbnCqQdxK1ePicGpfVzB">💡 给两个人的寄语</h2>
+
+<div class="card good" data-page-node-id="NL4Iumi6eJr4gF5L11ffV7">
+<h4 data-page-node-id="iQPrPsdIfdX3dUB0Eb1q9R">致 A 同学（后端）</h4>
+<p data-page-node-id="sWyU6r1PtdTdQqs1qx4o6U">"引擎写得好，UI 自然顺。" 把 tick() 设计成"返回 UI 需要的所有数据"，UI 层不用猜。提供清晰的 <code data-page-node-id="XdJG9CWB5VDHjVoQtAW5PA">to_dict()</code> 方法，让 B 不需要懂你的内部逻辑也能调 UI。</p>
+<p data-page-node-id="y01eUGoYLcUMW7I5EAfzsi"><strong data-page-node-id="R2gAZDttgplMQbaLg8GdxD">记住</strong>：你的代码不是给自己看的，是给 B 调的。</p>
+</div>
+
+<div class="card tip" data-page-node-id="LqW0ftGIhHUVsTtHqDlOEE">
+<h4 data-page-node-id="5ik2yXGjNpusF4mBXYTdAD">致 B 同学（前端）</h4>
+<p data-page-node-id="tdpDaQ2ohdEilFqoaCGUU6">"UI 决定第一印象。" 在 Kivy 里 KV 文件的可读性决定了维护成本。给每个组件加 <code data-page-node-id="qQmkCdifk5mKEqEohbRdMv">id</code> 和清晰的命名（如 <code data-page-node-id="Jel2xrhunSDFOwSqxZgitG">skill_btn_1</code>）。在调用引擎前<strong data-page-node-id="qMEzMGI4ceng0wAWdBpa1N">先看接口文档</strong>，不要凭直觉猜方法名。</p>
+<p data-page-node-id="KhQCx4D3pDXYG6x8D4QNzp"><strong data-page-node-id="Q7e475cF8tuNGjUfqjJCiX">记住</strong>：你的代码不是给自己看的，是给用户看的。</p>
+</div>
+
+<div class="card bad" data-page-node-id="pkxTMJLRmHXwUjCDcAQ10K">
+<h4 data-page-node-id="D4CU5YCx0lyz55HzHCvgYP">🚫 共同禁忌</h4>
+<ul data-page-node-id="mq4XGnDLsC8e77uegQsf0a">
+<li data-page-node-id="Dd02PgECFKZNbQ2eErjlnz">❌ 改对方的文件不打招呼</li>
+<li data-page-node-id="Ae5VxR4pNmHC8weZE1EnOh">❌ 等对方超过 30 分钟不吱声</li>
+<li data-page-node-id="6gaGWs5gqz3rwuCCY7sab4">❌ Day5 才发现 Day1 的接口有问题</li>
+<li data-page-node-id="rKk2YC1auOCtvp9dCiNoZe">❌ 一方熬夜，另一方不知道</li>
+<li data-page-node-id="804QRv8rCqw3XgtBfVzEhQ">❌ commit 时写 "fix bug" / "update" 这种无意义信息</li>
+</ul>
+</div>
+
+<div class="divider" data-page-node-id="PBvEwcbWJWqT5sjUSUPvHz"></div>
+
+<p style="text-align:center;color:var(--muted);font-size:13px;margin-top:40px" data-page-node-id="QsjhqO9Q8ZBdCtJJ0B1cF8">
+5 天不长，分工清楚 + 沟通及时 = 一次愉快的合作。<br data-page-node-id="rhok8pVrG6HjxvJizL6z1L">
+祝你们的 AI 顺利统治世界 🌍
+</p>
+
+</div>
+</body>
+</html>

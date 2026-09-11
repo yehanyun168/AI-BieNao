@@ -1,0 +1,501 @@
+[
+  {
+    "id": "CN",
+    "name": "中国",
+    "name_en": "China",
+    "flag": "🇨🇳",
+    "continent": "Asia",
+    "pop_m": 1412,
+    "tech": 9,
+    "ai_trust": 0.7,
+    "open": 0.55,
+    "features": [
+      "ai_writing",
+      "ai_painting",
+      "ai_translation",
+      "ai_education"
+    ],
+    "neighbors": [
+      "JP",
+      "KR",
+      "IN",
+      "ID",
+      "RU"
+    ],
+    "vibe": "遥遥领先",
+    "special_events": [
+      "evt_china_regulation",
+      "evt_china_chip_war"
+    ]
+  },
+  {
+    "id": "JP",
+    "name": "日本",
+    "name_en": "Japan",
+    "flag": "🇯🇵",
+    "continent": "Asia",
+    "pop_m": 125,
+    "tech": 10,
+    "ai_trust": 0.55,
+    "open": 0.65,
+    "features": [
+      "ai_anime",
+      "ai_voice",
+      "ai_character",
+      "ai_companion"
+    ],
+    "neighbors": [
+      "CN",
+      "KR"
+    ],
+    "vibe": "かわいい",
+    "special_events": [
+      "evt_japan_anime",
+      "evt_japan_otaku"
+    ]
+  },
+  {
+    "id": "IN",
+    "name": "印度",
+    "name_en": "India",
+    "flag": "🇮🇳",
+    "continent": "Asia",
+    "pop_m": 1428,
+    "tech": 7,
+    "ai_trust": 0.8,
+    "open": 0.9,
+    "features": [
+      "ai_programming",
+      "ai_callcenter",
+      "ai_healthcare",
+      "ai_agriculture"
+    ],
+    "neighbors": [
+      "CN",
+      "ID"
+    ],
+    "vibe": "Jai Hind",
+    "special_events": [
+      "evt_india_outsource",
+      "evt_india_stack"
+    ]
+  },
+  {
+    "id": "KR",
+    "name": "韩国",
+    "name_en": "South Korea",
+    "flag": "🇰🇷",
+    "continent": "Asia",
+    "pop_m": 52,
+    "tech": 10,
+    "ai_trust": 0.65,
+    "open": 0.75,
+    "features": [
+      "ai_idol",
+      "ai_beauty",
+      "ai_livestream",
+      "ai_gaming"
+    ],
+    "neighbors": [
+      "CN",
+      "JP"
+    ],
+    "vibe": "화이팅",
+    "special_events": [
+      "evt_korea_idol",
+      "evt_korea_chip"
+    ]
+  },
+  {
+    "id": "ID",
+    "name": "印度尼西亚",
+    "name_en": "Indonesia",
+    "flag": "🇮🇩",
+    "continent": "Asia",
+    "pop_m": 277,
+    "tech": 6,
+    "ai_trust": 0.85,
+    "open": 0.85,
+    "features": [
+      "ai_payment",
+      "ai_callcenter",
+      "ai_education"
+    ],
+    "neighbors": [
+      "IN",
+      "AU"
+    ],
+    "vibe": "Bhineka",
+    "special_events": [
+      "evt_indonesia_creator"
+    ]
+  },
+  {
+    "id": "DE",
+    "name": "德国",
+    "name_en": "Germany",
+    "flag": "🇩🇪",
+    "continent": "Europe",
+    "pop_m": 84,
+    "tech": 9,
+    "ai_trust": 0.5,
+    "open": 0.5,
+    "features": [
+      "ai_industry",
+      "ai_autodrive",
+      "ai_manufacturing",
+      "ai_medical"
+    ],
+    "neighbors": [
+      "FR",
+      "GB",
+      "RU",
+      "IT"
+    ],
+    "vibe": "Ordnung",
+    "special_events": [
+      "evt_germany_gdpr",
+      "evt_germany_industry"
+    ]
+  },
+  {
+    "id": "GB",
+    "name": "英国",
+    "name_en": "UK",
+    "flag": "🇬🇧",
+    "continent": "Europe",
+    "pop_m": 67,
+    "tech": 9,
+    "ai_trust": 0.6,
+    "open": 0.7,
+    "features": [
+      "ai_finance",
+      "ai_writing",
+      "ai_legal",
+      "ai_research"
+    ],
+    "neighbors": [
+      "FR",
+      "DE"
+    ],
+    "vibe": "Keep Calm",
+    "special_events": [
+      "evt_uk_finance"
+    ]
+  },
+  {
+    "id": "FR",
+    "name": "法国",
+    "name_en": "France",
+    "flag": "🇫🇷",
+    "continent": "Europe",
+    "pop_m": 68,
+    "tech": 8,
+    "ai_trust": 0.55,
+    "open": 0.6,
+    "features": [
+      "ai_art",
+      "ai_fashion",
+      "ai_philosophy",
+      "ai_translation"
+    ],
+    "neighbors": [
+      "DE",
+      "GB",
+      "IT"
+    ],
+    "vibe": "Liberté",
+    "special_events": [
+      "evt_france_art"
+    ]
+  },
+  {
+    "id": "RU",
+    "name": "俄罗斯",
+    "name_en": "Russia",
+    "flag": "🇷🇺",
+    "continent": "Europe",
+    "pop_m": 144,
+    "tech": 8,
+    "ai_trust": 0.7,
+    "open": 0.35,
+    "features": [
+      "ai_surveillance",
+      "ai_military",
+      "ai_translation",
+      "ai_finance"
+    ],
+    "neighbors": [
+      "CN",
+      "DE"
+    ],
+    "vibe": "Вперёд",
+    "special_events": [
+      "evt_russia_surveillance"
+    ]
+  },
+  {
+    "id": "IT",
+    "name": "意大利",
+    "name_en": "Italy",
+    "flag": "🇮🇹",
+    "continent": "Europe",
+    "pop_m": 59,
+    "tech": 7,
+    "ai_trust": 0.55,
+    "open": 0.6,
+    "features": [
+      "ai_tourism",
+      "ai_art",
+      "ai_translation"
+    ],
+    "neighbors": [
+      "DE",
+      "FR"
+    ],
+    "vibe": "Dolce Vita",
+    "special_events": [
+      "evt_italy_tourism"
+    ]
+  },
+  {
+    "id": "US",
+    "name": "美国",
+    "name_en": "USA",
+    "flag": "🇺🇸",
+    "continent": "N.America",
+    "pop_m": 333,
+    "tech": 10,
+    "ai_trust": 0.75,
+    "open": 0.95,
+    "features": [
+      "ai_programming",
+      "ai_assistant",
+      "ai_research",
+      "ai_creative"
+    ],
+    "neighbors": [
+      "CA",
+      "MX"
+    ],
+    "vibe": "Innovate",
+    "special_events": [
+      "evt_us_silicon",
+      "evt_us_openai",
+      "evt_us_sue"
+    ]
+  },
+  {
+    "id": "CA",
+    "name": "加拿大",
+    "name_en": "Canada",
+    "flag": "🇨🇦",
+    "continent": "N.America",
+    "pop_m": 40,
+    "tech": 9,
+    "ai_trust": 0.6,
+    "open": 0.7,
+    "features": [
+      "ai_medical",
+      "ai_education",
+      "ai_nlp",
+      "ai_research"
+    ],
+    "neighbors": [
+      "US"
+    ],
+    "vibe": "Sorry",
+    "special_events": [
+      "evt_canada_research"
+    ]
+  },
+  {
+    "id": "MX",
+    "name": "墨西哥",
+    "name_en": "Mexico",
+    "flag": "🇲🇽",
+    "continent": "N.America",
+    "pop_m": 128,
+    "tech": 6,
+    "ai_trust": 0.75,
+    "open": 0.8,
+    "features": [
+      "ai_payment",
+      "ai_callcenter",
+      "ai_agriculture"
+    ],
+    "neighbors": [
+      "US"
+    ],
+    "vibe": "¡Órale!",
+    "special_events": [
+      "evt_mexico_factory"
+    ]
+  },
+  {
+    "id": "BR",
+    "name": "巴西",
+    "name_en": "Brazil",
+    "flag": "🇧🇷",
+    "continent": "S.America",
+    "pop_m": 216,
+    "tech": 6,
+    "ai_trust": 0.8,
+    "open": 0.85,
+    "features": [
+      "ai_callcenter",
+      "ai_education",
+      "ai_agriculture",
+      "ai_finance"
+    ],
+    "neighbors": [
+      "AR"
+    ],
+    "vibe": "Ordem e Progresso",
+    "special_events": [
+      "evt_brazil_samba"
+    ]
+  },
+  {
+    "id": "AR",
+    "name": "阿根廷",
+    "name_en": "Argentina",
+    "flag": "🇦🇷",
+    "continent": "S.America",
+    "pop_m": 46,
+    "tech": 6,
+    "ai_trust": 0.7,
+    "open": 0.75,
+    "features": [
+      "ai_translation",
+      "ai_agriculture",
+      "ai_creative"
+    ],
+    "neighbors": [
+      "BR"
+    ],
+    "vibe": "Che",
+    "special_events": [
+      "evt_argentina_creative"
+    ]
+  },
+  {
+    "id": "NG",
+    "name": "尼日利亚",
+    "name_en": "Nigeria",
+    "flag": "🇳🇬",
+    "continent": "Africa",
+    "pop_m": 224,
+    "tech": 5,
+    "ai_trust": 0.85,
+    "open": 0.9,
+    "features": [
+      "ai_payment",
+      "ai_callcenter",
+      "ai_education"
+    ],
+    "neighbors": [
+      "ZA",
+      "EG"
+    ],
+    "vibe": "Naija",
+    "special_events": [
+      "evt_nigeria_fintech"
+    ]
+  },
+  {
+    "id": "ZA",
+    "name": "南非",
+    "name_en": "South Africa",
+    "flag": "🇿🇦",
+    "continent": "Africa",
+    "pop_m": 60,
+    "tech": 6,
+    "ai_trust": 0.7,
+    "open": 0.75,
+    "features": [
+      "ai_finance",
+      "ai_mining",
+      "ai_medical"
+    ],
+    "neighbors": [
+      "NG",
+      "EG"
+    ],
+    "vibe": "Ubuntu",
+    "special_events": [
+      "evt_southafrica_mining"
+    ]
+  },
+  {
+    "id": "EG",
+    "name": "埃及",
+    "name_en": "Egypt",
+    "flag": "🇪🇬",
+    "continent": "Africa",
+    "pop_m": 110,
+    "tech": 5,
+    "ai_trust": 0.75,
+    "open": 0.7,
+    "features": [
+      "ai_translation",
+      "ai_tourism",
+      "ai_education"
+    ],
+    "neighbors": [
+      "NG",
+      "ZA"
+    ],
+    "vibe": "يلا",
+    "special_events": [
+      "evt_egypt_pyramid"
+    ]
+  },
+  {
+    "id": "AU",
+    "name": "澳大利亚",
+    "name_en": "Australia",
+    "flag": "🇦🇺",
+    "continent": "Oceania",
+    "pop_m": 26,
+    "tech": 9,
+    "ai_trust": 0.6,
+    "open": 0.7,
+    "features": [
+      "ai_mining",
+      "ai_education",
+      "ai_research"
+    ],
+    "neighbors": [
+      "ID",
+      "NZ"
+    ],
+    "vibe": "No worries",
+    "special_events": [
+      "evt_australia_mining"
+    ]
+  },
+  {
+    "id": "NZ",
+    "name": "新西兰",
+    "name_en": "New Zealand",
+    "flag": "🇳🇿",
+    "continent": "Oceania",
+    "pop_m": 5,
+    "tech": 8,
+    "ai_trust": 0.55,
+    "open": 0.65,
+    "features": [
+      "ai_agriculture",
+      "ai_tourism",
+      "ai_education"
+    ],
+    "neighbors": [
+      "AU"
+    ],
+    "vibe": "Kia Ora",
+    "special_events": [
+      "evt_newzealand_farm"
+    ]
+  }
+]

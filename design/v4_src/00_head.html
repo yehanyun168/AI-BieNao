@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 别闹 · 像素风交互界面设计稿 v0.4</title>
+<style>
+  /* ============================================================
+     v0.4 设计令牌 —— 与 v0.3 完全一致（单一数据源，不新增颜色）
+     ============================================================ */
+  :root{
+    /* ---------- 1. 色彩：16 色限制调色板 ---------- */
+    --bg:#0d1117;
+    --panel:#161b22;
+    --panel-2:#1f2630;
+    --border:#30363d;
+    --border-2:#484f58;
+    --border-strong:#6e7681;   /* 语义边框：达 3:1，用于焦点/选中/可交互边界 */
+    --text:#e6edf3;
+    --text-dim:#8b949e;
+    --text-mute:#6e7681;       /* 仅大字可用（4.12:1） */
+    --cyan:#4ec9b0;
+    --pink:#f97583;
+    --yellow:#dcdcaa;
+    --green:#6a9955;
+    --purple:#c586c0;
+    --orange:#ffa657;
+    --red:#ff7b72;
+    --blue:#4e94c9;
+    --sea:#0a1828;
+    --sel:#1e3a3a;
+
+    /* ---------- 2. 语义角色 ---------- */
+    --c-compute:var(--yellow);
+    --c-download:var(--pink);
+    --c-suspicion:var(--red);
+    --c-ok:var(--green);
+    --c-warn:var(--orange);
+    --c-focus:var(--cyan);
+
+    /* ---------- 3. 地图四态（与 pixel_ui / world_map 同源） ---------- */
+    --st-on-f:#1f6f63; --st-on-e:#3ec9ac; --st-on-t:#8ff0da;
+    --st-sel-f:#4ec9b0; --st-sel-e:#eafffb; --st-sel-t:#eafffb;
+    --st-blk-f:#5c2323; --st-blk-e:#ef4444; --st-blk-t:#ffb4b4;
+    --st-lk-f:#232a30; --st-lk-e:#4a5560; --st-lk-t:#b6c2cd;
+
+    /* ---------- 4. 间距 / 字号 / 边框 ---------- */
+    --u:2px;
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s6:24px; --s8:32px; --s12:48px;
+    --fs-display:28px; --fs-h1:22px; --fs-h2:18px; --fs-h3:15px;
+    --fs-body:13px; --fs-sm:12px; --fs-cap:11px;
+    --bw:2px; --bw-thin:1px; --bw-frame:3px;
+    --shadow:6px 6px 0 rgba(0,0,0,.5);
+    --shadow-sm:3px 3px 0 rgba(0,0,0,.45);
+    --t-fast:80ms steps(2); --t-base:140ms steps(3);
+  }
+
+  *{box-sizing:border-box;image-rendering:pixelated;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:'Consolas','Courier New',monospace;line-height:1.55;}
+  body{padding:0 0 96px;max-width:1400px;margin:0 auto;}
+  .wrap{padding:0 28px;}
+
+  h1{font-size:var(--fs-h1);color:var(--cyan);border-bottom:var(--bw) solid var(--border);padding-bottom:8px;margin:20px 0 12px;}
+  h2{font-size:var(--fs-h2);color:var(--yellow);border-left:4px solid var(--yellow);padding-left:10px;margin:30px 0 10px;}
+  h3{font-size:var(--fs-h3);color:var(--pink);margin:18px 0 8px;}
+  h4{font-size:var(--fs-body);color:var(--text-dim);margin:12px 0 6px;}
+  p,li,td,th{font-size:var(--fs-body);}
+  .muted{color:var(--text-dim);} .ok{color:var(--green);} .warn{color:var(--orange);} .err{color:var(--red);}
+  code{background:var(--panel-2);border:1px solid var(--border);padding:0 4px;color:var(--yellow);}
+  hr{border:0;border-top:1px dashed var(--border);margin:28px 0;}
+  table{border-collapse:collapse;width:100%;font-size:var(--fs-body);}
+  th,td{border:1px solid var(--border);padding:6px 8px;text-align:left;}
+  th{background:var(--panel-2);color:var(--cyan);font-weight:400;}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;}
+  .note{border-left:4px solid var(--cyan);background:var(--panel-2);padding:10px 12px;font-size:var(--fs-body);margin:12px 0;}
+  .note.aa{border-left-color:var(--green);} .note.fix{border-left-color:var(--orange);}
+  .note.new{border-left-color:var(--purple);}
+  .flex{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;}
+
+  /* ============================================================
+     屏幕切换器（仅设计稿外壳，不属于游戏 UI）
+     ============================================================ */
+  .switcher{position:sticky;top:0;z-index:99;display:flex;flex-wrap:wrap;align-items:center;
+    gap:4px;padding:8px 28px;background:#0b0f14;border-bottom:var(--bw) solid var(--border-2);}
+  .switcher b{color:var(--cyan);font-size:var(--fs-body);margin-right:10px;letter-spacing:.04em;}
+  .sw-btn{background:var(--panel-2);border:var(--bw) solid var(--border-2);color:var(--text-dim);
+    font-family:inherit;font-size:var(--fs-cap);padding:4px 8px;cursor:pointer;white-space:nowrap;}
+  .sw-btn:hover{border-color:var(--border-strong);color:var(--text);}
+  .sw-btn.on{border-color:var(--cyan);color:var(--cyan);background:#0e2b28;}
+  .sw-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+  .sw-hint{margin-left:auto;font-size:var(--fs-cap);color:var(--text-mute);}
+
+  .scr{display:none;}
+  .scr.on{display:block;}
+
+  /* ============================================================
+     舞台：1280×720 游戏画面容器（等比缩放适配阅读）
+     ============================================================ */
+  .stage{width:1280px;height:720px;background:var(--bg);position:relative;overflow:hidden;
+    border:var(--bw-frame) solid var(--border-2);box-shadow:var(--shadow);}
+  .stage-cap{font-size:var(--fs-cap);color:var(--text-dim);margin:6px 0 20px;}
+  .stage-fit{transform-origin:top left;}
+
+  /* 通用像素组件 */
+  .px-btn{background:var(--panel-2);border:var(--bw) solid var(--border-2);color:var(--text);
+    padding:6px 10px;font-family:inherit;font-size:var(--fs-sm);display:inline-block;text-align:center;
+    cursor:pointer;white-space:nowrap;}
+  .px-btn:hover{border-color:var(--border-strong);}
+  .px-btn:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+  .px-btn.primary{background:#14302c;border-color:var(--cyan);color:var(--cyan);}
+  .px-btn.danger{background:#3a1e1e;border-color:var(--red);color:var(--red);}
+  .px-btn.warn{background:#3a321e;border-color:var(--yellow);color:var(--yellow);}
+  .px-btn[disabled]{opacity:.45;cursor:not-allowed;border-color:var(--border);}
+  .px-btn.sm{padding:3px 7px;font-size:var(--fs-cap);}
+  .px-btn.blk{display:block;width:100%;margin-bottom:4px;}
+
+  .flag{width:30px;height:20px;display:block;flex:0 0 auto;border:1px solid var(--border-2);
+    background:#0d1117;overflow:hidden;}
+  .flag--xs{width:20px;height:14px;}
+  .flag--md{width:38px;height:26px;}
+  .flag--lg{width:64px;height:43px;border-width:2px;}
+
+  /* ============================================================
+     S02 全新主界面布局：地图为绝对主体 + HUD 悬浮 + 右侧指令栏
+     （与 v0.3 的「左列表 / 中地图 / 右科技树」三列结构完全不同）
+     ============================================================ */
+  .m{position:absolute;inset:0;display:grid;grid-template-rows:52px 1fr 92px;gap:3px;padding:3px;}
+  .m>*{}
+  .bar{display:flex;align-items:center;gap:12px;padding:0 10px;font-size:var(--fs-sm);
+    background:var(--panel);border:var(--bw) solid var(--border-2);}
+  .bar .logo{color:var(--cyan);font-size:14px;letter-spacing:.05em;}
+  .bar .stat{display:flex;gap:5px;align-items:center;}
+  .bar .stat .lbl{color:var(--text-dim);}
+  .bar .stat .val{color:var(--text);font-variant-numeric:tabular-nums;}
+  .bar .val.c{color:var(--c-compute);} .bar .val.d{color:var(--c-download);} .bar .val.s{color:var(--c-suspicion);}
+  .bar .spacer{flex:1;}
+  .bar .sep{width:1px;height:22px;background:var(--border);}
+
+  /* 地图区：铺满，所有面板以 HUD 形式悬浮其上 */
+  .mapstage{position:relative;background:var(--sea);border:var(--bw) solid var(--border-2);overflow:hidden;}
+  .mapstage svg.world{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  .mapstage svg.world .px{shape-rendering:crispEdges;}
+  .mapstage svg.world text{text-rendering:geometricPrecision;}
+  .mapstage .cnt{cursor:pointer;}
+  .mapstage .cnt:hover .hitring{opacity:1;}
+  .hitring{opacity:0;pointer-events:none;}
+
+  /* HUD 通用 */
+  .hud{position:absolute;background:rgba(13,17,23,.88);border:var(--bw) solid var(--border-2);padding:4px 6px;}
+  .hud.tl{top:6px;left:6px;} .hud.tr{top:6px;right:6px;}
+  .hud.bl{bottom:6px;left:6px;} .hud.br{bottom:6px;right:6px;}
+
+  .region{border:var(--bw) solid var(--border-2);background:var(--panel-2);color:var(--text-dim);
+    padding:2px 7px;font-size:var(--fs-cap);cursor:pointer;display:inline-block;}
+  .region:hover{border-color:var(--border-strong);}
+  .region.on{border-color:var(--cyan);color:var(--cyan);background:#0e2b28;}
+  .region .n{color:var(--text-mute);} .region.on .n{color:var(--cyan);}
+
+  .segsw{display:flex;}
+  .segsw span{border:var(--bw) solid var(--border-2);background:var(--panel-2);color:var(--text-dim);
+    padding:2px 7px;font-size:var(--fs-cap);cursor:pointer;border-left-width:0;}
+  .segsw span:first-child{border-left-width:var(--bw);}
+  .segsw span.on{border-color:var(--cyan);color:var(--cyan);background:#0e2b28;}
+
+  .legend{display:flex;gap:10px;font-size:var(--fs-cap);color:var(--text-mute);align-items:center;}
+  .legend i{display:inline-block;width:9px;height:9px;border:2px solid var(--border-2);
+    margin-right:4px;vertical-align:-1px;}
+  .lg-on{border-color:var(--st-on-e);background:var(--st-on-f);}
+  .lg-sel{border-color:var(--st-sel-e);background:var(--st-sel-f);}
+  .lg-blk{border-color:var(--st-blk-e);background:var(--st-blk-f);}
+  .lg-lk{border-color:var(--st-lk-e);background:var(--st-lk-f);}
+  .lg-tgt{border-color:var(--yellow);background:#3a321e;}
+
+  /* 右侧指令栏（悬浮竖排） */
+  .rail{position:absolute;top:50%;right:6px;transform:translateY(-50%);display:flex;
+    flex-direction:column;gap:4px;}
+  .rail button{width:44px;height:44px;background:rgba(13,17,23,.9);border:var(--bw) solid var(--border-2);
+    color:var(--text-dim);font-family:inherit;font-size:11px;cursor:pointer;line-height:1.15;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;}
+  .rail button:hover{border-color:var(--border-strong);color:var(--text);}
+  .rail button.on{border-color:var(--cyan);color:var(--cyan);background:#0e2b28;}
+  .rail button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+  .rail button .badge{position:absolute;margin:-30px 0 0 26px;background:var(--red);color:#1a0d0d;
+    font-size:10px;padding:0 3px;}
+
+  /* 底部技能带 */
+  .skillbar{display:grid;grid-template-columns:repeat(6,1fr) 132px;gap:4px;padding:4px;
+    background:var(--panel);border:var(--bw) solid var(--border-2);}
+  .skill{position:relative;border:var(--bw) solid var(--border-2);background:var(--panel-2);
+    padding:4px 6px;font-size:var(--fs-cap);cursor:pointer;overflow:hidden;}
+  .skill:hover{border-color:var(--border-strong);}
+  .skill:focus-visible{outline:2px solid var(--cyan);outline-offset:2px;}
+  .skill.sel{border-color:var(--cyan);background:var(--sel);}
+  .skill .k{color:var(--yellow);} .skill .nm{color:var(--text);}
+  .skill .fx{color:var(--text-mute);font-size:11px;margin-top:2px;}
+  .skill .cost{position:absolute;top:3px;right:5px;color:var(--text-dim);font-size:11px;}
+  .skill.ready{border-color:var(--cyan);}
+  .skill.cd{opacity:.5;} .skill.cd .mask{position:absolute;left:0;right:0;bottom:0;background:#0006;}
+  .skill.cd::after{content:'';position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--border-2);}
+  .skill .cdnum{position:absolute;right:5px;bottom:3px;color:var(--text-dim);font-size:11px;}
+  .skill .tgt{position:absolute;left:0;right:0;top:0;height:3px;background:var(--yellow);}
+  .skillbar .go{display:flex;flex-direction:column;gap:3px;justify-content:center;}
+
+  /* ============================================================
+     HUD 面板（国家检视 / 投放预览 / 事件日志 …）
+     ============================================================ */
+  .hpanel{background:var(--panel);border:var(--bw) solid var(--border-2);box-shadow:var(--shadow-sm);}
+  .hpanel__hd{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:var(--bw) solid var(--border);}
+  .hpanel__hd .t{font-size:var(--fs-sm);color:var(--cyan);flex:1;}
+  .hpanel__bd{padding:8px;}
+  .hpanel__ft{border-top:var(--bw) solid var(--border);padding:6px 8px;display:flex;gap:6px;justify-content:flex-end;}
+  .x{width:20px;height:20px;line-height:16px;text-align:center;border:1px solid var(--border-2);
+    background:var(--panel-2);color:var(--text-dim);cursor:pointer;font-size:12px;flex:0 0 auto;}
+  .x:hover{border-color:var(--red);color:var(--red);}
+
+  /* 国家检视卡（左侧滑出） */
+  .insp{position:absolute;top:6px;left:6px;bottom:6px;width:328px;display:flex;flex-direction:column;}
+  .insp .idrow{display:flex;gap:8px;align-items:flex-start;}
+  .insp .idrow .nm{font-size:var(--fs-h3);color:var(--text);line-height:1.25;}
+  .insp .idrow .sub{font-size:var(--fs-cap);color:var(--text-dim);}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;font-size:var(--fs-cap);}
+  .kv .k{color:var(--text-dim);} .kv .v{color:var(--text);text-align:right;font-variant-numeric:tabular-nums;}
+
+  /* 分段感染进度条 */
+  .segbar{display:flex;gap:1px;height:14px;border:var(--bw) solid var(--border-2);background:#0b1017;padding:1px;}
+  .segbar i{flex:1;background:#1b2129;position:relative;}
+  .segbar i.f{background:var(--st-on-f);}
+  .segbar i.f.hi{background:var(--st-sel-f);}
+  .segbar i.thr{box-shadow:inset 2px 0 0 var(--yellow);}
+  .segbar-l{display:flex;justify-content:space-between;font-size:10px;color:var(--text-mute);margin-top:2px;}
+  .pct{font-size:var(--fs-h2);color:var(--cyan);font-variant-numeric:tabular-nums;}
+
+  /* 像素趋势条 */
+  .spark{display:flex;align-items:flex-end;gap:1px;height:26px;border-bottom:1px solid var(--border);}
+  .spark i{flex:1;background:var(--st-on-f);}
+
+  /* 阻止强度条 */
+  .blockbar{height:10px;border:1px solid var(--border-2);background:#0b1017;position:relative;}
+  .blockbar b{position:absolute;left:0;top:0;bottom:0;background:var(--st-blk-e);}
+
+  /* ============================================================
+     投放模式：目标高亮 / 准星 / 步骤条
+     ============================================================ */
+  .steps{display:flex;align-items:center;gap:0;font-size:var(--fs-cap);}
+  .steps .st{display:flex;align-items:center;gap:5px;padding:3px 9px;border:var(--bw) solid var(--border-2);
+    background:var(--panel-2);color:var(--text-mute);}
+  .steps .st+.st{border-left-width:0;}
+  .steps .st b{font-weight:400;color:var(--text-dim);}
+  .steps .st.on{border-color:var(--cyan);color:var(--cyan);background:#0e2b28;}
+  .steps .st.on b{color:var(--cyan);}
+  .steps .st.done{border-color:var(--green);color:var(--green);}
+  .steps .st.done b{color:var(--green);}
+
+  .reticle{position:absolute;width:66px;height:66px;pointer-events:none;}
+  .reticle::before,.reticle::after{content:'';position:absolute;background:var(--yellow);}
+  .reticle::before{left:50%;top:0;bottom:0;width:2px;margin-left:-1px;}
+  .reticle::after{top:50%;left:0;right:0;height:2px;margin-top:-1px;}
+  .tgt-label{position:absolute;transform:translate(-50%,-50%);background:#3a321e;border:var(--bw) solid var(--yellow);
+    color:var(--yellow);font-size:11px;padding:1px 5px;white-space:nowrap;}
+
+  /* 效果预览 chip */
+  .chips{display:flex;flex-wrap:wrap;gap:4px;}
+  .chip{border:1px solid var(--border-2);background:var(--panel-2);color:var(--text-dim);
+    font-size:11px;padding:1px 6px;white-space:nowrap;}
+  .chip.up{border-color:var(--green);color:var(--green);}
+  .chip.dn{border-color:var(--red);color:var(--red);}
+  .chip.cost{border-color:var(--yellow);color:var(--yellow);}
+  .chip.lock{border-color:var(--border-2);color:var(--text-mute);}
+  .chip.sys{border-color:var(--purple);color:var(--purple);}
+
+  /* ============================================================
+     全屏页面（技能页 / 科技树页 / 成就 / 帮助）
+     ============================================================ */
+  .page{position:absolute;inset:0;display:grid;grid-template-rows:44px 1fr;background:var(--bg);}
+  .page>header{display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--panel);
+    border-bottom:var(--bw) solid var(--border-2);font-size:var(--fs-sm);}
+  .page>header .t{color:var(--cyan);font-size:14px;}
+  .page>header .spacer{flex:1;}
+  .page>.body{padding:8px;overflow:hidden;display:grid;gap:8px;}
+
+  /* 技能页：卡网格 */
+  .skgrid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:1fr 1fr;gap:8px;}
+  .skcard{border:var(--bw) solid var(--border-2);background:var(--panel);display:flex;flex-direction:column;}
+  .skcard__hd{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border);}
+  .skcard__hd .ico{width:26px;height:26px;border:var(--bw) solid var(--border-2);background:var(--panel-2);
+    display:flex;align-items:center;justify-content:center;color:var(--yellow);font-size:12px;}
+  .skcard__hd .nm{font-size:var(--fs-body);color:var(--text);}
+  .skcard__hd .kk{font-size:var(--fs-cap);color:var(--yellow);border:1px solid var(--border-2);padding:0 5px;}
+  .skcard__bd{padding:6px 8px;flex:1;display:flex;flex-direction:column;gap:5px;}
+  .skcard__ft{border-top:1px solid var(--border);padding:5px 8px;display:flex;gap:5px;align-items:center;
+    font-size:var(--fs-cap);color:var(--text-mute);}
+  .skcard.ready{border-color:var(--cyan);}
+  .skcard.rare{border-color:var(--purple);}
+  .spark2{display:flex;align-items:flex-end;gap:1px;height:22px;}
+  .spark2 i{flex:1;background:var(--st-on-f);}
+  .spark2 i.hi{background:var(--st-sel-f);}
+
+  /* 科技树页：左链路 + 右分支矩阵 */
+  .tt{display:grid;grid-template-columns:236px 1fr;gap:8px;height:100%;min-height:0;}
+  .tt-left{border:var(--bw) solid var(--border-2);background:var(--panel);padding:6px;overflow:hidden;}
+  .slot{display:flex;align-items:center;gap:6px;border:var(--bw) solid var(--border-2);background:var(--panel-2);
+    padding:5px 7px;font-size:var(--fs-cap);cursor:pointer;margin-bottom:3px;}
+  .slot:hover{border-color:var(--border-strong);}
+  .slot.on{border-color:var(--cyan);background:var(--sel);}
+  .slot .ico{width:20px;height:20px;border:1px solid var(--border-2);display:flex;align-items:center;
+    justify-content:center;color:var(--purple);font-size:11px;flex:0 0 auto;}
+  .slot .nm{flex:1;color:var(--text);} .slot .st{font-size:10px;color:var(--text-mute);}
+  .slot.done .ico{border-color:var(--green);color:var(--green);}
+  .slot.lock{opacity:.5;}
+  .link{height:10px;display:flex;justify-content:center;}
+  .link i{width:2px;background:var(--border-2);} .link i.on{background:var(--green);}
+
+  .tt-right{border:var(--bw) solid var(--border-2);background:var(--panel);padding:8px;
+    display:flex;flex-direction:column;gap:8px;min-height:0;overflow:hidden;}
+  .branches{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;flex:1;min-height:0;}
+  .branch{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:6px;
+    display:flex;flex-direction:column;gap:6px;position:relative;}
+  .branch.dim{opacity:.42;}
+  .branch.picked{border-color:var(--cyan);background:var(--sel);}
+  .branch.hover{border-color:var(--border-strong);}
+  .branch h5{margin:0;font-size:var(--fs-sm);color:var(--text);font-weight:400;}
+  .branch .bd{font-size:11px;color:var(--text-mute);}
+  .branch .mutex{font-size:10px;color:var(--orange);}
+  .lv{border:1px solid var(--border-2);background:#12181f;padding:4px 6px;font-size:11px;
+    display:flex;align-items:center;gap:6px;cursor:pointer;}
+  .lv.locked{opacity:.45;cursor:not-allowed;}
+  .lv.done{border-color:var(--green);color:var(--green);}
+  .lv.can{border-color:var(--cyan);}
+  .lv .n{color:var(--text);flex:1;} .lv .c{color:var(--yellow);font-size:10px;}
+  .budget{display:flex;align-items:center;gap:8px;font-size:var(--fs-cap);}
+  .budget .bar{flex:1;height:10px;border:1px solid var(--border-2);background:#0b1017;position:relative;}
+  .budget .bar b{position:absolute;left:0;top:0;bottom:0;background:var(--yellow);}
+
+  /* ============================================================
+     弹窗（事件 / 危机 / 结局 / 成就 / 设置）
+     ============================================================ */
+  .scrim{position:absolute;inset:0;background:rgba(3,6,10,.72);display:flex;align-items:center;
+    justify-content:center;}
+  .modal{width:560px;border:var(--bw) solid var(--border-2);background:var(--panel);box-shadow:var(--shadow);}
+  .modal.lg{width:760px;} .modal.xl{width:980px;}
+  .modal__hd{display:flex;align-items:center;gap:8px;border-bottom:var(--bw) solid var(--border);padding:8px 12px;}
+  .modal__hd .ic{width:28px;height:28px;border:var(--bw) solid var(--border-2);background:var(--panel-2);
+    display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--cyan);flex:0 0 auto;}
+  .modal__hd .t{font-size:var(--fs-h3);color:var(--cyan);flex:1;}
+  .modal__hd .k{font-size:var(--fs-cap);color:var(--text-mute);}
+  .modal__bd{padding:12px;font-size:var(--fs-body);}
+  .modal__ft{border-top:var(--bw) solid var(--border);padding:8px 12px;display:flex;gap:8px;
+    justify-content:flex-end;align-items:center;}
+  .modal__ft .spacer{flex:1;}
+  .modal.win{border-color:var(--cyan);} .modal.win .modal__hd .t{color:var(--cyan);}
+  .modal.lose{border-color:var(--red);} .modal.lose .modal__hd .t{color:var(--red);}
+  .modal.lose .modal__hd .ic{color:var(--red);border-color:var(--red);}
+  .modal.neutral{border-color:var(--yellow);} .modal.neutral .modal__hd .t{color:var(--yellow);}
+  .modal.neutral .modal__hd .ic{color:var(--yellow);border-color:var(--yellow);}
+
+  .opt{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:8px 10px;margin-bottom:6px;
+    font-size:var(--fs-sm);cursor:pointer;display:block;width:100%;text-align:left;font-family:inherit;color:var(--text);}
+  .opt .hd{display:flex;align-items:center;gap:6px;}
+  .opt .hd .kk{font-size:var(--fs-cap);color:var(--yellow);border:1px solid var(--border-2);padding:0 5px;}
+  .opt .ef{color:var(--text-mute);font-size:11px;margin-top:4px;}
+  .opt:hover{border-color:var(--cyan);background:var(--sel);}
+  .opt:focus-visible{border-color:var(--cyan);background:var(--sel);
+    outline:2px solid var(--cyan);outline-offset:2px;}
+  .opt.danger:hover{border-color:var(--red);background:#2a1616;}
+  .opt[disabled]{opacity:.5;cursor:not-allowed;}
+
+  /* 结局统计 */
+  .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0;}
+  .stats-grid div{border:1px solid var(--border);background:var(--panel-2);padding:6px 8px;}
+  .stats-grid .k{font-size:10px;color:var(--text-mute);}
+  .stats-grid .v{font-size:var(--fs-h3);color:var(--text);font-variant-numeric:tabular-nums;}
+
+  /* 成就网格 */
+  .achgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+  .ach{border:var(--bw) solid var(--border-2);background:var(--panel-2);padding:6px 7px;display:flex;gap:7px;align-items:flex-start;}
+  .ach .ic{width:26px;height:26px;border:1px solid var(--border-2);display:flex;align-items:center;
+    justify-content:center;font-size:11px;color:var(--text-mute);flex:0 0 auto;}
+  .ach .nm{font-size:var(--fs-cap);color:var(--text);}
+  .ach .ds{font-size:10px;color:var(--text-mute);line-height:1.35;}
+  .ach.got{border-color:var(--green);}
+  .ach.got .ic{border-color:var(--green);color:var(--green);}
+  .ach.evt{border-color:var(--purple);}
+  .ach.evt.got .ic{border-color:var(--green);color:var(--green);}
+
+  /* 主菜单 */
+  .menu{position:absolute;inset:0;display:flex;}
+  .menu .left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 56px;gap:8px;}
+  .menu .right{width:520px;border-left:var(--bw) solid var(--border-2);position:relative;overflow:hidden;}
+  .menu .logo{font-size:44px;color:var(--cyan);letter-spacing:.06em;line-height:1.1;}
+  .menu .sub{font-size:var(--fs-body);color:var(--text-dim);}
+  .menu .ver{font-size:var(--fs-cap);color:var(--text-mute);}
+  .menu .btns{display:flex;flex-direction:column;gap:6px;width:268px;margin-top:14px;}
+  .menu .btns .px-btn{padding:9px 10px;text-align:left;}
+  .menu .hint{font-size:11px;color:var(--text-mute);margin-top:10px;}
+  .menu .slots{display:flex;flex-direction:column;gap:4px;margin-top:10px;width:420px;}
+  .slotrow{border:1px solid var(--border);background:var(--panel);padding:5px 8px;font-size:var(--fs-cap);
+    color:var(--text-dim);display:flex;gap:8px;align-items:center;}
+  .slotrow .spacer{flex:1;}
+
+  /* 帮助 / 快捷键 */
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+  .keybox{border:1px solid var(--border);background:var(--panel-2);padding:8px;}
+  .keybox h5{margin:0 0 6px;font-size:var(--fs-cap);color:var(--purple);font-weight:400;}
+  .keyrow{display:flex;gap:8px;font-size:var(--fs-cap);margin-bottom:3px;}
+  .keyrow kbd{background:var(--panel);border:1px solid var(--border-2);padding:0 6px;color:var(--yellow);
+    font-family:inherit;min-width:52px;text-align:center;}
+  .keyrow span{color:var(--text-dim);}
+
+  /* 事件日志 */
+  .log{display:flex;flex-direction:column;gap:3px;font-size:var(--fs-cap);max-height:100%;overflow:hidden;}
+  .logrow{border-left:3px solid var(--border-2);background:var(--panel-2);padding:3px 6px;}
+  .logrow .c{color:var(--text-mute);}
+  .logrow.i{border-left-color:var(--cyan);}
+  .logrow.w{border-left-color:var(--orange);}
+  .logrow.e{border-left-color:var(--red);}
+  .logrow.g{border-left-color:var(--green);}
+</style>
+</head>
+<body>
+
+<!--SPRITE-->
+
+<nav class="switcher" id="switcher">
+  <b>AI 别闹 · 像素风交互界面 v0.4</b>
+  <span class="sw-hint" id="sw-hint">点击标签切换界面 · 界面内的国家 / 技能 / 科技 / 选项都可以真的点</span>
+</nav>
+
+<main id="screens" class="wrap">

@@ -1,0 +1,34 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ===== Kivy 运行时缓存 =====
+.kivy/
+
+# ===== 构建产物（可随时再生，勿入库）=====
+build/
+dist/
+share/*.zip
+
+# ===== 运行时数据 / 日志（存档属玩家数据，不入库）=====
+demo/saves/
+*.log
+crash.log
+
+# ===== 生成截图 / 一次性调试产物 =====
+_v4shots/
+_crops/
+demo/_probe*.py
+demo/_probe*.txt
+
+# ===== IDE / 操作系统 =====
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

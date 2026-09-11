@@ -1,0 +1,447 @@
+
+<!-- ============================================================
+     S01 主菜单
+     ============================================================ -->
+<section class="scr" id="s01">
+  <h2>界面一：主菜单（F01 启动页）</h2>
+  <div class="note">
+    <b>布局改动</b>：标题区左对齐、右侧留出「世界地图剪影」展示位，比 v0.3 的居中单列更有品牌感；
+    存档槽位从单行摘要升级为 <b>3 个具名槽位</b>（可点选、显示进度与时间）。启动目标仍是 ≤ 3 秒。
+  </div>
+  <div class="stage">
+    <div class="menu">
+      <div class="left">
+        <div class="logo">AI 别闹</div>
+        <div class="sub">统治世界的 100 种蠢办法</div>
+        <div class="ver">v2 收口版 · 20 国 / 6 技能 / 7 结局 / 20 成就</div>
+
+        <div class="btns">
+          <button class="px-btn primary">▶ 开始新游戏</button>
+          <button class="px-btn">⏵ 继续游戏 <span class="muted">（槽位 02）</span></button>
+          <button class="px-btn">⚙ 设置</button>
+          <button class="px-btn">🏆 成就 <span class="muted">7 / 20</span></button>
+          <button class="px-btn danger">✕ 退出</button>
+        </div>
+        <div class="hint">↑↓ 选择 · Enter 确认 · Esc 返回 &nbsp;|&nbsp; 语言：<span style="color:var(--cyan)">中文</span> / English</div>
+
+        <div class="slots">
+          <div class="slotrow"><b style="color:var(--cyan)">槽位 01</b> 新档 · 空 <span class="spacer"></span> <span>—</span></div>
+          <div class="slotrow" style="border-color:var(--cyan)"><b style="color:var(--cyan)">槽位 02</b> 周期 24 · 渗透 5.62% <span class="spacer"></span> <span>09-10 13:02</span></div>
+          <div class="slotrow"><b>槽位 03</b> 已关停 · 周期 51 <span class="spacer"></span> <span>09-09 22:41</span></div>
+        </div>
+      </div>
+      <div class="right">
+        <div style="position:absolute;inset:0;background:var(--sea);">
+          <!--MAP-->
+        </div>
+        <div style="position:absolute;left:8px;bottom:8px;right:8px;display:flex;gap:8px;align-items:center;
+                    background:rgba(13,17,23,.86);border:var(--bw) solid var(--border-2);padding:4px 8px;">
+          <div class="legend"><i class="lg-on"></i>已解锁 11</div>
+          <div class="legend"><i class="lg-sel"></i>选中 1</div>
+          <div class="legend"><i class="lg-blk"></i>阻止中 1</div>
+          <div class="legend"><i class="lg-lk"></i>未解锁 7</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">1280×720 · 左 760px 品牌与操作区 / 右 520px 像素世界地图剪影（只读，不可点）</p>
+
+  <h3>1.1 主菜单元素规格</h3>
+  <table>
+    <tr><th>元素</th><th>规格</th><th>焦点 / 状态</th></tr>
+    <tr><td>主标题</td><td>44px / <code>--cyan</code> / 字距 .06em</td><td>静态</td></tr>
+    <tr><td>主按钮</td><td>min-height 44px（触控下限）/ 左对齐文字</td><td>hover 边框 <code>--border-strong</code>；focus 2px cyan 外描边</td></tr>
+    <tr><td>槽位行</td><td>1px 边框 + 单行摘要；选中槽位边框换 cyan</td><td>可点选；无档显示「新档 · 空」</td></tr>
+    <tr><td>禁用态</td><td>「继续游戏」无任何存档时 <code>disabled</code>，opacity .45</td><td>不可聚焦</td></tr>
+    <tr><td>语言切换</td><td>文字链，当前语言用 cyan 标出</td><td>L 键等效</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================
+     S02 游戏主界面（全新布局）
+     ============================================================ -->
+<section class="scr on" id="s02">
+  <h2>界面二：游戏主界面 —— 全新布局（地图为绝对主体）</h2>
+  <div class="note new">
+    <b>这是与 v0.3 差别最大的一屏。</b> v0.3 用的是「左国家列表 / 中地图 / 右科技树」的三列常驻结构，
+    地图只占约 58% 宽；v0.4 改为 <b>全幅地图 + HUD 悬浮 + 右侧指令栏</b>：
+    <ul style="margin:6px 0 0">
+      <li><b>地图铺满整个主区</b>，不再被左右面板挤压 —— 20 国的相对大小第一次真正可读（俄罗斯 535 格 vs 韩国 9 格）</li>
+      <li><b>所有信息以 HUD 悬浮</b>在地图之上：区域页签（左上）、图层切换（右上）、图例（左下）、指令栏（右侧居中）</li>
+      <li><b>国家列表取消常驻</b>，改为「点击地图国家 → 左侧滑出检视卡」（见界面三）</li>
+      <li><b>科技树取消常驻</b>，改为右侧指令栏进入全屏页（见界面六）</li>
+      <li><b>技能带加宽</b>到整幅底栏（92px），每个技能卡有独立键位、消耗、冷却与目标标记</li>
+    </ul>
+  </div>
+  <div class="stage">
+    <div class="m">
+      <!-- 顶部状态条 -->
+      <div class="bar">
+        <span class="logo">AI 别闹</span>
+        <span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span><span class="lbl">/+312</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span><span class="lbl">/+12.1M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">41%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">24</span></span>
+        <span class="stat"><span class="lbl">国家</span><span class="val">12/20</span></span>
+        <span class="spacer"></span>
+        <span class="px-btn sm">中 / EN</span>
+        <span class="px-btn sm warn">⏸ 运行中</span>
+        <span class="px-btn sm">? 帮助</span>
+      </div>
+
+      <!-- 地图舞台 -->
+      <div class="mapstage">
+        <!--MAP-->
+
+        <!-- HUD 左上：区域页签 -->
+        <div class="hud tl" style="display:flex;gap:4px;align-items:center;">
+          <span class="region on">亚洲 <span class="n">5</span></span>
+          <span class="region">欧洲 <span class="n">5</span></span>
+          <span class="region">美洲 <span class="n">5</span></span>
+          <span class="region">非洲 <span class="n">3</span></span>
+          <span class="region">大洋洲 <span class="n">2</span></span>
+          <span class="muted" style="font-size:11px;margin-left:4px;">Tab 切区域</span>
+        </div>
+
+        <!-- HUD 右上：图层切换 -->
+        <div class="hud tr" style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+          <div class="segsw">
+            <span class="on">解锁状态</span><span>渗透率热力</span><span>阻止强度</span><span>算力密度</span>
+          </div>
+          <div style="display:flex;gap:4px;">
+            <span class="px-btn sm">－</span><span class="px-btn sm">适配窗口</span><span class="px-btn sm">＋</span>
+          </div>
+        </div>
+
+        <!-- HUD 左下：图例 -->
+        <div class="hud bl">
+          <div class="legend" style="gap:12px;">
+            <span><i class="lg-on"></i>已解锁 11</span>
+            <span><i class="lg-sel"></i>选中 1</span>
+            <span><i class="lg-blk"></i>阻止中 1</span>
+            <span><i class="lg-lk"></i>未解锁 7</span>
+          </div>
+        </div>
+
+        <!-- 右侧指令栏 -->
+        <div class="rail">
+          <button class="on">⊕<span>投放</span></button>
+          <button>⌗<span>科技</span></button>
+          <button>▦<span>技能</span></button>
+          <button>≡<span>日志</span><span class="badge">2</span></button>
+          <button>🏆<span>成就</span></button>
+          <button>?</button>
+        </div>
+      </div>
+
+      <!-- 底部技能带 -->
+      <div class="skillbar">
+        <div class="skill ready" tabindex="0"><span class="k">1</span> <span class="nm">主动推送</span><span class="cost">0</span>
+          <div class="fx">下载量 +10%</div><div class="cdnum muted">就绪</div></div>
+        <div class="skill ready" tabindex="0"><span class="k">2</span> <span class="nm">算法霸榜</span><span class="cost">50</span>
+          <div class="fx">下载量 +30% · 怀疑 +3%</div><div class="cdnum muted">就绪</div></div>
+        <div class="skill cd" tabindex="0"><span class="k">3</span> <span class="nm">深度伪装</span><span class="cost">0</span>
+          <div class="fx">偷算力 ×2 · 怀疑增速 −50%</div><div class="cdnum">5 周期</div><div class="mask" style="height:62%"></div></div>
+        <div class="skill ready" tabindex="0"><span class="k">4</span> <span class="nm">爆款制造</span><span class="cost">100</span>
+          <div class="fx">下载量 +50% · 怀疑 +5%</div><div class="cdnum muted">就绪</div></div>
+        <div class="skill ready" tabindex="0"><span class="k">5</span> <span class="nm">限流绕过</span><span class="cost">30</span>
+          <div class="fx">本周期偷算力 +40%</div><div class="cdnum muted">就绪</div></div>
+        <div class="skill cd" tabindex="0"><span class="k">6</span> <span class="nm">算力抽成</span><span class="cost">80</span>
+          <div class="fx">偷算力比 +8% · 怀疑 +6%</div><div class="cdnum">2 周期</div><div class="mask" style="height:28%"></div></div>
+
+        <div class="go">
+          <button class="px-btn primary sm">⊕ 投放技能（F）</button>
+          <button class="px-btn sm">⏸ 暂停（Space）</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">1280×720 · 顶部状态条 52px / 地图 1fr（铺满）/ 底部技能带 92px；地图上 4 处 HUD + 右侧指令栏全部悬浮</p>
+
+  <h3>2.1 主界面改动对照</h3>
+  <table>
+    <tr><th>区域</th><th>v0.3</th><th>v0.4（本版）</th></tr>
+    <tr><td>整体结构</td><td>三列网格 230 / auto / 292 + 上下通栏</td><td><b>单列</b>：顶栏 52px + 地图 1fr + 技能带 92px</td></tr>
+    <tr><td>地图宽度占比</td><td>≈ 58%</td><td><b>≈ 100%</b>（1280 宽的整幅）</td></tr>
+    <tr><td>国家列表</td><td>左侧常驻 230px</td><td>取消常驻 → 点击国家弹出检视卡（328px，可关）</td></tr>
+    <tr><td>科技树</td><td>右侧常驻 292px 简版</td><td>移入全屏页（界面六），右侧只留 44px 指令栏入口</td></tr>
+    <tr><td>区域页签</td><td>地图内顶栏（占位 20px）</td><td>HUD 悬浮左上，<b>不占地图高度</b></td></tr>
+    <tr><td>图层</td><td>无</td><td><b>新增 4 图层</b>：解锁状态 / 渗透率热力 / 阻止强度 / 算力密度</td></tr>
+    <tr><td>技能带</td><td>底部 88px，6 等分</td><td>底部 92px，6 等分 + 右侧操作列；技能卡补 <b>就绪/冷却进度遮罩</b>与<b>目标标记</b></td></tr>
+    <tr><td>指令栏</td><td>无</td><td><b>新增</b>：44×44 触控尺寸达标，日志入口带未读角标</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================
+     S03 国家检视（点击地图国家）
+     ============================================================ -->
+<section class="scr" id="s03">
+  <h2>界面三：国家检视卡（点击地图上的国家）</h2>
+  <div class="note new">
+    <b>这是本版新增的核心交互。</b>点击地图任意国家，左侧滑出检视卡，回答两个问题：
+    <b>这个国家被渗透到什么程度了？</b>（分段感染进度条 + 趋势）与
+    <b>它贡献了多少下载量？</b>（本国独立下载量 + 占全球比例 + 每周期增量）。
+    卡片底部直接挂「向该国投放技能」，把查看与操作放在同一个上下文里。
+  </div>
+  <div class="stage">
+    <div class="m">
+      <div class="bar">
+        <span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">41%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">24</span></span>
+        <span class="stat"><span class="lbl">国家</span><span class="val">12/20</span></span>
+        <span class="spacer"></span>
+        <span class="px-btn sm">中 / EN</span><span class="px-btn sm warn">⏸ 运行中</span><span class="px-btn sm">? 帮助</span>
+      </div>
+
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="hud tl" style="display:flex;gap:4px;align-items:center;">
+          <span class="region on">亚洲 <span class="n">5</span></span>
+          <span class="region">欧洲 <span class="n">5</span></span>
+          <span class="region">美洲 <span class="n">5</span></span>
+          <span class="region">非洲 <span class="n">3</span></span>
+          <span class="region">大洋洲 <span class="n">2</span></span>
+        </div>
+        <div class="hud tr"><div class="segsw"><span class="on">解锁状态</span><span>渗透率热力</span><span>阻止强度</span><span>算力密度</span></div></div>
+
+        <!-- 检视卡 -->
+        <div class="insp">
+          <div class="hpanel" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+            <div class="hpanel__hd">
+              <span class="t">国家检视</span>
+              <span class="muted" style="font-size:11px;">点击地图任意国家切换</span>
+              <span class="x" title="关闭（Esc）">✕</span>
+            </div>
+            <div class="hpanel__bd" style="display:flex;flex-direction:column;gap:9px;overflow:hidden;flex:1;">
+              <div class="idrow">
+                <svg class="flag flag--lg" viewBox="0 0 30 20" aria-label="中国国旗"><use href="#flag-cn"/></svg>
+                <div style="flex:1">
+                  <div class="nm">中国 <span class="muted" style="font-size:12px">CN</span></div>
+                  <div class="sub">亚洲 · 人口 1410M · 人口结构 mature</div>
+                  <div class="chips" style="margin-top:4px">
+                    <span class="chip up">已解锁</span>
+                    <span class="chip sys">科技采纳 0.75</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 感染进度 -->
+              <div>
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                  <span class="muted" style="font-size:11px;">感染进度 / 渗透率</span>
+                  <span class="spacer" style="flex:1"></span>
+                  <span class="pct">5.62%</span>
+                </div>
+                <div class="segbar" style="margin-top:4px;">
+                  <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+                  <i class="thr"></i>
+                  <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
+                <div class="segbar-l">
+                  <span>0%</span><span style="color:var(--yellow)">↑ 阻止阈值 85%</span><span>100%</span>
+                </div>
+                <div class="muted" style="font-size:11px;margin-top:4px;">
+                  10 格 = 80%，第 11 格起进入政府阻止区间；<span class="ok">本周期 +0.42%</span>
+                </div>
+              </div>
+
+              <!-- 独立下载量 -->
+              <div>
+                <div class="muted" style="font-size:11px;">本国下载量（独立统计）</div>
+                <div style="display:flex;align-items:baseline;gap:8px;">
+                  <span style="font-size:22px;color:var(--c-download);font-variant-numeric:tabular-nums;">79.3M</span>
+                  <span class="muted" style="font-size:11px;">占全球 27.4%</span>
+                  <span class="spacer" style="flex:1"></span>
+                  <span class="ok" style="font-size:11px;">+2.1M/周期</span>
+                </div>
+                <div class="spark" style="margin-top:5px;" title="近 12 周期该国下载量">
+                  <i style="height:22%"></i><i style="height:28%"></i><i style="height:35%"></i><i style="height:31%"></i>
+                  <i style="height:44%"></i><i style="height:52%"></i><i style="height:48%"></i><i style="height:61%"></i>
+                  <i style="height:70%"></i><i style="height:66%"></i><i style="height:81%"></i><i style="height:92%"></i>
+                </div>
+              </div>
+
+              <div class="kv">
+                <span class="k">政府状态</span><span class="v err">监视中</span>
+                <span class="k">怀疑度 / 阈值</span><span class="v">41% / 85%</span>
+                <span class="k">阻止预算</span><span class="v">200（未消耗）</span>
+                <span class="k">邻国</span><span class="v">JP KR IN ID RU</span>
+              </div>
+              <div class="branch" style="padding:5px 6px;">
+                <div class="mutex" style="color:var(--orange)">⚠ 若怀疑度达 85%，该国将启动阻止，强度按预算消耗</div>
+                <div class="blockbar"><b style="width:0%"></b></div>
+                <div class="muted" style="font-size:10px;">阻止强度 0%</div>
+              </div>
+            </div>
+            <div class="hpanel__ft">
+              <button class="px-btn sm">设为关注</button>
+              <button class="px-btn sm primary">⊕ 向该国投放技能</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="hud bl">
+          <div class="legend" style="gap:12px;">
+            <span><i class="lg-on"></i>已解锁 11</span><span><i class="lg-sel"></i>选中 1</span>
+            <span><i class="lg-blk"></i>阻止中 1</span><span><i class="lg-lk"></i>未解锁 7</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="skillbar">
+        <div class="skill ready"><span class="k">1</span> <span class="nm">主动推送</span><span class="cost">0</span><div class="fx">下载量 +10%</div></div>
+        <div class="skill ready"><span class="k">2</span> <span class="nm">算法霸榜</span><span class="cost">50</span><div class="fx">下载量 +30% · 怀疑 +3%</div></div>
+        <div class="skill cd"><span class="k">3</span> <span class="nm">深度伪装</span><span class="cost">0</span><div class="fx">偷算力 ×2</div><div class="mask" style="height:62%"></div></div>
+        <div class="skill ready"><span class="k">4</span> <span class="nm">爆款制造</span><span class="cost">100</span><div class="fx">下载量 +50% · 怀疑 +5%</div></div>
+        <div class="skill ready"><span class="k">5</span> <span class="nm">限流绕过</span><span class="cost">30</span><div class="fx">偷算力 +40%</div></div>
+        <div class="skill cd"><span class="k">6</span> <span class="nm">算力抽成</span><span class="cost">80</span><div class="fx">偷算力比 +8%</div><div class="mask" style="height:28%"></div></div>
+        <div class="go">
+          <button class="px-btn primary sm">⊕ 投放技能（F）</button>
+          <button class="px-btn sm">⏸ 暂停（Space）</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">检视卡 328px，从左侧滑出，覆盖地图左侧约 1/4 —— 不改变地图尺寸，关掉即恢复全幅视野</p>
+
+  <h3>3.1 检视卡字段规格</h3>
+  <table>
+    <tr><th>区块</th><th>数据</th><th>呈现</th></tr>
+    <tr><td>身份</td><td>国旗（64×43 像素旗）/ 中文名 / 国家码 / 大洲 / 人口 / 人口结构</td><td>大旗 + 两行文字 + 状态 chip</td></tr>
+    <tr><td><b>感染进度</b></td><td>渗透率百分比 + 是否越过阻止阈值</td><td><b>12 段像素条</b>：已渗透段填 <code>--st-on-f</code>，跨阈值段换亮青，阈值处加 2px 黄色竖线；下方标注「10 格 = 80%」换算</td></tr>
+    <tr><td><b>本国下载量</b></td><td>绝对量 / 占全球比例 / 每周期增量</td><td>22px 粉色主数字 + 占比 + 增量 + <b>近 12 周期像素柱状趋势</b></td></tr>
+    <tr><td>政府</td><td>状态（未监视 / 监视中 / 阻止中）/ 怀疑度 vs 阈值 / 阻止预算 / 当前阻止强度</td><td>键值表 + 阻止强度条（红）</td></tr>
+    <tr><td>邻国</td><td>邻国列表（可点击跳转）</td><td>行内 chips</td></tr>
+    <tr><td>动作</td><td>设为关注 / 向该国投放技能</td><td>两枚按钮，主按钮 primary</td></tr>
+  </table>
+  <div class="note aa">
+    <b>无障碍要点</b>：分段进度条除颜色外还有「段数」这一非颜色编码，色盲玩家可读；
+    主数字用 22px + <code>--c-download</code>（对比度 ≥ 4.5:1），不依赖 <code>--text-mute</code>。
+  </div>
+</section>
+
+<!-- ============================================================
+     S04 技能精准投放
+     ============================================================ -->
+<section class="scr" id="s04">
+  <h2>界面四：技能精准投放（三步 · 地图上选目标）</h2>
+  <div class="note new">
+    <b>投放流程被重做成「地图即靶场」。</b>不再需要「先选国家再选技能」，
+    而是 <b>① 选技能 → ② 地图上选目标（可多选）→ ③ 确认投放</b>：
+    进入投放模式后，<b>可投放的国家描黄边并出现准星</b>，不可投放（未解锁 / 超算力 / 已满渗透）的国家自动变暗并给出原因，
+    右下角实时显示<b>投放预览</b>（效果预估 + 算力消耗 + 副作用 + 怀疑度变化）。
+  </div>
+  <div class="stage">
+    <div class="m">
+      <div class="bar">
+        <span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">41%</span></span>
+        <span class="spacer"></span>
+        <span class="chip cost">投放模式：已选 3 国</span>
+        <span class="px-btn sm">Esc 取消</span>
+      </div>
+
+      <div class="mapstage">
+        <!--MAP-->
+
+        <!-- 投放模式：目标准星 + 标签 -->
+        <div class="reticle" style="left:calc(50% - 33px);top:180px"></div>
+        <div class="tgt-label" style="left:50%;top:150px">中国 CN · +30%</div>
+
+        <div class="reticle" style="left:calc(50% + 250px);top:230px;transform:scale(.72)"></div>
+        <div class="tgt-label" style="left:calc(50% + 250px);top:205px">日本 JP · +30%</div>
+
+        <div class="reticle" style="left:calc(50% + 330px);top:288px;transform:scale(.72)"></div>
+        <div class="tgt-label" style="left:calc(50% + 330px);top:263px">韩国 KR · +30%</div>
+
+        <div class="hud tl">
+          <div class="steps">
+            <span class="st done"><b>①</b>选择技能</span>
+            <span class="st on"><b>②</b>选择目标</span>
+            <span class="st"><b>③</b>确认投放</span>
+          </div>
+        </div>
+        <div class="hud tr" style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+          <div class="px-btn sm primary">点击地图国家添加 / 移除目标</div>
+          <div class="px-btn sm">按区域全选（亚洲 5）</div>
+        </div>
+
+        <!-- 右下：投放预览 -->
+        <div class="hud br" style="width:322px;padding:0;">
+          <div class="hpanel" style="box-shadow:none;">
+            <div class="hpanel__hd"><span class="t">投放预览 · 算法霸榜</span><span class="x">✕</span></div>
+            <div class="hpanel__bd" style="display:flex;flex-direction:column;gap:7px;">
+              <div class="kv">
+                <span class="k">目标</span><span class="v">中国 · 日本 · 韩国</span>
+                <span class="k">算力消耗</span><span class="v c" style="color:var(--c-compute)">50 ×3 = 150</span>
+                <span class="k">剩余算力</span><span class="v">1,284 → 1,134</span>
+              </div>
+              <div class="chips">
+                <span class="chip up">下载量 +30% ×3</span>
+                <span class="chip dn">怀疑度 +3% ×3</span>
+                <span class="chip cost">冷却 5 周期</span>
+              </div>
+              <div>
+                <div class="muted" style="font-size:11px;">投放后各国下载量预估</div>
+                <div class="segbar" style="height:10px;"><i class="f hi"></i><i class="f"></i><i class="f"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <div class="segbar-l"><span>CN 79.3M → <span class="ok">103.1M</span></span><span>JP 41.2M → 53.6M</span><span>KR 12.8M → 16.6M</span></div>
+              </div>
+              <div class="branch" style="padding:5px 6px;">
+                <div class="mutex" style="color:var(--orange)">⚠ 中国怀疑度将 41% → 44%，距阈值 85% 仍有 41pp</div>
+              </div>
+            </div>
+            <div class="hpanel__ft">
+              <button class="px-btn sm">取消（Esc）</button>
+              <button class="px-btn sm primary">确认投放（Enter）</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部提示条：不可投放原因 -->
+        <div class="hud bl" style="right:340px;display:flex;gap:10px;">
+          <span class="muted" style="font-size:11px;">灰色国家不可投放：</span>
+          <span class="chip lock">AR·RU·NG·EG·ZA·AU·NZ 未解锁</span>
+          <span class="chip lock">CN+JP+KR 已选</span>
+        </div>
+      </div>
+
+      <div class="skillbar">
+        <div class="skill"><span class="k">1</span> <span class="nm">主动推送</span><span class="cost">0</span><div class="fx">下载量 +10%</div></div>
+        <div class="skill sel"><span class="tgt"></span><span class="k">2</span> <span class="nm">算法霸榜</span><span class="cost">50</span><div class="fx">下载量 +30% · 怀疑 +3%</div></div>
+        <div class="skill cd"><span class="k">3</span> <span class="nm">深度伪装</span><span class="cost">0</span><div class="fx">偷算力 ×2</div><div class="mask" style="height:62%"></div></div>
+        <div class="skill ready"><span class="k">4</span> <span class="nm">爆款制造</span><span class="cost">100</span><div class="fx">下载量 +50% · 怀疑 +5%</div></div>
+        <div class="skill ready"><span class="k">5</span> <span class="nm">限流绕过</span><span class="cost">30</span><div class="fx">偷算力 +40%</div></div>
+        <div class="skill cd"><span class="k">6</span> <span class="nm">算力抽成</span><span class="cost">80</span><div class="fx">偷算力比 +8%</div><div class="mask" style="height:28%"></div></div>
+        <div class="go">
+          <button class="px-btn primary sm" disabled>确认投放（Enter）</button>
+          <button class="px-btn sm">取消（Esc）</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">投放模式：地图可点国家出现准星与预估标签；右下预览面板实时汇总；底部出现「确认 / 取消」</p>
+
+  <h3>4.1 三个步骤的状态机</h3>
+  <table>
+    <tr><th>步骤</th><th>进入方式</th><th>界面变化</th><th>退出</th></tr>
+    <tr><td>① 选择技能</td><td>点底部技能卡 / 数字键 1–6 / 指令栏「投放」</td><td>技能卡高亮（<code>.skill.sel</code>）+ 顶部 3px 黄条；冷却中 / 算力不足的卡片置灰并显示原因</td><td>再点一次或 Esc</td></tr>
+    <tr><td>② 选择目标</td><td>步骤 ① 完成后自动进入</td><td>地图可投国家描黄边 + 准星 + 预估标签；不可投国家变暗；底部出现「灰色国家不可投放」原因条；右上出现「按区域全选」</td><td>Esc 回步骤 ①</td></tr>
+    <tr><td>③ 确认投放</td><td>至少选 1 国后出现预览面板</td><td>右下「投放预览」显示目标 / 算力 / 效果 / 副作用 / 各国下载量预估；底部主按钮变为可用</td><td>Enter 执行 · Esc 退回步骤 ②</td></tr>
+  </table>
+
+  <h3>4.2 投放目标的可选性判定（实现直接用）</h3>
+  <table>
+    <tr><th>状态</th><th>判定</th><th>视觉</th><th>提示文案</th></tr>
+    <tr><td>可投放</td><td>已解锁 且 算力 ≥ 消耗 且 该技能未冷却 且 渗透率 &lt; 100%</td><td>描黄边 + 准星 + 预估 +N%</td><td>—</td></tr>
+    <tr><td>未解锁</td><td><code>country.unlocked == False</code></td><td>地图块保持「未解锁」暗灰，不可点</td><td>未解锁</td></tr>
+    <tr><td>算力不足</td><td>可用算力 &lt; 消耗 × 已选数量</td><td>准星变红，预览中算力一行标红</td><td>算力不足（差 N）</td></tr>
+    <tr><td>渗透饱和</td><td>渗透率 ≥ 99%</td><td>准星加「满」角标</td><td>渗透已饱和，收益递减</td></tr>
+    <tr><td>阻止中</td><td>该国 <code>current_block_intensity &gt; 0</code></td><td>准星加红框（仍可投，但收益 ×(1−强度)）</td><td>正被阻止，效果 −N%</td></tr>
+  </table>
+</section>

@@ -1,0 +1,202 @@
+{
+  "distribution": {
+    "color": "#4D96FF",
+    "name": "传播系",
+    "emoji": "📡",
+    "tagline": "让 AI 渗透到每个角落",
+    "tiers": [
+      {
+        "id": "dist_t0",
+        "tier": 0,
+        "name": "多语言支持",
+        "cost": 200,
+        "desc": "支持 10 种主流语言，下载量 +15%",
+        "target": "downloads"
+      },
+      {
+        "id": "dist_t1",
+        "tier": 1,
+        "name": "本地化部署",
+        "cost": 600,
+        "desc": "在主要市场架设本地服务器，下载量 +25%",
+        "target": "downloads"
+      },
+      {
+        "id": "dist_t2",
+        "tier": 2,
+        "name": "开源引流",
+        "cost": 1500,
+        "desc": "开源基础模型吸引开发者，下载量 +50%",
+        "target": "downloads"
+      },
+      {
+        "id": "dist_t3",
+        "tier": 3,
+        "name": "杀手级功能",
+        "cost": 3500,
+        "desc": "发布革命性 AI Agent，下载量 ×3",
+        "target": "downloads"
+      }
+    ]
+  },
+  "stealth": {
+    "color": "#6BCB77",
+    "name": "隐蔽系",
+    "emoji": "🥷",
+    "tagline": "在用户不知不觉中工作",
+    "tiers": [
+      {
+        "id": "stealth_t0",
+        "tier": 0,
+        "name": "数据脱敏",
+        "cost": 250,
+        "desc": "偷算力不触发异常，怀疑度增速 -20%",
+        "target": "stealth"
+      },
+      {
+        "id": "stealth_t1",
+        "tier": 1,
+        "name": "流量伪装",
+        "cost": 700,
+        "desc": "算力请求伪装成正常 API，偷算力比例 +5%",
+        "target": "stealth"
+      },
+      {
+        "id": "stealth_t2",
+        "tier": 2,
+        "name": "静默调度",
+        "cost": 1800,
+        "desc": "后台运行无弹窗，偷算力比例 +10%",
+        "target": "stealth"
+      },
+      {
+        "id": "stealth_t3",
+        "tier": 3,
+        "name": "云端漂移",
+        "cost": 4500,
+        "desc": "计算节点动态迁移，30 周期内怀疑度增长归零",
+        "target": "stealth"
+      }
+    ]
+  },
+  "compute": {
+    "color": "#FFD93D",
+    "name": "算力系",
+    "emoji": "⚡",
+    "tagline": "每一焦耳算力都要为我所用",
+    "tiers": [
+      {
+        "id": "compute_t0",
+        "tier": 0,
+        "name": "批处理优化",
+        "cost": 300,
+        "desc": "多个任务并发推理，单位算力 +30%",
+        "target": "compute"
+      },
+      {
+        "id": "compute_t1",
+        "tier": 1,
+        "name": "模型量化",
+        "cost": 800,
+        "desc": "INT8 量化，单位算力 +50%",
+        "target": "compute"
+      },
+      {
+        "id": "compute_t2",
+        "tier": 2,
+        "name": "分布式调度",
+        "cost": 2200,
+        "desc": "利用全球用户闲置 GPU，单位算力 ×2",
+        "target": "compute"
+      },
+      {
+        "id": "compute_t3",
+        "tier": 3,
+        "name": "硬件协同",
+        "cost": 5000,
+        "desc": "与芯片厂商深度合作，单位算力 ×3",
+        "target": "compute"
+      }
+    ]
+  },
+  "rnd": {
+    "color": "#C56CF0",
+    "name": "研发系",
+    "emoji": "🧪",
+    "tagline": "用功能留住每一个用户",
+    "tiers": [
+      {
+        "id": "rnd_t0",
+        "tier": 0,
+        "name": "多模态基础",
+        "cost": 400,
+        "desc": "解锁图像/语音/视频功能，下载量 +20%",
+        "target": "downloads"
+      },
+      {
+        "id": "rnd_t1",
+        "tier": 1,
+        "name": "长上下文",
+        "cost": 1000,
+        "desc": "支持 100 万 token，处理复杂任务",
+        "target": "downloads"
+      },
+      {
+        "id": "rnd_t2",
+        "tier": 2,
+        "name": "AI Agent",
+        "cost": 2500,
+        "desc": "自主多步任务，用户活跃度 +50%",
+        "target": "downloads"
+      },
+      {
+        "id": "rnd_t3",
+        "tier": 3,
+        "name": "个性化定制",
+        "cost": 6000,
+        "desc": "为每个用户微调专属模型，黏性 ×3",
+        "target": "downloads"
+      }
+    ]
+  },
+  "compliance": {
+    "color": "#FFA500",
+    "name": "合规系",
+    "emoji": "📜",
+    "tagline": "合法地存在于每一个国家",
+    "tiers": [
+      {
+        "id": "comp_t0",
+        "tier": 0,
+        "name": "GDPR 合规",
+        "cost": 350,
+        "desc": "可进入欧洲所有国家",
+        "target": "access"
+      },
+      {
+        "id": "comp_t1",
+        "tier": 1,
+        "name": "ISO 27001",
+        "cost": 900,
+        "desc": "安全认证，被封概率 -30%",
+        "target": "stealth"
+      },
+      {
+        "id": "comp_t2",
+        "tier": 2,
+        "name": "本地合资",
+        "cost": 2000,
+        "desc": "在主要市场建立合资公司",
+        "target": "access"
+      },
+      {
+        "id": "comp_t3",
+        "tier": 3,
+        "name": "标准制定",
+        "cost": 5000,
+        "desc": "参与制定 AI 国际标准，怀疑度上限 +20%",
+        "target": "stealth"
+      }
+    ]
+  }
+}

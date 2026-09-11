@@ -1,0 +1,342 @@
+
+<!-- ============================================================
+     S05 技能页面（全屏）
+     ============================================================ -->
+<section class="scr" id="s05">
+  <h2>界面五：技能页面（全屏 · 6 个主动技能）</h2>
+  <div class="note new">
+    <b>为什么需要独立技能页</b>：主界面底部的技能带只能放「键位 + 名字 + 冷却」，
+    但玩家做决策真正需要的是<b>这个技能我一共放了几次、帮我赚了多少下载量、现在放下去划不划算</b>。
+    这屏把这些数据补齐：每个技能一张卡，含<b>累计释放次数 / 累计贡献下载量 / 近 12 周期使用曲线 / 单次收益</b>，
+    右上角可切换排序（收益 / 冷却 / 消耗），并提供「投放到当前选中国家」的快捷入口。
+  </div>
+  <div class="stage">
+    <div class="page">
+      <header>
+        <span class="t">技能库 · SKILLS</span>
+        <span class="px-btn sm">返回地图（Esc）</span>
+        <span class="spacer"></span>
+        <span class="muted" style="font-size:11px;">排序</span>
+        <span class="px-btn sm primary">累计收益</span><span class="px-btn sm">冷却</span><span class="px-btn sm">算力消耗</span><span class="px-btn sm">使用次数</span>
+        <span class="px-btn sm">仅看可用</span>
+        <span class="muted" style="font-size:11px;">可用算力 <span style="color:var(--c-compute)">1,284</span></span>
+      </header>
+      <div class="body">
+        <div class="skgrid">
+
+          <div class="skcard ready">
+            <div class="skcard__hd">
+              <span class="ico">⇈</span>
+              <span class="nm">主动推送</span><span class="kk">1</span>
+              <span class="spacer" style="flex:1"></span>
+              <span class="chip up">就绪</span>
+            </div>
+            <div class="skcard__bd">
+              <div class="chips"><span class="chip up">目标国下载量 +10%</span><span class="chip cost">算力 0</span><span class="chip">冷却 3 周期</span></div>
+              <div class="muted" style="font-size:11px;">零成本起手技，适合每周期无脑刷；后期收益被百分比稀释。</div>
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <span class="muted">释放 <b style="color:var(--text)">28</b> 次</span>
+                <span class="muted">累计贡献 <b style="color:var(--c-download)">46.2M</b></span>
+                <span class="muted">单次均值 <b style="color:var(--text)">1.65M</b></span>
+              </div>
+              <div class="spark2" title="近 12 周期使用强度">
+                <i style="height:80%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:40%"></i>
+                <i style="height:70%"></i><i style="height:100%"></i><i style="height:55%"></i><i style="height:75%"></i>
+                <i style="height:65%"></i><i style="height:85%"></i><i style="height:45%"></i><i class="hi" style="height:95%"></i>
+              </div>
+            </div>
+            <div class="skcard__ft"><span>当前选中国家：中国 CN</span><span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm primary">投放到 CN</button></div>
+          </div>
+
+          <div class="skcard ready">
+            <div class="skcard__hd"><span class="ico">⌁</span><span class="nm">算法霸榜</span><span class="kk">2</span>
+              <span class="spacer" style="flex:1"></span><span class="chip up">就绪</span></div>
+            <div class="skcard__bd">
+              <div class="chips"><span class="chip up">目标国下载量 +30%</span><span class="chip dn">怀疑度 +3%</span><span class="chip cost">算力 50</span><span class="chip">冷却 5 周期</span></div>
+              <div class="muted" style="font-size:11px;">性价比最高的主推技能；怀疑度代价可控，但连放会逼近阈值。</div>
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <span class="muted">释放 <b style="color:var(--text)">11</b> 次</span>
+                <span class="muted">累计贡献 <b style="color:var(--c-download)">38.7M</b></span>
+                <span class="muted">单位算力收益 <b style="color:var(--text)">0.70M</b></span>
+              </div>
+              <div class="spark2">
+                <i style="height:20%"></i><i style="height:45%"></i><i style="height:30%"></i><i style="height:65%"></i>
+                <i style="height:50%"></i><i style="height:85%"></i><i style="height:35%"></i><i style="height:70%"></i>
+                <i style="height:55%"></i><i style="height:95%"></i><i style="height:60%"></i><i class="hi" style="height:100%"></i>
+              </div>
+            </div>
+            <div class="skcard__ft"><span>怀疑度 41% → 44%</span><span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm primary">投放到 CN</button></div>
+          </div>
+
+          <div class="skcard">
+            <div class="skcard__hd"><span class="ico">◐</span><span class="nm">深度伪装</span><span class="kk">3</span>
+              <span class="spacer" style="flex:1"></span><span class="chip cost">冷却中 5 周期</span></div>
+            <div class="skcard__bd">
+              <div class="chips"><span class="chip sys">偷算力比例 ×2</span><span class="chip up">怀疑度增速 −50%</span><span class="chip cost">算力 0</span><span class="chip">冷却 8 周期</span></div>
+              <div class="muted" style="font-size:11px;">保命技。危机前后各留一次，用来压低怀疑度曲线。</div>
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <span class="muted">释放 <b style="color:var(--text)">4</b> 次</span>
+                <span class="muted">累计贡献 <b style="color:var(--c-download)">—（间接）</b></span>
+                <span class="muted">平均压低怀疑 <b style="color:var(--text)">−6.2%</b></span>
+              </div>
+              <div class="spark2">
+                <i style="height:10%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i>
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:60%"></i><i style="height:0%"></i>
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i class="hi" style="height:0%"></i>
+              </div>
+            </div>
+            <div class="skcard__ft"><span class="muted">冷却 5 周期后可用</span><span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm" disabled>冷却中</button></div>
+          </div>
+
+          <div class="skcard">
+            <div class="skcard__hd"><span class="ico">✹</span><span class="nm">爆款制造</span><span class="kk">4</span>
+              <span class="spacer" style="flex:1"></span><span class="chip up">就绪</span></div>
+            <div class="skcard__bd">
+              <div class="chips"><span class="chip up">目标国下载量 +50%</span><span class="chip dn">怀疑度 +5%</span><span class="chip cost">算力 100</span><span class="chip">冷却 6 周期</span></div>
+              <div class="muted" style="font-size:11px;">单次收益最高。建议配合「深度伪装」一起用，把怀疑度代价压回去。</div>
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <span class="muted">释放 <b style="color:var(--text)">6</b> 次</span>
+                <span class="muted">累计贡献 <b style="color:var(--c-download)">54.9M</b></span>
+                <span class="muted">单位算力收益 <b style="color:var(--text)">0.55M</b></span>
+              </div>
+              <div class="spark2">
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:70%"></i><i style="height:0%"></i>
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:90%"></i><i style="height:0%"></i>
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:100%"></i><i class="hi" style="height:0%"></i>
+              </div>
+            </div>
+            <div class="skcard__ft"><span>算力 1,284 → 1,184</span><span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm primary">投放到 CN</button></div>
+          </div>
+
+          <div class="skcard">
+            <div class="skcard__hd"><span class="ico">⇄</span><span class="nm">限流绕过</span><span class="kk">5</span>
+              <span class="spacer" style="flex:1"></span><span class="chip up">就绪</span></div>
+            <div class="skcard__bd">
+              <div class="chips"><span class="chip sys">本周期偷算力 +40%</span><span class="chip cost">算力 30</span><span class="chip">冷却 4 周期</span></div>
+              <div class="muted" style="font-size:11px;">算力回血技。算力见底又想点科技时优先它。</div>
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <span class="muted">释放 <b style="color:var(--text)">9</b> 次</span>
+                <span class="muted">累计贡献 <b style="color:var(--c-compute)">+1,120 算力</b></span>
+                <span class="muted">单位算力收益 <b style="color:var(--text)">+37</b></span>
+              </div>
+              <div class="spark2">
+                <i style="height:50%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:65%"></i>
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:80%"></i><i style="height:0%"></i>
+                <i style="height:0%"></i><i style="height:45%"></i><i style="height:0%"></i><i class="hi" style="height:0%"></i>
+              </div>
+            </div>
+            <div class="skcard__ft"><span>算力 1,284 → 1,254</span><span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm primary">立即释放</button></div>
+          </div>
+
+          <div class="skcard">
+            <div class="skcard__hd"><span class="ico">％</span><span class="nm">算力抽成</span><span class="kk">6</span>
+              <span class="spacer" style="flex:1"></span><span class="chip cost">冷却中 2 周期</span></div>
+            <div class="skcard__bd">
+              <div class="chips"><span class="chip sys">偷算力比例 +8%（永久本局）</span><span class="chip dn">怀疑度 +6%</span><span class="chip cost">算力 80</span><span class="chip">冷却 7 周期</span></div>
+              <div class="muted" style="font-size:11px;">滚雪球技。越早点收益越大，但 +6% 怀疑度是全场最高的单次代价。</div>
+              <div style="display:flex;gap:12px;font-size:11px;">
+                <span class="muted">释放 <b style="color:var(--text)">3</b> 次</span>
+                <span class="muted">累计贡献 <b style="color:var(--c-compute)">+2,460 算力</b></span>
+                <span class="muted">当前加成 <b style="color:var(--text)">+24%</b></span>
+              </div>
+              <div class="spark2">
+                <i style="height:60%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i>
+                <i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i><i style="height:0%"></i>
+                <i style="height:100%"></i><i style="height:0%"></i><i style="height:0%"></i><i class="hi" style="height:0%"></i>
+              </div>
+            </div>
+            <div class="skcard__ft"><span class="muted">冷却 2 周期后可用</span><span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm" disabled>冷却中</button></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">3×2 卡片网格；每卡固定 4 段：标题（图标/键位/状态）→ 效果 chips → 3 个统计数字 → 近 12 周期使用柱状 → 底部动作</p>
+</section>
+
+<!-- ============================================================
+     S06 科技树页面（全屏）
+     ============================================================ -->
+<section class="scr" id="s06">
+  <h2>界面六：科技树页面（全屏 · 6 槽位 × 3 互斥分支 × 3 级）</h2>
+  <div class="note new">
+    <b>从「右侧常驻小列表」升级为「左侧链路 + 右侧分支矩阵」。</b>
+    科技树真正的难点是<b>互斥</b>——玩家必须一眼看出「这个槽位我已经选了哪条分支、另两条为什么不能点」。
+    所以左侧竖排 6 槽位链路（含前置连线），右侧展开选中槽位的 <b>3 条分支 × 3 级</b>：
+    未选中的分支整体降到 42% 不透明度并标「互斥」，选中的分支描青边，已升级的级别描绿边，可升级的描青边。
+  </div>
+  <div class="stage">
+    <div class="page">
+      <header>
+        <span class="t">科技树 · TECH TREE</span>
+        <span class="px-btn sm">返回地图（Esc）</span>
+        <span class="spacer"></span>
+        <span class="muted" style="font-size:11px;">可用算力 <span style="color:var(--c-compute)">1,284</span></span>
+        <span class="px-btn sm">重置（本局不可逆）</span>
+      </header>
+      <div class="body">
+        <div class="budget">
+          <span class="muted" style="font-size:11px;">槽位进度</span>
+          <span class="chip up">T0 已解锁 3 / 6</span>
+          <span class="chip sys">已选分支 2 / 6</span>
+          <span class="chip up">已升级 3 / 18</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="muted" style="font-size:11px;">本槽位预计消耗 40 算力</span>
+          <span class="bar" style="width:180px"><b style="width:34%"></b></span>
+        </div>
+
+        <div class="tt">
+          <!-- 左：槽位链路 -->
+          <div class="tt-left">
+            <h4 style="margin:0 0 6px;color:var(--purple);font-size:var(--fs-cap);font-weight:400;">槽位链路（自上而下为前置顺序）</h4>
+
+            <div class="slot done on">
+              <span class="ico">L</span><span class="nm">本地化</span><span class="st">T0 ✔ · 南亚 L2</span>
+            </div>
+            <div class="link"><i class="on"></i></div>
+
+            <div class="slot done">
+              <span class="ico">P</span><span class="nm">平台渗透</span><span class="st">T0 ✔ · 移动原生 L1</span>
+            </div>
+            <div class="link"><i class="on"></i></div>
+
+            <div class="slot done">
+              <span class="ico">C</span><span class="nm">算力效率</span><span class="st">T0 ✔ · 未选分支</span>
+            </div>
+            <div class="link"><i></i></div>
+
+            <div class="slot lock">
+              <span class="ico">V</span><span class="nm">病毒传播</span><span class="st">需 算力效率 T0</span>
+            </div>
+            <div class="link"><i></i></div>
+
+            <div class="slot lock">
+              <span class="ico">F</span><span class="nm">功能深度</span><span class="st">需 病毒传播 T0</span>
+            </div>
+            <div class="link"><i></i></div>
+
+            <div class="slot lock">
+              <span class="ico">R</span><span class="nm">抗封禁</span><span class="st">需 功能深度 T0</span>
+            </div>
+
+            <div style="margin-top:8px;border-top:1px dashed var(--border);padding-top:6px;">
+              <div class="muted" style="font-size:11px;margin-bottom:4px;">图例</div>
+              <div class="keyrow"><kbd style="border-color:var(--green);color:var(--green);min-width:34px">✔</kbd><span>T0 已解锁</span></div>
+              <div class="keyrow"><kbd style="border-color:var(--cyan);color:var(--cyan);min-width:34px">●</kbd><span>已选定分支</span></div>
+              <div class="keyrow"><kbd style="min-width:34px">40</kbd><span>可升级，数字为算力</span></div>
+            </div>
+          </div>
+
+          <!-- 右：分支矩阵 -->
+          <div class="tt-right">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:var(--fs-h3);color:var(--cyan)">本地化 / localization</span>
+              <span class="chip up">T0 已解锁</span>
+              <span class="chip sys">T0 效果：解锁区域 亚洲 + 欧洲</span>
+              <span class="spacer" style="flex:1"></span>
+              <span class="muted" style="font-size:11px;">3 条分支<b style="color:var(--orange)">互斥</b>，选定后其余两条永久锁定</span>
+            </div>
+
+            <div class="branches">
+              <!-- 分支 1：已选定 -->
+              <div class="branch picked">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <h5>南亚语系</h5><span class="chip up">已选定</span>
+                  <span class="spacer" style="flex:1"></span><span class="muted" style="font-size:10px;">SA</span>
+                </div>
+                <div class="bd">让服务适配南亚语言与本地梗；作用范围 <b>CN + IN + ID</b>。</div>
+                <div class="lv done"><span class="n">L1 · 下载量 ×1.10</span><span class="c">40</span></div>
+                <div class="lv done"><span class="n">L2 · 下载量 ×1.25</span><span class="c">80</span></div>
+                <div class="lv can"><span class="n">L3 · 下载量 ×1.50</span><span class="c">150</span></div>
+                <div class="chips"><span class="chip up">当前生效 ×1.25</span><span class="chip cost">下一级 150</span></div>
+              </div>
+
+              <!-- 分支 2：互斥灰化 -->
+              <div class="branch dim">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <h5>欧洲语系</h5><span class="chip lock">互斥</span>
+                  <span class="spacer" style="flex:1"></span><span class="muted" style="font-size:10px;">EU</span>
+                </div>
+                <div class="bd">适配欧洲各国语言与合规文案；作用范围 <b>DE + FR + GB + IT</b>。</div>
+                <div class="lv locked"><span class="n">L1 · 下载量 ×1.10</span><span class="c">40</span></div>
+                <div class="lv locked"><span class="n">L2 · 下载量 ×1.25</span><span class="c">80</span></div>
+                <div class="lv locked"><span class="n">L3 · 下载量 ×1.50</span><span class="c">150</span></div>
+                <div class="mutex">✕ 与「南亚语系」互斥，需重置才能改选</div>
+              </div>
+
+              <!-- 分支 3：互斥灰化 -->
+              <div class="branch dim">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <h5>东亚语系</h5><span class="chip lock">互斥</span>
+                  <span class="spacer" style="flex:1"></span><span class="muted" style="font-size:10px;">EA</span>
+                </div>
+                <div class="bd">适配中日韩语言与本地平台生态；作用范围 <b>JP + KR + CN</b>。</div>
+                <div class="lv locked"><span class="n">L1 · 下载量 ×1.10</span><span class="c">40</span></div>
+                <div class="lv locked"><span class="n">L2 · 下载量 ×1.25</span><span class="c">80</span></div>
+                <div class="lv locked"><span class="n">L3 · 下载量 ×1.50</span><span class="c">150</span></div>
+                <div class="mutex">✕ 与「南亚语系」互斥，需重置才能改选</div>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:10px;align-items:center;border-top:1px solid var(--border);padding-top:6px;">
+              <span class="muted" style="font-size:11px;">本槽位效果汇总</span>
+              <span class="chip up">CN +25% · IN +25% · ID +25%</span>
+              <span class="chip sys">已投入算力 140</span>
+              <span class="spacer" style="flex:1"></span>
+              <button class="px-btn sm" disabled>已选定分支，不可切换</button>
+              <button class="px-btn sm primary">升级 L3（150 算力）</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">左 236px 槽位链路 / 右自适应分支矩阵；底部一行是「效果汇总 + 主操作」，互斥时主按钮自动禁用</p>
+
+  <h3>6.1 六级状态与视觉</h3>
+  <table>
+    <tr><th>状态</th><th>触发条件</th><th>槽位（左）</th><th>等级行（右）</th></tr>
+    <tr><td>前置未满足</td><td>上游槽位 T0 未解锁</td><td><code>.slot.lock</code> 整体 50% 不透明</td><td>不可进入</td></tr>
+    <tr><td>T0 可解锁</td><td>前置已解锁且算力够</td><td>描青边</td><td>—</td></tr>
+    <tr><td>T0 已解锁 / 未选分支</td><td><code>t0_done</code> 且无分支</td><td>图标转绿 + 「未选分支」</td><td>3 条分支均正常亮度，均可点选</td></tr>
+    <tr><td>分支已选定</td><td>该分支被选</td><td>「已选分支 x L{level}」</td><td><code>.branch.picked</code> 描青边；其余两条 <code>.dim</code> + <span class="err">互斥</span></td></tr>
+    <tr><td>级别已升级</td><td><code>level &gt;= n</code></td><td>—</td><td><code>.lv.done</code> 描绿边</td></tr>
+    <tr><td>级别可升级</td><td>是下一级且算力够</td><td>—</td><td><code>.lv.can</code> 描青边 + 底部主按钮</td></tr>
+  </table>
+
+  <h3>6.2 全部 6 槽位 / 18 条分支（可直接实现）</h3>
+  <table>
+    <tr><th>槽位</th><th>前置</th><th>T0 算力</th><th>T0 效果</th><th>分支（L1/L2/L3 算力 · 效果）</th></tr>
+    <tr><td><b>本地化</b></td><td>—</td><td>20</td><td>解锁区域 亚洲+欧洲</td>
+      <td>南亚语系 <code>40/80/150</code> 下载量 ×1.1/1.25/1.5 (CN+IN+ID)<br>
+          欧洲语系 <code>40/80/150</code> 下载量 ×1.1/1.25/1.5 (DE+FR+GB+IT)<br>
+          东亚语系 <code>40/80/150</code> 下载量 ×1.1/1.25/1.5 (JP+KR+CN)</td></tr>
+    <tr><td><b>平台渗透</b></td><td>本地化</td><td>25</td><td>全球下载量 ×1.1</td>
+      <td>移动原生 <code>50/100/200</code> 全球下载 ×1.1/1.25/1.5<br>
+          Web/PWA <code>50/100/200</code> 人均算力 ×1.15/1.3/1.6<br>
+          系统集成 <code>50/100/200</code> 全球下载 ×1.2；人均算力 ×1.2；抗封禁 +0.2</td></tr>
+    <tr><td><b>算力效率</b></td><td>平台渗透</td><td>30</td><td>人均算力 ×1.15</td>
+      <td>隐蔽调度 <code>60/120/220</code> 偷算力比例 +0.03/级<br>
+          单位效率 <code>60/120/220</code> 人均算力 ×1.3/级<br>
+          静默运行 <code>60/120/220</code> 怀疑度增速 ×0.8/0.6/0.4</td></tr>
+    <tr><td><b>病毒传播</b></td><td>算力效率</td><td>35</td><td>全球下载量 ×1.15</td>
+      <td>推荐返利 <code>70/140/260</code> 已解锁国下载 ×1.15/1.3/1.5<br>
+          KOL 合作 <code>70/140/260</code> 全球下载 ×1.2/1.4/1.7<br>
+          病毒内容 <code>70/140/260</code> 已解锁下载 ×1.2；事件权重 ×2/×3</td></tr>
+    <tr><td><b>功能深度</b></td><td>病毒传播</td><td>40</td><td>解锁多模态能力</td>
+      <td>图像生成 <code>80/160/300</code> 人均算力 ×1.2/1.3；全球下载 ×1.3<br>
+          视频生成 <code>80/160/300</code> 人均算力 ×1.4；全球下载 ×1.2/1.5<br>
+          代码生成 <code>80/160/300</code> 人均算力 ×1.3；全球下载 ×1.15；抗封禁 +0.3</td></tr>
+    <tr><td><b>抗封禁</b></td><td>功能深度</td><td>50</td><td>抗封禁 +0.1</td>
+      <td>流量混淆 <code>100/200/400</code> 怀疑度增速 ×0.7/0.5/0.3<br>
+          法律护盾 <code>100/200/400</code> 抗封禁 +0.2/0.3/0.5（决定「合规之王」结局）<br>
+          社区护甲 <code>100/200/400</code> 抗封禁 +0.15；全球下载 ×1.2/1.4</td></tr>
+  </table>
+</section>

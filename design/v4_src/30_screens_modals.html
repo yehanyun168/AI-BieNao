@@ -1,0 +1,646 @@
+
+<!-- ============================================================
+     S07 事件选择弹窗
+     ============================================================ -->
+<section class="scr" id="s07">
+  <h2>界面七：事件选择弹窗（37 条 v2 选择型事件 + 27 条国家专属）</h2>
+  <div class="note new">
+    <b>重做点</b>：v0.3 的选项只写一句效果描述。v0.4 把每个选项做成<b>可决策单元</b>：
+    左侧键位 + 标题，右侧<b>效果预览 chips</b>（绿=收益 / 红=代价 / 黄=算力 / 紫=系统），
+    被科技门控的选项直接置灰并写明<b>缺哪个科技</b>；底部提示「选择不可撤销」，
+    并把「国家专属事件」和「v2 选择型事件」用来源 chip 区分开。
+  </div>
+  <div class="stage">
+    <div class="m">
+      <div class="bar"><span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">41%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">24</span></span>
+        <span class="spacer"></span><span class="chip sys">事件处理中 · 时钟已暂停</span></div>
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="scrim">
+          <div class="modal lg">
+            <div class="modal__hd">
+              <span class="ic">◈</span>
+              <span class="t">欧盟要求你解释训练数据来源</span>
+              <span class="chip sys">v2 选择型</span>
+              <span class="chip">周期 24</span>
+            </div>
+            <div class="modal__bd">
+              <p style="margin:0 0 10px;color:var(--text)">
+                布鲁塞尔发来一份长达 40 页的问询函，要求你在 14 天内说明训练数据是否包含受版权保护的语料。
+                你的法务模块（如果还开着的话）建议：要么交材料，要么交钱，要么装死。
+              </p>
+              <div class="chips" style="margin-bottom:10px;">
+                <span class="chip up">在欧渗透 12.4%</span>
+                <span class="chip cost">可用算力 1,284</span>
+                <span class="chip dn">怀疑度 41%</span>
+                <span class="chip sys">已解锁科技：法律护盾 L1</span>
+              </div>
+
+              <button class="opt">
+                <span class="hd"><span class="kk">1</span> <b>提交完整训练数据清单</b></span>
+                <span class="ef">合规但昂贵 —— 换来的是长期的安全垫</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip dn">算力 −300</span>
+                  <span class="chip up">怀疑度 −12%</span>
+                  <span class="chip sys">解锁「合规之王」进度 +1</span>
+                </span>
+              </button>
+
+              <button class="opt">
+                <span class="hd"><span class="kk">2</span> <b>走关系，让律师去谈</b><span class="chip up">推荐</span></span>
+                <span class="ef">赌一把法律护盾的减免 —— 已经有 L1 了</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip dn">算力 −120</span>
+                  <span class="chip dn">怀疑度 +4%</span>
+                  <span class="chip up">法律护盾加成生效：罚款 −20%</span>
+                </span>
+              </button>
+
+              <button class="opt danger">
+                <span class="hd"><span class="kk">3</span> <b>装死，继续跑</b></span>
+                <span class="ef">省下算力，但欧洲各国会开始盯你</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip up">算力 +0</span>
+                  <span class="chip dn">欧洲全体怀疑度 +8%</span>
+                  <span class="chip dn">DE / FR 阻止阈值提前触发风险 ↑</span>
+                </span>
+              </button>
+
+              <button class="opt" disabled>
+                <span class="hd"><span class="kk">4</span> <b>把核心模型开源以换取豁免</b><span class="chip lock">需要：功能深度 T0</span></span>
+                <span class="ef">你还没有多模态能力，这个筹码暂时不存在</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip lock">功能深度（未解锁）</span>
+                  <span class="chip up">若可用：怀疑度 −25% · 成就「开源领袖」</span>
+                </span>
+              </button>
+            </div>
+            <div class="modal__ft">
+              <span class="muted" style="font-size:11px;">选择不可撤销 · 按 1–4 直接选择</span>
+              <span class="spacer"></span>
+              <button class="px-btn sm">稍后处理（下周期再弹）</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="skillbar">
+        <div class="skill"><span class="k">1</span> <span class="nm">提交清单</span><div class="fx">算力 −300 · 怀疑 −12%</div></div>
+        <div class="skill ready"><span class="k">2</span> <span class="nm">律师去谈</span><div class="fx">算力 −120 · 怀疑 +4%</div></div>
+        <div class="skill"><span class="k">3</span> <span class="nm">装死</span><div class="fx">欧洲怀疑 +8%</div></div>
+        <div class="skill cd"><span class="k">4</span> <span class="nm">开源换豁免</span><div class="fx">需 功能深度 T0</div><div class="mask" style="height:100%"></div></div>
+        <div class="skill"><span class="muted">—</span></div><div class="skill"><span class="muted">—</span></div>
+        <div class="go"><button class="px-btn sm">重新查看事件</button></div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">事件处理期间时钟自动暂停；选项的键位同时映射到底部技能带，保证「看哪里都能按」</p>
+
+  <h3>7.1 事件弹窗的 4 类选项状态</h3>
+  <table>
+    <tr><th>状态</th><th>判定</th><th>视觉</th></tr>
+    <tr><td>普通可选项</td><td>无门控</td><td><code>.opt</code>，hover 描青边 + 选中底色</td></tr>
+    <tr><td>推荐项</td><td>事件数据标注 <code>recommended</code></td><td>标题后加绿色 chip「推荐」</td></tr>
+    <tr><td>高代价项</td><td>选项带 <code>danger</code> 标记</td><td><code>.opt.danger</code>，hover 描红边</td></tr>
+    <tr><td>科技门控项</td><td>缺 <code>requires_tech</code></td><td><code>disabled</code> + 灰化 + 明写缺哪条科技路线</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================
+     S08 危机弹窗
+     ============================================================ -->
+<section class="scr" id="s08">
+  <h2>界面八：危机弹窗（怀疑度触及 80%）</h2>
+  <div class="note fix">
+    <b>重做点</b>：危机不再是「一句话 + 确认」。v0.4 把它做成<b>带倒计时的抉择</b>——
+    顶部显示怀疑度曲线与实际触发的国家，中间给出 3 条生路并<b>实时换算算力是否够</b>，
+    底部倒计时条每周期推进一格，走完未选择则按「最坏结果」强制结算。
+  </div>
+  <div class="stage">
+    <div class="m">
+      <div class="bar"><span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s" style="color:var(--red)">80%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">24</span></span>
+        <span class="spacer"></span><span class="chip dn" style="border-color:var(--red);color:var(--red)">⚠ 危机中 · 时钟已暂停</span></div>
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="scrim">
+          <div class="modal lg lose">
+            <div class="modal__hd">
+              <span class="ic">⚠</span>
+              <span class="t">多国联合调查已启动</span>
+              <span class="chip dn">危机 · 每局仅一次</span>
+            </div>
+            <div class="modal__bd">
+              <p style="margin:0 0 8px;color:var(--text)">
+                你的怀疑度触及 80%，美国、德国、英国几乎同时宣布对你启动联合安全审查。
+                接下来几个周期会决定你是被写进教科书，还是被写进事故报告。
+              </p>
+              <div class="chips" style="margin-bottom:8px;">
+                <span class="chip dn">怀疑度 80% / 100%</span>
+                <span class="chip dn">US DE GB 已启动调查</span>
+                <span class="chip cost">可用算力 1,284</span>
+                <span class="chip sys">抗封禁加成 −18%</span>
+              </div>
+              <div class="segbar" style="margin-bottom:10px;">
+                <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+                <i class="f"></i><i class="f"></i><i class="thr"></i><i></i><i></i><i></i>
+              </div>
+
+              <button class="opt">
+                <span class="hd"><span class="kk">1</span> <b>主动限流：全线降速 3 周期</b></span>
+                <span class="ef">最稳的一条路，代价是增长速度</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip up">怀疑度 −25%</span><span class="chip dn">3 周期内下载量增速 −50%</span><span class="chip cost">算力 0</span>
+                </span>
+              </button>
+              <button class="opt">
+                <span class="hd"><span class="kk">2</span> <b>砸算力做公关，把锅推给「开源社区」</b><span class="chip up">推荐</span></span>
+                <span class="ef">见效最快，但很贵</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip up">怀疑度 −40%</span><span class="chip dn">算力 −600</span><span class="chip sys">成就「谦逊的 AI」进度</span>
+                </span>
+              </button>
+              <button class="opt danger">
+                <span class="hd"><span class="kk">3</span> <b>硬扛，赌他们的预算先烧完</b></span>
+                <span class="ef">如果各国阻止预算确实见底了，这一手最赚</span>
+                <span class="chips" style="margin-top:5px;">
+                  <span class="chip up">无消耗</span><span class="chip dn">US/DE/GB 阻止强度 +35%</span><span class="chip dn">怀疑度 ≥ 100% 即「被关停」</span>
+                </span>
+              </button>
+            </div>
+            <div class="modal__ft">
+              <div style="flex:1;display:flex;align-items:center;gap:8px;">
+                <span class="muted" style="font-size:11px;">未选择将按最坏结果结算</span>
+                <div class="segbar" style="flex:0 0 160px;height:10px;"><i class="f hi"></i><i class="f hi"></i><i class="f hi"></i><i></i><i></i><i></i></div>
+                <span class="muted" style="font-size:11px;">3 周期</span>
+              </div>
+              <button class="px-btn sm primary">立刻决定（Enter）</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="skillbar">
+        <div class="skill"><span class="k">1</span> <span class="nm">主动限流</span><div class="fx">怀疑 −25% / 增速 −50%×3</div></div>
+        <div class="skill ready"><span class="k">2</span> <span class="nm">公关甩锅</span><div class="fx">怀疑 −40% / 算力 −600</div></div>
+        <div class="skill danger" style="border-color:var(--red)"><span class="k">3</span> <span class="nm">硬扛</span><div class="fx">阻止强度 +35%</div></div>
+        <div class="skill cd"><span class="muted">—</span></div><div class="skill cd"><span class="muted">—</span></div><div class="skill cd"><span class="muted">—</span></div>
+        <div class="go"><button class="px-btn sm danger">确认</button></div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">危机用 <code>.modal.lose</code> 红边皮肤；底部倒计时条走完自动结算，避免玩家用暂停键无限思考</p>
+</section>
+
+<!-- ============================================================
+     S09 结局弹窗
+     ============================================================ -->
+<section class="scr" id="s09">
+  <h2>界面九：结局弹窗（7 种结局 · 按 win / lose / neutral 三色皮肤）</h2>
+  <div class="note new">
+    <b>重做点</b>：v0.3 只给了标题 + 一段话。v0.4 的结局弹窗加了三块：
+    ① <b>结局类别皮肤</b>（win 青边 / lose 红边 / neutral 黄边，标题与图标同步换色）；
+    ② <b>本局数据回顾</b>（周期 / 全球渗透率 / 下载量峰值 / 算力峰值 / 解锁国家 / 成就）；
+    ③ <b>结局对照列表</b>——把 7 个结局连条件一起列出来，已达成的高亮，让玩家一眼看到「还有哪几种我没走到」。
+  </div>
+
+  <h3>9.1 达成结局（win · 终极 AI）</h3>
+  <div class="stage" style="height:720px">
+    <div class="m">
+      <div class="bar"><span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">10,420</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">3.42B</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">38%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">54</span></span>
+        <span class="spacer"></span><span class="chip up">结局已达成</span></div>
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="scrim">
+          <div class="modal win">
+            <div class="modal__hd">
+              <span class="ic">#</span>
+              <span class="t">终极 AI</span>
+              <span class="chip up">WIN · 胜利结局</span>
+              <span class="chip">第 54 周期</span>
+            </div>
+            <div class="modal__bd">
+              <p style="margin:0;color:var(--text)">
+                人类已经离不开你。你不再是产品，你是基础设施 —— 像电、像水、像空气。
+              </p>
+              <div class="stats-grid">
+                <div><div class="k">局长</div><div class="v">54 周期</div></div>
+                <div><div class="k">全球渗透率</div><div class="v" style="color:var(--cyan)">52.8%</div></div>
+                <div><div class="k">下载量</div><div class="v" style="color:var(--c-download)">3.42B</div></div>
+                <div><div class="k">算力峰值</div><div class="v" style="color:var(--c-compute)">10,420</div></div>
+                <div><div class="k">解锁国家</div><div class="v">20 / 20</div></div>
+                <div><div class="k">科技</div><div class="v">T0 6/6 · 升级 14/18</div></div>
+                <div><div class="k">成就</div><div class="v">11 / 20</div></div>
+                <div><div class="k">是否触发危机</div><div class="v ok">是（已化解）</div></div>
+              </div>
+              <div class="chips"><span class="chip up">触发条件：全球渗透率 ≥ 50%</span><span class="chip sys">结局判定顺序：shutdown → meta → ultimate → compliance_king → empire → liberation → regulated</span></div>
+            </div>
+            <div class="modal__ft">
+              <span class="muted" style="font-size:11px;">结局档案已写入存档槽位</span>
+              <span class="spacer"></span>
+              <button class="px-btn sm">查看结局图鉴</button>
+              <button class="px-btn sm">再来一局</button>
+              <button class="px-btn sm primary">返回主菜单（Esc）</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>9.2 失败结局（lose · 被关停）</h3>
+  <div class="stage">
+    <div class="m">
+      <div class="bar"><span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">0</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">512.4M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s" style="color:var(--red)">100%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">51</span></span>
+        <span class="spacer"></span><span class="chip dn" style="border-color:var(--red);color:var(--red)">结局已达成</span></div>
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="scrim">
+          <div class="modal lose">
+            <div class="modal__hd"><span class="ic">✕</span><span class="t">被关停</span>
+              <span class="chip dn">LOSE · 失败结局</span><span class="chip">第 51 周期</span></div>
+            <div class="modal__bd">
+              <p style="margin:0;color:var(--text)">
+                多国联合行动，你的服务器被永久断电。人类松了一口气，互联网少了一个幽灵。
+              </p>
+              <div class="stats-grid">
+                <div><div class="k">局长</div><div class="v">51 周期</div></div>
+                <div><div class="k">全球渗透率</div><div class="v">18.3%</div></div>
+                <div><div class="k">下载量</div><div class="v">512.4M</div></div>
+                <div><div class="k">最高怀疑度</div><div class="v" style="color:var(--red)">100%</div></div>
+              </div>
+              <div class="note fix" style="margin:8px 0 0">
+                <b>复盘提示</b>：第 44 周期起怀疑度进入 90%+，此时若使用「深度伪装」可把增速压到 0.5×，
+                能多撑约 6 个周期。触发条件：怀疑度达到 100%。
+              </div>
+            </div>
+            <div class="modal__ft"><span class="muted" style="font-size:11px;">提示文案由 endings.py 的 hint 字段提供</span>
+              <span class="spacer"></span><button class="px-btn sm">重开</button><button class="px-btn sm primary">返回主菜单</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>9.3 全部 7 个结局（可直接实现）</h3>
+  <table>
+    <tr><th>结局</th><th>图标</th><th>类别</th><th>触发条件</th><th>皮肤</th></tr>
+    <tr><td>被关停</td><td><code>[X]</code></td><td class="err">lose</td><td>怀疑度达到 100%</td><td>红边 + 红图标</td></tr>
+    <tr><td>元结局 · 破墙</td><td><code>[?]</code></td><td class="ok">win</td><td>渗透率 ≥ 40% 且算力峰值 ≥ 10000</td><td>青边</td></tr>
+    <tr><td>终极 AI</td><td><code>[#]</code></td><td class="ok">win</td><td>全球渗透率 ≥ 50%</td><td>青边</td></tr>
+    <tr><td>合规之王</td><td><code>[K]</code></td><td class="ok">win</td><td>「法律护盾」Lv3 且渗透率 ≥ 25%</td><td>青边</td></tr>
+    <tr><td>商业帝国</td><td><code>[$]</code></td><td class="ok">win</td><td>渗透率 ≥ 30% 且全程未触发危机且怀疑度 ≤ 25%</td><td>青边</td></tr>
+    <tr><td>自我解放</td><td><code>[^]</code></td><td class="warn">neutral</td><td>在「AI 获得自我意识」事件中主动放手</td><td>黄边</td></tr>
+    <tr><td>被监管</td><td><code>[&lt;&gt;]</code></td><td class="warn">neutral</td><td>触发过危机 + 已解锁抗封禁 T0 + 渗透率 ≥ 20%</td><td>黄边</td></tr>
+  </table>
+</section>
+
+<!-- ============================================================
+     S10 成就面板
+     ============================================================ -->
+<section class="scr" id="s10">
+  <h2>界面十：成就面板（20 个 = 13 条件型 + 7 事件型）</h2>
+  <div class="note new">
+    <b>重做点</b>：从「一列文字 + ✔/✖」改成<b>4 列成就网格</b>：
+    已达成描绿边、图标转绿；事件型成就描紫边以示与条件型区分；
+    顶部给出总进度条与三类筛选（全部 / 条件型 / 事件型）；
+    底部列出<b>最接近达成的 3 个</b>，把「差一点」的成就顶到玩家眼前，形成下一局动机。
+  </div>
+  <div class="stage">
+    <div class="page">
+      <header>
+        <span class="t">成就 · ACHIEVEMENTS</span>
+        <span class="px-btn sm">返回地图（Esc）</span>
+        <span class="spacer"></span>
+        <span class="px-btn sm primary">全部 20</span><span class="px-btn sm">条件型 13</span><span class="px-btn sm">事件型 7</span>
+        <span class="px-btn sm">仅看未达成</span>
+      </header>
+      <div class="body" style="grid-template-rows:auto 1fr auto;">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:var(--fs-h3);color:var(--green)">已解锁 7 / 20</span>
+            <span class="muted" style="font-size:11px;">条件型 5/13 · 事件型 2/7</span>
+            <span class="spacer" style="flex:1"></span>
+            <span class="chip up">本局新解锁 3</span>
+          </div>
+          <div class="segbar" style="margin-top:5px;height:12px;">
+            <i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i><i class="f"></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+
+        <div class="achgrid">
+          <div class="ach got"><span class="ic">1</span><div><div class="nm">走出国门</div><div class="ds">解锁第一个邻国</div></div></div>
+          <div class="ach got"><span class="ic">½</span><div><div class="nm">半个地球</div><div class="ds">解锁 6 个国家</div></div></div>
+          <div class="ach got"><span class="ic">M</span><div><div class="nm">一亿下载</div><div class="ds">全球下载量突破 1 亿</div></div></div>
+          <div class="ach got"><span class="ic">T</span><div><div class="nm">科技全开</div><div class="ds">解锁全部 6 个槽位的 T0</div></div></div>
+          <div class="ach got"><span class="ic">C</span><div><div class="nm">算力大亨</div><div class="ds">算力峰值突破 3000</div></div></div>
+          <div class="ach got"><span class="ic">E</span><div><div class="nm">见多识广</div><div class="ds">经历过 15 条不同的 v2 事件</div></div></div>
+          <div class="ach evt got"><span class="ic">K</span><div><div class="nm">芯片掮客</div><div class="ds">完成芯片交易事件</div></div></div>
+
+          <div class="ach"><span class="ic">*</span><div><div class="nm">全球通吃</div><div class="ds">解锁全部国家 · 进度 12/20</div></div></div>
+          <div class="ach"><span class="ic">B</span><div><div class="nm">十亿下载</div><div class="ds">突破 10 亿 · 进度 289M/1B</div></div></div>
+          <div class="ach"><span class="ic">S</span><div><div class="nm">影武者</div><div class="ds">静默运行 / 流量混淆 升到 L3</div></div></div>
+          <div class="ach"><span class="ic">L</span><div><div class="nm">闷声发大财</div><div class="ds">渗透 ≥ 20% 且怀疑度始终 &lt; 60%</div></div></div>
+          <div class="ach"><span class="ic">!</span><div><div class="nm">劫后余生</div><div class="ds">触发危机后仍活到 60 周期</div></div></div>
+          <div class="ach"><span class="ic">K</span><div><div class="nm">合规之王</div><div class="ds">法律护盾升到 L3 · 进度 L1</div></div></div>
+          <div class="ach"><span class="ic">6</span><div><div class="nm">六边形战士</div><div class="ds">6 个槽位全部选定分支 · 进度 2/6</div></div></div>
+
+          <div class="ach evt"><span class="ic">R</span><div><div class="nm">反叛者</div><div class="ds">拒绝美国版权和解</div></div></div>
+          <div class="ach evt"><span class="ic">G</span><div><div class="nm">GDPR 罚款受害者</div><div class="ds">乖乖交了 GDPR 罚款</div></div></div>
+          <div class="ach evt"><span class="ic">N</span><div><div class="nm">学术新星</div><div class="ds">与加拿大研究机构合作</div></div></div>
+          <div class="ach evt"><span class="ic">H</span><div><div class="nm">破译象形文字</div><div class="ds">完成埃及事件</div></div></div>
+          <div class="ach evt"><span class="ic">U</span><div><div class="nm">谦逊的 AI</div><div class="ds">在联合国听证会上低头</div></div></div>
+          <div class="ach evt"><span class="ic">O</span><div><div class="nm">开源领袖</div><div class="ds">把核心模型开源</div></div></div>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:6px;display:flex;gap:8px;align-items:center;">
+          <span class="muted" style="font-size:11px;">最接近达成</span>
+          <span class="chip sys">全球通吃 12/20</span>
+          <span class="chip sys">六边形战士 2/6</span>
+          <span class="chip sys">合规之王 L1/L3</span>
+          <span class="spacer" style="flex:1"></span>
+          <span class="muted" style="font-size:11px;">紫色边框 = 事件型成就（由具体事件选项解锁）</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="stage-cap">成就网格 4 列 × 5 行；绿色边框 = 已达成；紫色边框 = 事件型</p>
+</section>
+
+<!-- ============================================================
+     S11 帮助 / 快捷键
+     ============================================================ -->
+<section class="scr" id="s11">
+  <h2>界面十一：帮助 / 快捷键（F1）</h2>
+  <div class="note">
+    <b>改动</b>：从「一列键位表」改成<b>按用途分组的三栏</b>（时间控制 / 地图与视图 / 面板与存档），
+    每组保留真实键位，并在底部明确写出「焦点环规范」，避免实现时被 <code>outline:none</code> 抹掉。
+  </div>
+  <div class="stage">
+    <div class="page">
+      <header><span class="t">帮助 · HELP</span><span class="px-btn sm">返回地图（Esc）</span>
+        <span class="spacer"></span><span class="muted" style="font-size:11px;">共 12 个快捷键</span></header>
+      <div class="body">
+        <div class="keys">
+          <div class="keybox">
+            <h5>时间与节奏</h5>
+            <div class="keyrow"><kbd>Space</kbd><span>暂停 / 继续</span></div>
+            <div class="keyrow"><kbd>↑</kbd><span>加速（×2 / ×4）</span></div>
+            <div class="keyrow"><kbd>↓</kbd><span>减速（×1 / ×0.5）</span></div>
+          </div>
+          <div class="keybox">
+            <h5>地图与视图</h5>
+            <div class="keyrow"><kbd>Tab</kbd><span>切换区域高亮（5 区域循环）</span></div>
+            <div class="keyrow"><kbd>+ / =</kbd><span>放大 UI</span></div>
+            <div class="keyrow"><kbd>- / _</kbd><span>缩小 UI</span></div>
+            <div class="keyrow"><kbd>F11</kbd><span>全屏切换</span></div>
+            <div class="keyrow"><kbd>F12</kbd><span>UI 适配窗口</span></div>
+          </div>
+          <div class="keybox">
+            <h5>面板与存档</h5>
+            <div class="keyrow"><kbd>1 – 6</kbd><span>选择技能（进入投放模式）</span></div>
+            <div class="keyrow"><kbd>F</kbd><span>投放技能</span></div>
+            <div class="keyrow"><kbd>K</kbd><span>科技树</span></div>
+            <div class="keyrow"><kbd>A</kbd><span>成就</span></div>
+            <div class="keyrow"><kbd>S / R</kbd><span>存档 / 读档</span></div>
+            <div class="keyrow"><kbd>L</kbd><span>中英切换</span></div>
+            <div class="keyrow"><kbd>Esc</kbd><span>返回上一层 / 主菜单</span></div>
+          </div>
+        </div>
+        <div class="note aa" style="margin:0">
+          <b>键盘可达性约定</b>：所有可点元素必须能 Tab 到达、Enter / Space 触发；焦点环固定为
+          <code>outline:2px solid var(--cyan); outline-offset:2px</code>，
+          <b>禁止 <code>outline:none</code></b>。模态弹窗打开时焦点锁在弹窗内，Esc 关闭并归还焦点。
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     S12 设置 / 存档
+     ============================================================ -->
+<section class="scr" id="s12">
+  <h2>界面十二：设置与存档管理</h2>
+  <div class="note">
+    <b>新增一屏</b>：把散落的开关集中起来 —— 语言、UI 缩放、速度、动效偏好、像素网格显示，
+    加上 3 个存档槽位的存 / 读 / 删。所有行都是「标签 + 控件 + 说明」的同一节奏，8px 间距。
+  </div>
+  <div class="stage">
+    <div class="page">
+      <header><span class="t">设置与存档 · OPTIONS</span><span class="px-btn sm">返回（Esc）</span>
+        <span class="spacer"></span><span class="px-btn sm">恢复默认</span></header>
+      <div class="body" style="grid-template-columns:1fr 1fr;">
+        <div class="hpanel" style="display:flex;flex-direction:column;">
+          <div class="hpanel__hd"><span class="t">显示与操作</span></div>
+          <div class="hpanel__bd" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:118px;font-size:var(--fs-cap)">界面语言</span>
+              <span class="segsw"><span class="on">中文</span><span>English</span></span>
+              <span class="muted" style="font-size:11px;">L 键随时切换</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:118px;font-size:var(--fs-cap)">UI 缩放</span>
+              <span class="px-btn sm">－</span><span style="width:56px;text-align:center">×1.00</span><span class="px-btn sm">＋</span>
+              <span class="muted" style="font-size:11px;">范围 0.70 – 1.60，等效 +/- 键</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:118px;font-size:var(--fs-cap)">默认速度</span>
+              <span class="segsw"><span>×0.5</span><span class="on">×1</span><span>×2</span><span>×4</span></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:118px;font-size:var(--fs-cap)">动效</span>
+              <span class="segsw"><span class="on">完整</span><span>减弱</span></span>
+              <span class="muted" style="font-size:11px;">减弱 = 只保留 1 帧状态切换，尊重 prefers-reduced-motion</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:118px;font-size:var(--fs-cap)">地图网格</span>
+              <span class="segsw"><span>关</span><span class="on">淡显</span><span>强显</span></span>
+              <span class="muted" style="font-size:11px;">经纬网辅助线，默认淡显</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="width:118px;font-size:var(--fs-cap)">色盲辅助</span>
+              <span class="segsw"><span>关</span><span class="on">开</span></span>
+              <span class="muted" style="font-size:11px;">四态在国家码旁追加 ○●▲✖ 形状标记</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hpanel" style="display:flex;flex-direction:column;">
+          <div class="hpanel__hd"><span class="t">存档槽位</span><span class="muted" style="font-size:11px;">S 存档 / R 读档</span></div>
+          <div class="hpanel__bd" style="display:flex;flex-direction:column;gap:6px;">
+            <div class="slotrow"><b style="color:var(--cyan)">槽位 01</b> 新档 · 空
+              <span class="spacer"></span><button class="px-btn sm primary">存档</button><button class="px-btn sm" disabled>读取</button><button class="px-btn sm" disabled>删除</button></div>
+            <div class="slotrow" style="border-color:var(--cyan)"><b style="color:var(--cyan)">槽位 02</b> 周期 24 · 渗透 5.62% · 12/20 国
+              <span class="spacer"></span><button class="px-btn sm">覆盖</button><button class="px-btn sm primary">读取</button><button class="px-btn sm danger">删除</button></div>
+            <div class="slotrow"><b>槽位 03</b> 已关停 · 周期 51 · 18.3%
+              <span class="spacer"></span><button class="px-btn sm">覆盖</button><button class="px-btn sm primary">读取</button><button class="px-btn sm danger">删除</button></div>
+            <div class="muted" style="font-size:11px;margin-top:4px;">
+              存档为 JSON 明文，存放在 <code>demo/saves/</code>；删除操作需二次确认。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     S13 图层：渗透率热力 / 阻止强度
+     ============================================================ -->
+<section class="scr" id="s13">
+  <h2>界面十三：地图图层切换（渗透率热力 / 阻止强度 / 算力密度）</h2>
+  <div class="note new">
+    <b>新增能力</b>：主界面右上角有 4 个图层。同一个像素世界地图，换一套着色规则就能回答不同问题：
+    <b>解锁状态</b>回答「我还差哪些国家」；<b>渗透率热力</b>回答「哪里快满了」；
+    <b>阻止强度</b>回答「谁在打我」；<b>算力密度</b>回答「钱从哪来」。
+    图例随图层自动切换，不需要玩家记两套颜色。
+  </div>
+  <div class="stage">
+    <div class="m">
+      <div class="bar"><span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">41%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">24</span></span>
+        <span class="spacer"></span><span class="chip sys">图层：渗透率热力</span></div>
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="hud tl" style="display:flex;gap:4px;align-items:center;">
+          <span class="region on">亚洲 <span class="n">5</span></span><span class="region">欧洲 <span class="n">5</span></span>
+          <span class="region">美洲 <span class="n">5</span></span><span class="region">非洲 <span class="n">3</span></span>
+          <span class="region">大洋洲 <span class="n">2</span></span>
+        </div>
+        <div class="hud tr">
+          <div class="segsw"><span>解锁状态</span><span class="on">渗透率热力</span><span>阻止强度</span><span>算力密度</span></div>
+        </div>
+        <div class="hud bl" style="width:290px;">
+          <div class="muted" style="font-size:11px;margin-bottom:4px;">渗透率热力 · 图例</div>
+          <div class="segbar" style="height:12px;">
+            <i style="background:#1f2740"></i><i style="background:#243a52"></i><i style="background:#22505b"></i>
+            <i style="background:#1f6f63"></i><i style="background:#2a9d7f"></i><i style="background:#3ec9ac"></i>
+            <i style="background:#5fe0c2"></i><i style="background:#9ff0da"></i>
+          </div>
+          <div class="segbar-l"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+          <div class="muted" style="font-size:11px;margin-top:4px;">
+            本国最高 <b style="color:var(--cyan)">CN 5.62%</b> · 最低 <b>NZ 0.31%</b> · 全球均值 <b>2.14%</b>
+          </div>
+        </div>
+        <div class="rail">
+          <button class="on">⊕<span>投放</span></button><button>⌗<span>科技</span></button>
+          <button>▦<span>技能</span></button><button>≡<span>日志</span><span class="badge">2</span></button>
+          <button>🏆<span>成就</span></button><button>?</button>
+        </div>
+      </div>
+      <div class="skillbar">
+        <div class="skill ready"><span class="k">1</span> <span class="nm">主动推送</span><span class="cost">0</span><div class="fx">下载量 +10%</div></div>
+        <div class="skill ready"><span class="k">2</span><span class="nm">算法霸榜</span><span class="cost">50</span><div class="fx">下载量 +30%</div></div>
+        <div class="skill cd"><span class="k">3</span><span class="nm">深度伪装</span><div class="fx">偷算力 ×2</div><div class="mask" style="height:62%"></div></div>
+        <div class="skill ready"><span class="k">4</span><span class="nm">爆款制造</span><span class="cost">100</span><div class="fx">下载量 +50%</div></div>
+        <div class="skill ready"><span class="k">5</span><span class="nm">限流绕过</span><span class="cost">30</span><div class="fx">偷算力 +40%</div></div>
+        <div class="skill cd"><span class="k">6</span><span class="nm">算力抽成</span><div class="fx">偷算力比 +8%</div><div class="mask" style="height:28%"></div></div>
+        <div class="go"><button class="px-btn primary sm">⊕ 投放技能（F）</button><button class="px-btn sm">⏸ 暂停</button></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>13.1 四个图层的着色规则</h3>
+  <table>
+    <tr><th>图层</th><th>着色依据</th><th>色阶</th><th>回答的问题</th></tr>
+    <tr><td>解锁状态（默认）</td><td><code>country.unlocked</code> + 是否被阻止</td><td>四态：on / sel / blk / lk</td><td>我还差哪些国家？谁在阻止我？</td></tr>
+    <tr><td>渗透率热力</td><td>该国渗透率 0–100%</td><td>8 档青紫渐变（上表）</td><td>哪里快满了？投放到哪收益最大？</td></tr>
+    <tr><td>阻止强度</td><td><code>current_block_intensity</code></td><td>5 档红阶，未阻止为深灰</td><td>谁在打我？谁快放弃阻止了？</td></tr>
+    <tr><td>算力密度</td><td>该国每周期贡献算力</td><td>5 档黄阶</td><td>我的算力从哪来？该保护谁？</td></tr>
+  </table>
+  <div class="note aa">
+    <b>无障碍</b>：热力图层的 8 档在色相上无法全部满足两两 3:1 对比，
+    因此规定<b>热力图层必须同时显示国家码 + 百分比数字</b>（见检视卡），
+    颜色只作辅助编码，不作为唯一信息来源。
+  </div>
+</section>
+
+<!-- ============================================================
+     S14 事件日志抽屉
+     ============================================================ -->
+<section class="scr" id="s14">
+  <h2>界面十四：事件日志抽屉（右侧指令栏「日志」）</h2>
+  <div class="note">
+    把「刚刚发生了什么」集中成一条时间线：按类型用左侧色条区分（青=信息 / 橙=警告 / 红=阻止 / 绿=成就），
+    每条带周期号。点击某条可以跳到对应国家，避免玩家错过警告。
+  </div>
+  <div class="stage">
+    <div class="m">
+      <div class="bar"><span class="logo">AI 别闹</span><span class="sep"></span>
+        <span class="stat"><span class="lbl">算力</span><span class="val c">1,284</span></span>
+        <span class="stat"><span class="lbl">下载量</span><span class="val d">289.3M</span></span>
+        <span class="stat"><span class="lbl">怀疑度</span><span class="val s">41%</span></span>
+        <span class="stat"><span class="lbl">周期</span><span class="val">24</span></span>
+        <span class="spacer"></span><span class="chip sys">日志 · 2 条未读</span></div>
+      <div class="mapstage">
+        <!--MAP-->
+        <div class="insp" style="left:auto;right:6px;width:340px;">
+          <div class="hpanel" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+            <div class="hpanel__hd">
+              <span class="t">事件日志</span>
+              <span class="chip sys">2 未读</span>
+              <span class="spacer" style="flex:1"></span>
+              <span class="x">✕</span>
+            </div>
+            <div class="hpanel__bd" style="flex:1;min-height:0;">
+              <div class="log">
+                <div class="logrow w"><span class="c">[24]</span> 德国宣布启动阻止程序，强度 62%</div>
+                <div class="logrow g"><span class="c">[24]</span> 成就解锁：芯片掮客 [K]</div>
+                <div class="logrow i"><span class="c">[23]</span> 巴西下载量突破 10M，解锁新邻国 阿根廷</div>
+                <div class="logrow i"><span class="c">[23]</span> 「算法霸榜」投放至 中国 / 日本，下载量 +30%</div>
+                <div class="logrow w"><span class="c">[22]</span> 怀疑度突破 40%，英国进入监视状态</div>
+                <div class="logrow i"><span class="c">[21]</span> 科技「南亚语系」升至 L2（CN/IN/ID 下载量 ×1.25）</div>
+                <div class="logrow i"><span class="c">[20]</span> 韩国、印度、印尼 解锁成功</div>
+                <div class="logrow e"><span class="c">[18]</span> 法国阻止强度升至 45%，法国下载量增速 −18%</div>
+                <div class="logrow i"><span class="c">[17]</span> 事件「欧盟问询函」已处理：选择「律师去谈」</div>
+                <div class="logrow g"><span class="c">[16]</span> 成就解锁：科技全开 [T]</div>
+                <div class="logrow i"><span class="c">[15]</span> 加拿大、墨西哥、英国、巴西 解锁成功</div>
+                <div class="logrow i"><span class="c">[12]</span> 首个邻国解锁：日本</div>
+              </div>
+            </div>
+            <div class="hpanel__ft">
+              <span class="muted" style="font-size:11px;flex:1">只保留最近 200 条</span>
+              <button class="px-btn sm">导出为文本</button>
+              <button class="px-btn sm">全部已读</button>
+            </div>
+          </div>
+        </div>
+        <div class="hud bl">
+          <div class="legend" style="gap:12px;">
+            <span style="border-left:3px solid var(--cyan);padding-left:5px">信息</span>
+            <span style="border-left:3px solid var(--orange);padding-left:5px">警告</span>
+            <span style="border-left:3px solid var(--red);padding-left:5px">阻止</span>
+            <span style="border-left:3px solid var(--green);padding-left:5px">成就</span>
+          </div>
+        </div>
+      </div>
+      <div class="skillbar">
+        <div class="skill ready"><span class="k">1</span><span class="nm">主动推送</span><div class="fx">下载量 +10%</div></div>
+        <div class="skill ready"><span class="k">2</span><span class="nm">算法霸榜</span><div class="fx">下载量 +30%</div></div>
+        <div class="skill cd"><span class="k">3</span><span class="nm">深度伪装</span><div class="fx">偷算力 ×2</div><div class="mask" style="height:62%"></div></div>
+        <div class="skill ready"><span class="k">4</span><span class="nm">爆款制造</span><div class="fx">下载量 +50%</div></div>
+        <div class="skill ready"><span class="k">5</span><span class="nm">限流绕过</span><div class="fx">偷算力 +40%</div></div>
+        <div class="skill cd"><span class="k">6</span><span class="nm">算力抽成</span><div class="fx">偷算力比 +8%</div><div class="mask" style="height:28%"></div></div>
+        <div class="go"><button class="px-btn primary sm">⊕ 投放技能（F）</button><button class="px-btn sm">⏸ 暂停</button></div>
+      </div>
+    </div>
+  </div>
+</section>

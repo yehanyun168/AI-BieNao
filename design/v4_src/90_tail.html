@@ -1,0 +1,257 @@
+<!-- ============================================================
+     规格附录
+     ============================================================ -->
+<hr>
+<h1>AI 别闹 · 像素风交互界面设计稿 v0.4</h1>
+<div class="note new">
+  <b>v0.4 相对 v0.3 的关键变化</b>：v0.3 是一份「静态界面规格」——把 v2 收口版已有的界面画清楚。
+  v0.4 是一次<b>交互重做</b>：主界面从三列常驻结构改为 <b>全幅地图 + HUD 悬浮 + 指令抽屉</b>，
+  并把此前缺失的交互补全 —— <b>点击国家查看独立下载量与感染进度</b>、<b>技能三步精准投放</b>、
+  <b>独立技能页</b>、<b>独立科技树页</b>，以及重做的<b>事件 / 危机 / 结局弹窗与成就面板</b>。
+  <b>视觉语言与 v0.3 完全一致</b>：同一套 16 色 + 语义边框令牌、同样的硬边框与硬投影、同样的 8px 节奏、同样的字号阶梯。
+</div>
+
+<h2>附 1. 设计令牌（与 v0.3 完全一致，未新增颜色）</h2>
+<table>
+  <tr><th>令牌</th><th>值</th><th>用途</th></tr>
+  <tr><td><code>--bg</code></td><td>#0d1117</td><td>全局背景</td></tr>
+  <tr><td><code>--panel</code> / <code>--panel-2</code></td><td>#161b22 / #1f2630</td><td>主面板 / 次级面板与输入面</td></tr>
+  <tr><td><code>--sea</code></td><td>#0a1828</td><td>地图海面</td></tr>
+  <tr><td><code>--sel</code></td><td>#1e3a3a</td><td>选中态底色</td></tr>
+  <tr><td><code>--border</code> / <code>--border-2</code></td><td>#30363d / #484f58</td><td>装饰分隔线 / 常规边框（<b>仅装饰</b>）</td></tr>
+  <tr><td><code>--border-strong</code></td><td>#6e7681</td><td><b>语义边框</b>：焦点、选中、可交互边界（4.12:1）</td></tr>
+  <tr><td><code>--text</code> / <code>--text-dim</code> / <code>--text-mute</code></td><td>#e6edf3 / #8b949e / #6e7681</td><td>正文 / 次级 / <b>仅大字</b></td></tr>
+  <tr><td>四态 fill / edge</td><td>on #1f6f63/#3ec9ac · sel #4ec9b0/#eafffb · blk #5c2323/#ef4444 · lk #232a30/#4a5560</td><td>地图国家着色，与 <code>pixel_ui.py</code> / <code>world_map.py</code> 同源</td></tr>
+  <tr><td>语义角色</td><td>算力 yellow · 下载 pink · 怀疑 red · 正向 green · 警告 orange</td><td>数字与状态色，全站不混用</td></tr>
+  <tr><td>间距</td><td>--u 2px；4 / 8 / 12 / 16 / 24 / 32 / 48</td><td>所有尺寸取 2 的倍数，节奏走 8px</td></tr>
+  <tr><td>边框 / 阴影</td><td>2px / 1px / 3px；<code>6px 6px 0</code>、<code>3px 3px 0</code></td><td>全部硬边、0 模糊、0 圆角</td></tr>
+  <tr><td>动效</td><td><code>steps(2) 80ms</code> / <code>steps(3) 140ms</code></td><td>只做「跳帧」式过渡，不用缓动曲线</td></tr>
+</table>
+
+<h2>附 2. 可交互元素总表（本版新增项已标注）</h2>
+<table>
+  <tr><th>元素</th><th>位置</th><th>交互</th><th>状态</th></tr>
+  <tr><td>国家地块</td><td>地图</td><td>点击 → 打开检视卡 / 投放模式下加入目标</td><td>hover 显示黄色描边环；选中保持描边</td></tr>
+  <tr><td><b>检视卡</b>（新）</td><td>主界面左侧</td><td>点国家弹出；✕ 或 Esc 关闭；邻国可点跳转</td><td>滑出 / 收起</td></tr>
+  <tr><td><b>分段感染条</b>（新）</td><td>检视卡</td><td>只读，hover 显示该段对应百分比</td><td>阈值处黄色竖线</td></tr>
+  <tr><td><b>趋势柱</b>（新）</td><td>检视卡 / 技能卡</td><td>只读，hover 显示周期与数值</td><td>末柱高亮</td></tr>
+  <tr><td>区域页签</td><td>地图左上 HUD</td><td>点击 / Tab 循环</td><td>选中描青边，计数同步</td></tr>
+  <tr><td><b>图层切换</b>（新）</td><td>地图右上 HUD</td><td>点击切换着色规则，图例随之改变</td><td>4 选 1</td></tr>
+  <tr><td><b>指令栏</b>（新）</td><td>地图右侧</td><td>投放 / 科技 / 技能 / 日志 / 成就 / 帮助</td><td>44×44 触控达标；日志带未读角标</td></tr>
+  <tr><td>技能卡</td><td>底部技能带</td><td>点击 → 进入投放模式；数字键 1–6 等效</td><td>就绪 / 选 / 冷却（遮罩高度=剩余比例）</td></tr>
+  <tr><td><b>投放准星</b>（新）</td><td>地图</td><td>点国家添加/移除目标</td><td>可投黄 / 不可投灰 / 算力不足红 / 阻止中红框</td></tr>
+  <tr><td>科技槽位</td><td>科技树左侧</td><td>点击切换右侧分支矩阵</td><td>已解锁 / 锁定（50% 透明）/ 已选分支</td></tr>
+  <tr><td>科技分支</td><td>科技树右侧</td><td>点击选定（互斥，二次确认）</td><td>可点 / 已选定 / 互斥灰化 42%</td></tr>
+  <tr><td>科技等级行</td><td>科技树右侧</td><td>点击升级（算力足够时）</td><td>已升级绿 / 可升级青 / 锁定 45%</td></tr>
+  <tr><td>事件选项</td><td>事件弹窗</td><td>点击或按 1–4 选择</td><td>普通 / 推荐 / 高代价 / 科技门控（禁用）</td></tr>
+  <tr><td>结局条目</td><td>结局弹窗</td><td>点击查看该结局详情</td><td>win 青 / lose 红 / neutral 黄</td></tr>
+  <tr><td>成就卡</td><td>成就面板</td><td>点击查看达成条件与提示</td><td>已达成绿边 / 事件型紫边 / 未达成灰</td></tr>
+  <tr><td>存档槽位</td><td>设置页 / 主菜单</td><td>存 / 读 / 覆盖 / 删除（二次确认）</td><td>空档禁用读取；当前档描青边</td></tr>
+  <tr><td>日志条目</td><td>日志抽屉</td><td>点击跳转到相关国家</td><td>按类型左侧色条：青/橙/红/绿</td></tr>
+</table>
+
+<h2>附 3. 无障碍规范（WCAG 2.1 AA）</h2>
+<table>
+  <tr><th>项目</th><th>要求</th><th>本版落实</th></tr>
+  <tr><td>色彩对比</td><td>正文 ≥ 4.5:1，大字 ≥ 3:1</td><td><code>--text</code> 13.4:1、<code>--text-dim</code> 5.6:1 均达标；<code>--text-mute</code> 4.12:1 仅用于 ≤ 11px 的非关键标注</td></tr>
+  <tr><td>非文本对比</td><td>可交互边界 ≥ 3:1</td><td>所有可点边界用 <code>--border-strong</code>（4.12:1）；<code>--border</code>/<code>--border-2</code> 降级为纯装饰</td></tr>
+  <tr><td>颜色非唯一编码</td><td>不得只靠颜色传达信息</td><td>分段条用「格数」编码进度；热力图层强制显示国家码 + 百分比；色盲辅助开关追加 ○●▲✖ 形状</td></tr>
+  <tr><td>键盘可达</td><td>全部功能可键盘完成</td><td>12 个快捷键 + Tab 焦点序 + Enter/Space 触发；弹窗打开时焦点锁定，Esc 关闭并归还焦点</td></tr>
+  <tr><td>焦点可见</td><td>焦点指示 ≥ 2px 且对比达标</td><td><code>outline:2px solid var(--cyan); outline-offset:2px</code>，<b>禁止 outline:none</b></td></tr>
+  <tr><td>触控尺寸</td><td>≥ 44×44px</td><td>指令栏按钮 44×44 ✓；技能卡 ≥ 76px ✓；工具条 44px ✓；区域页签高度 24px 属密集工具条，已用 4px 间距补偿</td></tr>
+  <tr><td>动效敏感</td><td>尊重 reduced-motion</td><td>设置页提供「动效：减弱」，只保留 1 帧状态切换</td></tr>
+  <tr><td>文本缩放</td><td>200% 不破版</td><td>全站用相对单位 + 8px 节奏；游戏侧由 F12 缩放承担（0.70–1.60）</td></tr>
+</table>
+
+<h2>附 4. 交付对照（令牌 → 实现）</h2>
+<table>
+  <tr><th>设计稿</th><th>Kivy 实现</th><th>备注</th></tr>
+  <tr><td><code>:root</code> 调色板</td><td><code>pixel_ui.COLORS</code></td><td>16 色 + <code>border_strong</code>，一一对应</td></tr>
+  <tr><td>地图四态 fill/edge</td><td><code>world_map.STATE_FILL / STATE_EDGE</code></td><td>与 <code>pixel_assets.py</code> 同源，均由 <code>tools/gen_pixel_map.py</code> 生成</td></tr>
+  <tr><td>像素世界地图 SVG</td><td><code>world_map.py</code>（canvas 指令 + PushMatrix/Scale）</td><td>120×60 网格、Miller 投影；设计稿与真机共用同一份路径数据</td></tr>
+  <tr><td>像素国旗</td><td><code>flag_draw.py</code>（逐矩形）</td><td>30×20 网格；注意 Kivy <code>Rectangle</code> 不裁剪，出界矩形需 clamp</td></tr>
+  <tr><td><b>检视卡</b>（新）</td><td>建议新增 <code>main.CountryInspector</code></td><td>数据源：<code>country.downloads_m</code> / <code>penetration</code> / <code>block_threshold</code></td></tr>
+  <tr><td><b>投放模式</b>（新）</td><td>建议新增 <code>main.DeployMode</code> 状态机</td><td>三步：选技能 → 选目标 → 确认；目标集合 <code>set[code]</code></td></tr>
+  <tr><td><b>技能页 / 科技树页</b>（新）</td><td>建议从 <code>GameUI</code> 拆出 <code>SkillPage</code> / <code>TechPage</code></td><td>科技页复用 <code>tech_tree.TECH_TREE</code> 的 slot/branch/level 结构</td></tr>
+  <tr><td>事件 / 危机 / 结局弹窗</td><td><code>show_choice_popup</code> / <code>show_crisis_popup</code> / <code>show_ending_popup</code></td><td>选项的 chips 对应 <code>v2_events</code> 的 effects 字段</td></tr>
+  <tr><td>成就面板</td><td><code>show_achievements</code></td><td>数据源 <code>achievements.ACHIEVEMENTS</code> + <code>EVENT_ACHIEVEMENTS</code></td></tr>
+</table>
+
+<h2>附 5. 验收清单</h2>
+<table>
+  <tr><th>#</th><th>检查项</th><th>标准</th></tr>
+  <tr><td>1</td><td>主界面地图铺满</td><td>地图宽度占满 1280px 主区，无左右常驻面板挤压</td></tr>
+  <tr><td>2</td><td>点击国家有反馈</td><td>≤ 100ms 内出现黄色描边环并弹出检视卡</td></tr>
+  <tr><td>3</td><td>检视卡含两项核心数据</td><td>独立下载量（含占比与增量）与感染进度（分段条 + 阈值线）均在首屏可见，无需滚动</td></tr>
+  <tr><td>4</td><td>投放三步可回退</td><td>每一步都能 Esc 回退，不丢已选目标</td></tr>
+  <tr><td>5</td><td>不可投放有原因</td><td>灰色国家必须给出「未解锁 / 算力不足 / 渗透饱和 / 阻止中」之一</td></tr>
+  <tr><td>6</td><td>科技互斥可视</td><td>选定分支后其余两条 42% 不透明 + 明确「互斥」文案</td></tr>
+  <tr><td>7</td><td>事件选项四态齐全</td><td>普通 / 推荐 / 高代价 / 科技门控 均可在弹窗中出现</td></tr>
+  <tr><td>8</td><td>结局三色皮肤</td><td>win 青 / lose 红 / neutral 黄，标题与图标同步变</td></tr>
+  <tr><td>9</td><td>20 个成就全部可见</td><td>4×5 网格一屏放下，不滚动</td></tr>
+  <tr><td>10</td><td>键盘 100% 可达</td><td>仅用键盘可完成 选技能→选目标→投放→关闭 全流程</td></tr>
+  <tr><td>11</td><td>焦点环不被抹除</td><td>全站无 <code>outline:none</code>（grep 校验）</td></tr>
+  <tr><td>12</td><td>像素纪律</td><td>无圆角、无模糊阴影、线宽仅 1/2/3px、字号 ≥ 11px</td></tr>
+</table>
+
+<div class="foot" style="text-align:center;color:var(--text-mute);font-size:var(--fs-cap);margin-top:24px;">
+  《AI 别闹》像素风交互界面设计稿 v0.4 · 生成于 2026-09-10 · 令牌与 v0.3 同源 · 内容取自项目实际代码与测试数据
+</div>
+
+</main>
+
+<!-- ============================================================
+     原型交互脚本（仅影响本设计稿的演示，不是游戏实现）
+     ============================================================ -->
+<style>
+  .cnt.sel .hitring{opacity:1;}
+  .cnt.sel .hitring{stroke:var(--yellow);}
+  .opt.chosen{border-color:var(--cyan);background:var(--sel);}
+  .lv.done{background:#12291f;}
+  .region,.segsw span,.skill,.rail button,.sw-btn,.px-btn,.opt,.lv,.slot,.branch,.ach{cursor:pointer;}
+  .hidden{display:none !important;}
+</style>
+<script>
+(function () {
+  var secs = Array.prototype.slice.call(document.querySelectorAll('#screens > .scr'));
+  var sw = document.getElementById('switcher');
+  var hint = document.getElementById('sw-hint');
+
+  // 1) 依 section 自动生成切换按钮
+  secs.forEach(function (s, i) {
+    var h2 = s.querySelector('h2');
+    var t = h2 ? h2.textContent.trim() : s.id;
+    var b = document.createElement('button');
+    b.className = 'sw-btn' + (s.classList.contains('on') ? ' on' : '');
+    b.textContent = t.replace(/^界面[一二三四五六七八九十]+：/, '').slice(0, 14);
+    b.title = t;
+    b.setAttribute('data-t', s.id);
+    b.onclick = function () { show(s.id); };
+    sw.insertBefore(b, hint);
+  });
+
+  function show(id) {
+    secs.forEach(function (s) { s.classList.toggle('on', s.id === id); });
+    Array.prototype.forEach.call(sw.querySelectorAll('.sw-btn'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-t') === id);
+    });
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+  window.__show = show;
+
+  // 2) 事件委托：所有演示交互
+  document.addEventListener('click', function (e) {
+    var el;
+
+    // 国家地块 → 选中描边
+    el = e.target.closest && e.target.closest('.cnt');
+    if (el) {
+      var g = el.closest('.mapstage');
+      var wasSel = el.classList.contains('sel');
+      if (!el.classList.contains('deploy')) {
+        g.querySelectorAll('.cnt.sel').forEach(function (n) { n.classList.remove('sel'); });
+        if (!wasSel) el.classList.add('sel');
+        return;
+      }
+      el.classList.toggle('sel');
+      return;
+    }
+
+    // 区域页签
+    el = e.target.closest && e.target.closest('.region');
+    if (el) {
+      var box = el.parentNode;
+      box.querySelectorAll('.region').forEach(function (n) { n.classList.remove('on'); });
+      el.classList.add('on');
+      return;
+    }
+
+    // 分段切换（图层 / 语言 / 速度 / 动效）
+    el = e.target.closest && e.target.closest('.segsw span');
+    if (el) {
+      el.parentNode.querySelectorAll('span').forEach(function (n) { n.classList.remove('on'); });
+      el.classList.add('on');
+      return;
+    }
+
+    // 技能卡 → 选/取消
+    el = e.target.closest && e.target.closest('.skill');
+    if (el && el.querySelector('.nm')) {
+      el.parentNode.querySelectorAll('.skill').forEach(function (n) { n.classList.remove('sel'); });
+      el.classList.add('sel');
+      return;
+    }
+
+    // 指令栏
+    el = e.target.closest && e.target.closest('.rail button');
+    if (el) {
+      el.parentNode.querySelectorAll('button').forEach(function (n) { n.classList.remove('on'); });
+      el.classList.add('on');
+      return;
+    }
+
+    // 关闭按钮
+    el = e.target.closest && e.target.closest('.x');
+    if (el) {
+      var host = el.closest('.insp') || el.closest('.hpanel') || el.closest('.modal');
+      if (host) { host.classList.toggle('hidden'); }
+      return;
+    }
+
+    // 事件选项
+    el = e.target.closest && e.target.closest('.opt');
+    if (el && !el.hasAttribute('disabled')) {
+      el.closest('.modal__bd').querySelectorAll('.opt').forEach(function (n) { n.classList.remove('chosen'); });
+      el.classList.add('chosen');
+      return;
+    }
+
+    // 科技分支
+    el = e.target.closest && e.target.closest('.branch');
+    if (el && !el.classList.contains('dim')) {
+      el.parentNode.querySelectorAll('.branch').forEach(function (n) { n.classList.remove('picked'); });
+      el.classList.add('picked');
+      return;
+    }
+
+    // 科技等级
+    el = e.target.closest && e.target.closest('.lv');
+    if (el && !el.classList.contains('locked')) {
+      el.classList.toggle('done');
+      return;
+    }
+
+    // 科技槽位
+    el = e.target.closest && e.target.closest('.slot');
+    if (el && !el.classList.contains('lock')) {
+      el.parentNode.querySelectorAll('.slot').forEach(function (n) { n.classList.remove('on'); });
+      el.classList.add('on');
+      return;
+    }
+
+    // 成就卡
+    el = e.target.closest && e.target.closest('.ach');
+    if (el) { el.classList.toggle('got'); return; }
+  });
+
+  // 3) Esc 关闭最上层浮层；←/→ 切界面
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      var vis = Array.prototype.filter.call(
+        document.querySelectorAll('.scr.on .insp, .scr.on .hpanel, .scr.on .modal'),
+        function (n) { return !n.classList.contains('hidden'); });
+      if (vis.length) { vis[vis.length - 1].classList.add('hidden'); }
+      return;
+    }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      var cur = secs.findIndex(function (s) { return s.classList.contains('on'); });
+      var nxt = e.key === 'ArrowRight' ? cur + 1 : cur - 1;
+      if (nxt >= 0 && nxt < secs.length) { show(secs[nxt].id); }
+    }
+  });
+
+  if (hint) { hint.textContent = '点击标签切换界面 · 界面内的国家 / 技能 / 科技 / 选项都可以真的点 · ←/→ 翻页 · Esc 关闭浮层'; }
+})();
+</script>
+</body>
+</html>
