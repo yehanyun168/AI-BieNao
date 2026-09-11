@@ -120,6 +120,10 @@ class WorldMap(FloatLayout):
     CHIP_STROKE = 0.3                # 标签框描边宽度（格）
     LABEL_FONT = 2.2                 # 标签字号（格）
     DOT = 1.1                        # 锚点方块边长（格）
+    # 信标（design/ardot_ui/S06_world_map.png）：锚点上叠一枚状态色方块，
+    # 外圈再套一圈同色方环 = 「这个国家现在的状态」一眼可见。
+    BEACON = 2.6                     # 信标方块边长（格）
+    BEACON_RING = 0.42               # 信标外环宽度（格）
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -130,8 +134,9 @@ class WorldMap(FloatLayout):
         self._on_select = None
 
         self._colors = {}            # code -> (fill Color, edge Color)
-        self._chip_gfx = {}          # code -> (stroke Color, Rect, bg Color, Rect,
-                                     #          dot Color, Rect, lead Color, Line)
+        self._chip_gfx = {}          # code -> (stroke Color, chip Rect, bg Color, inner Rect,
+                                     #          dot Color, lead Color, lead Line, mark Rect,
+                                     #          beacon_ring Color, ring Rect, beacon_core Color, core Rect)
         self._grid_lines = []        # [(axis, grid_pos, Line)]
         self._labels_built = False
         # v0.4 图层覆盖色：{code: (fill_hex, edge_hex, text_hex)}，空 = 用四态
@@ -229,7 +234,18 @@ class WorldMap(FloatLayout):
             self._overlay.add(dot)
             mark = Rectangle()
             self._overlay.add(mark)
-            self._chip_gfx[code] = (stroke, chip, bg, inner, lead, line, dot, mark)
+            # 信标外环（先环后芯，保证芯盖在环上）
+            b_ring = Color(1, 1, 1, 0)
+            self._overlay.add(b_ring)
+            ring = Rectangle()
+            self._overlay.add(ring)
+            # 信标芯（状态色方块）
+            b_core = Color(1, 1, 1, 0)
+            self._overlay.add(b_core)
+            core = Rectangle()
+            self._overlay.add(core)
+            self._chip_gfx[code] = (stroke, chip, bg, inner, lead, line, dot, mark,
+                                    b_ring, ring, b_core, core)
 
     def _build_labels(self):
         for code in PA.OWNER_CODES:
@@ -296,7 +312,8 @@ class WorldMap(FloatLayout):
             lbl.size = (x1 - x0, y1 - y0)
             lbl.font_size = max(8.5, self.LABEL_FONT * ch)
 
-            stroke, chip, _bg, inner, lead, line, dot, mark = self._chip_gfx[code]
+            (stroke, chip, _bg, inner, lead, line, dot, mark,
+             b_ring, ring, b_core, core) = self._chip_gfx[code]
             chip.pos, chip.size = (x0, y0), (x1 - x0, y1 - y0)
             inner.pos = (x0 + stroke_px, y0 + stroke_px)
             inner.size = (max(x1 - x0 - 2 * stroke_px, 0.1),
@@ -306,6 +323,14 @@ class WorldMap(FloatLayout):
             hw, hh = self.DOT * cw / 2.0, self.DOT * ch / 2.0
             acx, acy = g2x(ax), g2y(ay)
             mark.pos, mark.size = (acx - hw, acy - hh), (self.DOT * cw, self.DOT * ch)
+
+            # 信标：锚点上的状态色方块 + 外圈方环（设计稿 S06）
+            bs = self.BEACON
+            bhw, bhh = bs * cw / 2.0, bs * ch / 2.0
+            core.pos, core.size = (acx - bhw, acy - bhh), (bs * cw, bs * ch)
+            rs = bs + self.BEACON_RING * 2.0
+            rhw, rhh = rs * cw / 2.0, rs * ch / 2.0
+            ring.pos, ring.size = (acx - rhw, acy - rhh), (rs * cw, rs * ch)
 
             # 引导线终点 = 锚点→框心连线与外框的交点（不侵入框内）
             cxp, cyp = (x0 + x1) / 2.0, (y0 + y1) / 2.0
@@ -380,10 +405,19 @@ class WorldMap(FloatLayout):
                     edge_rgba = hex_rgba(TARGET_EDGE)
                 else:
                     edge_rgba = hex_rgba(CONT_EDGE if cont else STATE_EDGE[st])
-            stroke, _chip, _bg, _inner, lead, _line, dot, _mark = self._chip_gfx[code]
+            stroke, _chip, _bg, _inner, lead, _line, dot, _mark, \
+                b_ring, _ring, b_core, _core = self._chip_gfx[code]
             stroke.rgba = edge_rgba
             dot.rgba = edge_rgba
             lead.rgba = (edge_rgba[0], edge_rgba[1], edge_rgba[2], 0.7)
+            # 信标：环用状态边色，芯用状态主色（设计稿 S06 —— 已占=青、封锁=红）
+            if tone is not None:
+                core_hex = tone[0]
+            else:
+                core_hex = TARGET_EDGE if code in self._target_codes \
+                    else STATE_EDGE[st]
+            b_core.rgba = hex_rgba(core_hex)
+            b_ring.rgba = (edge_rgba[0], edge_rgba[1], edge_rgba[2], 0.55)
 
     def set_grid_mode(self, idx: int) -> None:
         """地图经纬网开关（设计稿 S12「地图网格」）。
