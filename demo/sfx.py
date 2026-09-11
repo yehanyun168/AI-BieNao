@@ -49,6 +49,7 @@ def load_all() -> None:
                 _SOUNDS[name] = SoundLoader.load(p)
             else:
                 _SOUNDS[name] = None
+                print('[sfx] 警告：音效缺失 %s.wav，已静音跳过（查找目录: %s）' % (name, d))
         except Exception:
             _SOUNDS[name] = None
 

@@ -1,0 +1,112 @@
+# ============================================================
+# pre-commit 框架配置 —— 《AI 别闹》
+# ============================================================
+#
+# ⚠️ 当前状态：**文档性质，尚未接入 pre-commit 框架**
+#   本文件目前**不会**被任何工具自动执行。真正的提交守卫是当前已生效的
+#   `.git/hooks/pre-commit`（纯 bash，随仓库 .git 目录存在，不随 clone 分发）。
+#
+#   写这份配置的目的：
+#     1. 把守卫的「意图」沉淀成可移植、可 review 的声明式描述
+#     2. 后续迁移到 pre-commit 框架（或搬到 CI）时直接可用，不用重新设计
+#     3. CI 可以照抄这里的 entry / args，保证本地与远端口径一致
+#
+#   接入步骤（等决定迁移时再做，现在别跑）：
+#     pip install pre-commit
+#     pre-commit install          # 生成 .git/hooks/pre-commit（会覆盖现有手写钩子）
+#     pre-commit run --all-files  # 首次全量跑一遍
+#
+# ------------------------------------------------------------
+# 与 .git/hooks/pre-commit 的对应关系（口径必须保持一致）
+#
+#   只跑快且无窗口的两个脚本，合计约 4s：
+#     demo/verify_tables.py     数据表 + 分层依赖方向（期望 35/35）
+#     demo/verify_tech_tree.py  科技树结构 + 状态机（期望 29/29）
+#
+#   刻意不跑：demo/test_v4_app.py（会真的弹 Kivy 窗口，打扰开发）
+#   刻意不跑：demo/balance_sim.py --seeds 30（太慢，留给手动 / CI）
+#
+# ------------------------------------------------------------
+# 为什么需要它
+#   2026-09-11 的 c94e480「清理未使用 import」重构引入了分层违规：
+#   ui_v4_screens.py(L5) import 了 ui_modal.py(L7)，靠人工事后复跑才发现。
+#   这两个脚本是那次事故的自动哨兵，不要在没有替代方案前删掉。
+# ============================================================
+
+# 最低框架版本（新版本会警告但通常仍能跑）
+minimum_pre_commit_version: "3.5.0"
+
+# 不进 .git 目录、不碰二进制大文件的常规取舍
+default_install_hook_types: ["pre-commit"]
+default_stages: [pre-commit]
+fail_fast: false
+
+repos:
+  # ----------------------------------------------------------
+  # 官方基础钩子：先保证文件本身干净，再跑业务校验
+  # ----------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # 守卫自身：钩子脚本必须是 LF，否则 Git for Windows 的 bash 会报
+      # "/bin/sh^M: bad interpreter"（这就是本项目踩过的坑）
+      - id: mixed-line-ending
+        name: 强制 LF 换行（钩子脚本 CRLF 会让 bash 报 bad interpreter）
+        args: ["--fix=lf"]
+
+      - id: trailing-whitespace
+        name: 去掉行尾空白
+        exclude: ^(design/.*\.html|demo/assets/.*)$
+
+      - id: end-of-file-fixer
+        name: 文件以单个换行结尾
+
+      - id: check-yaml
+        name: YAML 语法检查
+
+      - id: check-merge-conflict
+        name: 检查残留的冲突标记
+
+      # 体积守卫：数据表/截图别把仓库撑爆
+      - id: check-added-large-files
+        name: 拒绝 >2MB 的文件
+        args: ["--maxkb=2048"]
+
+  # ----------------------------------------------------------
+  # 项目自有的两个校验脚本（与 .git/hooks/pre-commit 完全同口径）
+  # ----------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: verify-tables
+        name: "数据表 + 分层依赖方向（verify_tables.py，期望 35/35）"
+        description: >
+          校验数据驱动约束与分层宪法：低层模块不得 import 高层模块。
+          分层表见 demo/verify_tables.py 的 LAYERS。
+        entry: sh -c 'cd demo && KIVY_NO_FILELOG=1 python verify_tables.py'
+        language: system
+        pass_filenames: false
+        always_run: false
+        # 与手写钩子同口径：只有这些路径变动才触发
+        files: ^(demo|tools)/.*\.py$|^v2/.*\.json$|\.spec$
+        # 依赖 kivy，环境探测由手写钩子负责；框架接入后需保证 PATH 里的
+        # python 是 3.12.x 且装了 Kivy 2.3.1（3.13/3.14 不兼容 Kivy 2.3.1）。
+        # 版本不对时可用 AI_BIE_NAO_PYTHON 指定，见 CONTRIBUTING.md。
+
+      - id: verify-tech-tree
+        name: "科技树结构 + 状态机（verify_tech_tree.py，期望 29/29）"
+        description: >
+          校验科技树节点/连线结构、取消互斥、主链前置、四态判定与键盘导航。
+        entry: sh -c 'cd demo && KIVY_NO_FILELOG=1 python verify_tech_tree.py'
+        language: system
+        pass_filenames: false
+        always_run: false
+        files: ^(demo|tools)/.*\.py$|^v2/.*\.json$|\.spec$
+
+  # ----------------------------------------------------------
+  # 以下校验**刻意不放进 pre-commit**（太慢 / 会弹窗口），留给 CI 或手动
+  #   - demo/test_v4_app.py  —— 会真的开 Kivy 窗口（约 4s，但打扰开发）
+  #   - demo/test_build.py   —— 冒烟（约 2s），CI 跑即可
+  #   - demo/balance_sim.py --seeds 30 —— 数值回归，慢，改数值时手动必跑
+  #   - demo/test_edge_cases.py —— 边界用例（约 5 项），CI 跑即可
+  # 参考：docs/游戏开发待办清单.md / CONTRIBUTING.md 第 2 节「验证三连」
+  # ----------------------------------------------------------

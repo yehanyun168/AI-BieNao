@@ -9,27 +9,81 @@ AI别闹.spec - PyInstaller 配置文件
   python tools/build_exe.py
 """
 from kivy_deps import sdl2, glew, angle
+import glob
+import os
 import sys
 
 block_cipher = None
 
+
+# ---------------------------------------------------------------------------
+# 随包资源 datas（P0-6 整改）
+#
+# 三条规则，避免「新增资源忘了同步 spec」的静默失效重演：
+#   1. 资源按【整个目录】携带：demo/assets/sfx -> assets/sfx。
+#      ⚠️ 目标路径 assets/sfx 必须与 demo/sfx.py::_base_dir() 打包态的
+#         os.path.join(sys._MEIPASS, 'assets', 'sfx') 严格一致，
+#         两者对不上 = 加了也白加（缺音效还不报错）。
+#   2. demo 下的 .py 用 glob 自动生成（仅标准库），新增模块自动随包；
+#      纯开发/测试工具按前缀排除，不进发行包。
+#   3. _EXPLICIT_DATAS 是历史显式条目，原样保留，glob 结果自动去重。
+# ---------------------------------------------------------------------------
+_EXPLICIT_DATAS = [
+    ('demo/data.py', '.'),
+    ('demo/engine.py', '.'),
+    ('demo/tech_tree.py', '.'),
+    ('demo/i18n.py', '.'),
+    ('demo/country_events.py', '.'),
+    ('demo/test_build.py', '.'),
+    ('demo/README.md', '.'),
+    # ⚠️ v2_events.py 运行时从磁盘读取，必须随包分发
+    ('v2/events.json', '.'),
+]
+
+# 纯开发/测试工具不随包分发（按前缀过滤，比逐个列举更不容易漏）
+_DEV_PREFIXES = ('test_', 'verify_', 'make_screenshots')
+
+_SFX_SRC = 'demo/assets/sfx'
+_SFX_DST = 'assets/sfx'   # 对齐 demo/sfx.py::_base_dir()
+
+# 构建期自检：缺 wav 直接中止打包，而不是静默产出一个「哑掉」的 exe
+_SFX_FILES = sorted(glob.glob(_SFX_SRC + '/*.wav'))
+if not _SFX_FILES:
+    raise SystemExit(
+        '[spec] 打包中止：%s 下没有找到任何 .wav（当前工作目录=%s）'
+        % (_SFX_SRC, os.getcwd())
+    )
+
+
+def _norm(p):
+    """路径分隔符统一为 /（Windows 下 glob/os.path 会返回 \\）。"""
+    return p.replace('\\', '/')
+
+
+_auto_py = [
+    (_norm(p), '.')
+    for p in sorted(glob.glob('demo/*.py'))
+    if not os.path.basename(p).startswith(_DEV_PREFIXES)
+]
+
+_seen_src = {_norm(src) for src, _dst in _EXPLICIT_DATAS}
+datas = (
+    _EXPLICIT_DATAS
+    + [e for e in _auto_py if e[0] not in _seen_src]
+    + [(_SFX_SRC, _SFX_DST)]   # 音效：整目录携带，8 个 wav 自动跟随
+)
+
+print('[spec] 随包音效：%d 个 wav -> %s（%s）'
+      % (len(_SFX_FILES), _SFX_DST, ', '.join(os.path.basename(f) for f in _SFX_FILES)))
+print('[spec] datas 条目合计：%d（显式 %d + 自动 %d + 音效目录 1）'
+      % (len(datas), len(_EXPLICIT_DATAS), len(datas) - len(_EXPLICIT_DATAS) - 1))
 
 # Kivy 资源 + demo 数据
 a = Analysis(
     ['demo/main.py'],
     pathex=['.'],
     binaries=[],
-    datas=[
-        ('demo/data.py', '.'),
-        ('demo/engine.py', '.'),
-        ('demo/tech_tree.py', '.'),
-        ('demo/i18n.py', '.'),
-        ('demo/country_events.py', '.'),
-        ('demo/test_build.py', '.'),
-        ('demo/README.md', '.'),
-        # ⚠️ v2_events.py 运行时从磁盘读取，必须随包分发
-        ('v2/events.json', '.'),
-    ],
+    datas=datas,
     hiddenimports=[
         'kivy',
         'kivy.core',

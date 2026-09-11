@@ -7,23 +7,102 @@ save_manager.py - 存档 / 读档
 用法：
     save_manager.save('save.json')     # 存档
     save_manager.load('save.json')     # 读档（直接写回 engine 的全局状态）
+    save_manager.load_ex('save.json')  # 读档 + 失败原因（P0-2）
     save_manager.list_saves()          # 列出存档目录里的所有存档
+    save_manager.log_crash(text)       # 崩溃钩子写入口（P0-3，与上面同一文件）
+
+P0-2 读档容错约定：
+    任何坏档（乱码 / 缺键 / 类型错 / 版本不符 / 文件不存在）都**不抛异常**，
+    一律返回失败 + 明确原因码，并把原因追加到 demo/crash.log。
+    需要区分原因的上层请用 load_ex()；只要真假的老调用方继续用 load()。
 """
 import json
 import os
 from datetime import datetime
-from typing import List
+from typing import List, Tuple
 
 from data import STARTER_SKILLS, SKILL_UNLOCK
+from i18n import t
 import commissions
 
 SAVE_VERSION = 1
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 DEFAULT_SLOT = 'slot1.json'
+CRASH_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         'crash.log')
+
+# —— 读档结果原因码（P0-2）——
+# 上层据此区分「全新玩家没存档」与「存档坏了」，避免一律弹吓人的"存档损坏"。
+LOAD_OK = 'ok'
+LOAD_MISSING = 'missing'          # 文件不存在（全新玩家，不该报错）
+LOAD_CORRUPT = 'corrupt'          # JSON 解析失败（乱码 / 截断 / 编码错）
+LOAD_BAD_VERSION = 'bad_version'  # version 与 SAVE_VERSION 不符
+LOAD_BAD_SCHEMA = 'bad_schema'    # 能解析，但字段缺失 / 类型不对
+
+# 原因码 → i18n 文案键（缺键时 t() 原样返回键名，不会崩）
+_LOAD_FAIL_KEY = {
+    LOAD_MISSING: 'load_fail',
+    LOAD_CORRUPT: 'load_corrupt',
+    LOAD_BAD_VERSION: 'load_bad_version',
+    LOAD_BAD_SCHEMA: 'load_corrupt',
+}
 
 
 def _ensure_dir():
     os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+def _append_crash_line(line: str) -> None:
+    """crash.log 的**唯一**写入口（追加模式）。
+
+    全项目只有这一处 open(crash.log)：P0-2 读档失败与 P0-3 崩溃钩子共用，
+    保证日志格式与隐私口径只有一套。
+    可靠性：日志写不进去（磁盘满 / 只读 / 权限 / 编码异常）绝不能拖垮调用方
+    —— 这是全项目唯一允许的「静默」点。
+    """
+    try:
+        with open(CRASH_LOG, 'a', encoding='utf-8', errors='replace') as f:
+            f.write(line)
+    except Exception:
+        return
+
+
+def log_crash(text: str) -> None:
+    """供 P0-3 崩溃钩子复用：把已格式化的崩溃文本追加到 crash.log。
+
+    与 ``_log_load_fail`` 共用 ``_append_crash_line``，因此格式同源。
+    ``text`` 无需自带尾换行。
+    """
+    if not text.endswith('\n'):
+        text += '\n'
+    _append_crash_line(text)
+
+
+def _log_load_fail(reason: str, path: str, exc: BaseException = None) -> None:
+    """把读档失败原因追加到 crash.log。
+
+    隐私：只记文件名（basename），不记完整绝对路径、不记用户名。
+    可靠性：日志本身写失败（磁盘满 / 只读 / 权限）绝不能影响读档主流程。
+    """
+    try:
+        name = os.path.basename(path) if path else '-'
+        if exc is None:
+            exc_txt = '-'
+        else:
+            exc_txt = type(exc).__name__
+            detail = str(exc).replace('\n', ' ')[:120]
+            if detail:
+                exc_txt = f"{exc_txt}:{detail}"
+        line = (f"[{datetime.now().isoformat(timespec='seconds')}] "
+                f"LOAD_FAIL reason={reason} path={name} exc={exc_txt}\n")
+        _append_crash_line(line)
+    except Exception:
+        return   # 日志写不进去也不能拖垮读档（这是唯一允许的"静默"点）
+
+
+def load_fail_text(reason: str) -> str:
+    """把失败原因码翻成面向玩家的文案（走 i18n，跟随当前语言）。"""
+    return t(_LOAD_FAIL_KEY.get(reason, 'load_fail'))
 
 
 def save(path: str = None) -> str:
@@ -85,18 +164,13 @@ def save(path: str = None) -> str:
     return path
 
 
-def load(path: str = None) -> bool:
-    """读档，成功返回 True"""
+def _apply_save(data: dict) -> None:
+    """把已校验过的存档 dict 写回 engine 全局状态。
+
+    只做字段搬运，不做任何异常捕获 —— 捕获统一在 load_ex() 里，
+    这样失败原因码只有一处出口，不会散落。
+    """
     import engine
-
-    path = path or os.path.join(SAVE_DIR, DEFAULT_SLOT)
-    if not os.path.exists(path):
-        return False
-
-    with open(path, encoding='utf-8') as f:
-        data = json.load(f)
-    if data.get('version') != SAVE_VERSION:
-        return False
 
     # 先把国家状态初始化好，再覆盖
     engine.init_game()
@@ -158,7 +232,71 @@ def load(path: str = None) -> bool:
         c.current_block_intensity = cs.get('current_block_intensity', 0.0)
         c.block_budget_remaining = cs.get('block_budget_remaining',
                                           c.config.block_budget)
-    return True
+
+
+def load_ex(path: str = None) -> Tuple[bool, str]:
+    """读档，返回 ``(ok, reason)``。
+
+    reason 取值见模块顶部的 LOAD_* 常量。任何坏档都不抛异常：
+    解析、版本校验、字段搬运三段全部包在窄异常里，失败即回滚 engine
+    到干净初始态并落 crash.log。
+
+    Args:
+        path: 存档路径；None 表示默认槽位。
+
+    Returns:
+        (True, LOAD_OK) 成功；
+        (False, LOAD_MISSING / LOAD_CORRUPT / LOAD_BAD_VERSION / LOAD_BAD_SCHEMA) 失败。
+    """
+    import engine
+
+    path = path or os.path.join(SAVE_DIR, DEFAULT_SLOT)
+    if not os.path.exists(path):
+        _log_load_fail(LOAD_MISSING, path)
+        return False, LOAD_MISSING
+
+    # 1) 解析：乱码 / 截断 / 编码错 / 读不了
+    try:
+        with open(path, encoding='utf-8') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, OSError) as e:
+        _log_load_fail(LOAD_CORRUPT, path, e)
+        return False, LOAD_CORRUPT
+
+    # 2) 结构：根必须是对象（JSON 合法但内容是数组/字符串也算坏档）
+    if not isinstance(data, dict):
+        _log_load_fail(LOAD_BAD_SCHEMA, path,
+                       TypeError(f'root is {type(data).__name__}, want dict'))
+        return False, LOAD_BAD_SCHEMA
+
+    # 3) 版本：不符 → 明确区分，不再静默 False
+    if data.get('version') != SAVE_VERSION:
+        _log_load_fail(LOAD_BAD_VERSION, path)
+        return False, LOAD_BAD_VERSION
+
+    # 4) 字段搬运：缺 player 键 / 类型不对 / 委托反序列化炸 → 坏档
+    try:
+        _apply_save(data)
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        # _apply_save 里已经 init_game() 过，可能留下半写状态 → 回滚成干净新档
+        try:
+            engine.init_game()
+        except (KeyError, TypeError, ValueError, AttributeError):
+            pass  # 回滚都失败也绝不掩盖本次的失败原因
+        _log_load_fail(LOAD_BAD_SCHEMA, path, e)
+        return False, LOAD_BAD_SCHEMA
+    return True, LOAD_OK
+
+
+def load(path: str = None):
+    """读档（老接口，向后兼容）。
+
+    成功返回 True，失败返回 None —— 两者都是 bool 语境下的真/假，
+    已有 ``if save_manager.load(p):`` / ``assert save_manager.load()``
+    调用方无需改动。需要区分失败原因请改用 load_ex()。
+    """
+    ok, _reason = load_ex(path)
+    return True if ok else None
 
 
 def list_saves() -> List[str]:

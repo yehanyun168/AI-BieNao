@@ -4,6 +4,29 @@ REM Pure ASCII to avoid GBK/UTF-8 encoding issues
 chcp 65001 >nul 2>&1
 title AI Bienao Day 2 Demo
 
+REM ============================================================
+REM CRITICAL (P0-7): disable Kivy file logging. DO NOT REMOVE.
+REM ============================================================
+REM Kivy runs file_log_handler.purge_logs() at IMPORT time, deleting old
+REM files under ~/.kivy/logs/. On some Windows machines that folder is
+REM protected, so Kivy's safe-delete throws:
+REM     OSError: [safe-delete] operation failed
+REM and the game dies BEFORE any window ever opens.
+REM
+REM Why this is a TIME BOMB, not an ordinary bug:
+REM   * The FIRST launch is usually fine - there are no old logs to purge yet.
+REM   * It only fires AFTER several sessions, once history logs pile up.
+REM   * Symptom: "played fine for days, then suddenly won't start" - and the
+REM     player has no way to diagnose it.
+REM   * That lands exactly inside the M1 playtest window (3+ friends).
+REM
+REM Set here, BEFORE Step 1, on purpose: the very first probe below already
+REM runs "import kivy", which triggers purge_logs() all by itself - setting
+REM this any later is too late. main.py additionally calls
+REM os.environ.setdefault() as a fallback for IDE / direct double-click
+REM launches that never go through this script.
+set KIVY_NO_FILELOG=1
+
 echo.
 echo ============================================================
 echo   AI Bienao - Day 2 Demo
@@ -138,10 +161,39 @@ if not exist "ui_v4.py" goto :files_missing
 if not exist "ui_v4_screens.py" goto :files_missing
 if not exist "tutorial.py" goto :files_missing
 
-%PYTHON_EXE% -c "import data, engine, tech_tree, i18n, country_events, flag_draw, world_map, pixel_ui, pixel_assets, ui_v4, ui_v4_screens, tutorial" >nul 2>&1
+REM --- modules added after the original v0.4 checklist (P0-7) ---
+if not exist "ui_commissions.py" goto :files_missing
+if not exist "ui_fx.py" goto :files_missing
+if not exist "ui_input.py" goto :files_missing
+if not exist "ui_drop.py" goto :files_missing
+if not exist "ui_hud.py" goto :files_missing
+if not exist "ui_shared.py" goto :files_missing
+if not exist "ui_modal.py" goto :files_missing
+if not exist "ui_pages.py" goto :files_missing
+if not exist "ui_popups.py" goto :files_missing
+if not exist "ui_session.py" goto :files_missing
+if not exist "save_manager.py" goto :files_missing
+if not exist "balance.py" goto :files_missing
+if not exist "conditions.py" goto :files_missing
+if not exist "commissions.py" goto :files_missing
+if not exist "endings.py" goto :files_missing
+if not exist "achievements.py" goto :files_missing
+if not exist "sfx.py" goto :files_missing
+if not exist "v2_events.py" goto :files_missing
+
+REM v2/events.json is a RUNTIME data dependency (the v2 event library).
+REM Missing it does NOT crash the game - v2_events.py only warns and runs with
+REM an EMPTY event pool - so this is a warning, not a hard stop: refusing to
+REM launch is worse than a degraded session, and the path differs when packaged.
+if not exist "..\v2\events.json" (
+    echo   [WARN] ..\v2\events.json NOT found - v2 event library will be EMPTY
+    echo         The game still starts, but v2 choice events will not appear.
+)
+
+%PYTHON_EXE% -c "import data, engine, tech_tree, i18n, country_events, flag_draw, world_map, pixel_ui, pixel_assets, ui_v4, ui_v4_screens, tutorial, ui_commissions, ui_fx, ui_input, ui_drop, ui_hud, ui_shared, ui_modal, ui_pages, ui_popups, ui_session, save_manager, balance, conditions, commissions, endings, achievements, sfx, v2_events" >nul 2>&1
 if errorlevel 1 goto :files_import_failed
 
-echo   [OK] All 11 demo modules import successfully
+echo   [OK] All 30 demo modules import successfully
 echo.
 
 REM ============================================================
@@ -178,7 +230,11 @@ echo ============================================================
 echo.
 echo Expected files in this folder:
 echo   data.py, engine.py, main.py, tech_tree.py, i18n.py, country_events.py, flag_draw.py,
-echo   world_map.py, pixel_ui.py, pixel_assets.py, ui_v4.py, ui_v4_screens.py, tutorial.py
+echo   world_map.py, pixel_ui.py, pixel_assets.py, ui_v4.py, ui_v4_screens.py, tutorial.py,
+echo   ui_commissions.py, ui_fx.py, ui_input.py, ui_drop.py, ui_hud.py, ui_shared.py,
+echo   ui_modal.py, ui_pages.py, ui_popups.py, ui_session.py, save_manager.py,
+echo   balance.py, conditions.py, commissions.py, endings.py, achievements.py,
+echo   sfx.py, v2_events.py
 echo.
 echo Current folder: %CD%
 echo.

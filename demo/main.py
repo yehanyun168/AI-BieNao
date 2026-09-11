@@ -26,6 +26,229 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
   Tab 切区域 · +/- 缩放 · F11 全屏 · F12 适配 · F1 帮助
   S/R 存/读档 · L 中英切换 · Esc 返回上一层 · Enter 确认投放
 """
+import os
+import sys
+import traceback
+from datetime import datetime
+
+_HERE = os.path.dirname(os.path.abspath(__file__))
+if _HERE not in sys.path:
+    sys.path.insert(0, _HERE)
+
+# ============================================================
+# P0-7 禁掉 Kivy 文件日志（必须位于首次 import kivy 之前）
+# ============================================================
+# Kivy 在 import 阶段会执行 file_log_handler.purge_logs()，清理
+# ~/.kivy/logs/ 下的历史日志；部分 Windows 机器上该目录受文件保护，
+# safe-delete 会抛：
+#     OSError: [safe-delete] 操作失败
+# —— 游戏还没开窗口就崩在启动阶段，窗口根本出不来。
+#
+# 危害特征（这也是必须在本文件兜底的原因）：
+#   * 首次运行通常正常（还没有历史日志可清）；
+#   * 玩过若干局、日志累积之后才触发 —— 典型「玩了几天突然打不开」；
+#   * 玩家完全无法自行排查，且正好落在 M1 真人测试窗口里。
+#
+# 为什么用 setdefault 而不是直接赋值：尊重外部环境已设置的值
+# （run_demo.bat 已设 1；开发者需要排查时也可自行设 0 重新打开日志）。
+os.environ.setdefault('KIVY_NO_FILELOG', '1')
+
+
+# ============================================================
+# P0-3 全局崩溃钩子（sys.excepthook → demo/crash.log）
+# ============================================================
+# 位置：必须在 ``import kivy`` **之前** —— 这样连 Kivy / 各子系统的 import 期
+# 崩溃也能抓到（那时 Kivy 还没起来，任何依赖 Kivy 的日志方案都已不可用）。
+# 因此本块只依赖标准库，Kivy / ui_modal / i18n 一律**延迟导入**。
+#
+# 铁律（崩溃现场本身就是"不可信环境"）：
+#   1. 钩子整体再包一层 try/except —— 钩子自己抛异常会变成"处理异常的异常"，
+#      递归吞掉玩家唯一的留痕机会；
+#   2. 重入哨兵兜底：万一第 1 层被击穿，二次进入直接交回默认钩子；
+#   3. 每一步都允许失败：取环境信息失败写 unknown、写日志失败就只打印、
+#      弹窗失败就只留日志 —— 绝不因为"报告崩溃"而制造新崩溃或卡死。
+_CRASH_BUSY = False        # 重入哨兵
+_CRASH_MODAL_DONE = False  # 崩溃弹窗只弹一次，避免连续崩溃刷屏
+
+
+def _crash_git_head() -> str:
+    """当前 commit 短哈希；拿不到（无 .git / worktree / 权限）一律 unknown。
+
+    只读 .git 里的文件，**不起子进程** —— 崩溃现场 fork git 可能挂住，
+    把"留痕"变成"卡死"。
+    """
+    try:
+        root = os.path.dirname(_HERE)
+        with open(os.path.join(root, '.git', 'HEAD'), encoding='utf-8') as f:
+            head = f.read().strip()
+        if head.startswith('ref:'):
+            ref = head[4:].strip()
+            with open(os.path.join(root, '.git', *ref.split('/')),
+                      encoding='utf-8') as f:
+                head = f.read().strip()
+        return (head or 'unknown')[:12]
+    except Exception:
+        return 'unknown'
+
+
+def _crash_kivy_version() -> str:
+    try:
+        import kivy
+        return str(getattr(kivy, '__version__', 'unknown'))
+    except Exception:
+        return 'unknown'
+
+
+def _crash_tick() -> str:
+    """发生异常时的游戏周期数；拿不到就 '-'（绝不为此引入新异常）。"""
+    try:
+        import engine
+        p = getattr(engine, 'player', None)
+        v = getattr(p, 'tick_count', None) if p is not None else None
+        return str(v) if isinstance(v, int) else '-'
+    except Exception:
+        return '-'
+
+
+def _crash_scrub(text: str) -> str:
+    """隐私脱敏：把用户目录与项目根的绝对路径降为 ~ / 相对路径。
+
+    traceback 的 ``File "..."`` 行天然带绝对路径，不脱敏就会把用户名和
+    完整目录结构写进要回传给开发者的日志里。
+    """
+    try:
+        root = os.path.dirname(_HERE)          # 先消项目根 → 相对路径
+        if len(root) > 3:
+            text = text.replace(root + os.sep, '')
+            text = text.replace(root, '.')
+        home = os.path.expanduser('~')         # 其余（如 site-packages）→ ~
+        if len(home) > 3:
+            text = text.replace(home, '~')
+    except Exception:
+        pass
+    return text
+
+
+def _crash_write(header: str, body: str) -> bool:
+    """落盘到 demo/crash.log（追加）。
+
+    优先走 ``save_manager.log_crash`` —— 与 P0-2 读档日志共用同一个写入口，
+    不造第二套格式；save_manager 本身不可用时退回直接写文件，保证
+    「有日志」优先于「格式统一」。
+    """
+    text = _crash_scrub(header + '\n' + body)
+    if not text.endswith('\n'):
+        text += '\n'
+    try:
+        import save_manager
+        save_manager.log_crash(text)
+        return True
+    except Exception:
+        pass
+    try:
+        with open(os.path.join(_HERE, 'crash.log'), 'a', encoding='utf-8',
+                  errors='replace') as f:
+            f.write(text)
+        return True
+    except Exception:
+        return False
+
+
+def _build_crash_modal() -> None:
+    """真正构建并弹出崩溃提示（由 Clock 延后一帧调用）。
+
+    崩溃时游戏可能已处于不稳定状态，所以这里整体包 try：任何一步失败就
+    只留日志、不弹窗。
+    """
+    try:
+        from kivy.uix.boxlayout import BoxLayout
+        from ui_modal import (make_button, make_modal, modal_header,
+                              auto_h_label)
+        from ui_v4 import hline, FS_BODY
+        from ui_shared import COLORS
+        from i18n import t
+
+        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
+        body.add_widget(modal_header('!', t('crash_title')))
+        body.add_widget(hline())
+        body.add_widget(auto_h_label(t('crash_body'), FS_BODY,
+                                     color=COLORS['text']))
+        row = BoxLayout(orientation='horizontal', spacing=12,
+                        size_hint_y=None, height=50)
+        # 与 _show_load_fail_notice 同款写法：row 先入 body 参与高度测量，
+        # pop 在 make_modal 之后才赋值（lambda 调用时才解析，安全）。
+        row.add_widget(make_button(t('ok_button'), font_size=FS_BODY,
+                                   height=50, bg=COLORS['panel_light'],
+                                   on_release=lambda *_: pop.dismiss()))
+        body.add_widget(row)
+        pop = make_modal(body, size_hint=(0.5, 0.45), skin='lose',
+                         close_on_outside=True)
+        pop.open()
+    except Exception:
+        return
+
+
+def _show_crash_modal() -> None:
+    """崩溃后给玩家一个可回传的提示。
+
+    **无 App 实例则不弹窗**（测试 / 无头 / 崩溃过早 / App 还没 build）——
+    此时 Kivy 窗口压根不存在，make_modal 必然炸，所以这里直接放弃、只留日志。
+    """
+    global _CRASH_MODAL_DONE
+    if _CRASH_MODAL_DONE:
+        return
+    try:
+        from kivy.app import App
+        from kivy.clock import Clock
+        if App.get_running_app() is None:
+            return
+        _CRASH_MODAL_DONE = True
+        Clock.schedule_once(lambda *_: _build_crash_modal(), 0)
+    except Exception:
+        return
+
+
+def _crash_excepthook(etype, value, tb) -> None:
+    """全局未捕获异常钩子：写 crash.log + 提示玩家 + 交回默认钩子。"""
+    global _CRASH_BUSY
+    if _CRASH_BUSY:                     # 钩子自身崩了 → 绝不递归，立即放行
+        if _DEFAULT_EXCEPTHOOK is not None:
+            _DEFAULT_EXCEPTHOOK(etype, value, tb)
+        return
+    _CRASH_BUSY = True
+    try:
+        try:
+            body = ''.join(traceback.format_exception(etype, value, tb))
+        except Exception:
+            body = f"{getattr(etype, '__name__', etype)}: {value}\n" \
+                   f"<traceback unavailable>\n"
+        header = (f"[{datetime.now().isoformat(timespec='seconds')}] "
+                  f"CRASH commit={_crash_git_head()} "
+                  f"py={sys.version.split()[0]} "
+                  f"kivy={_crash_kivy_version()} "
+                  f"tick={_crash_tick()}")
+        ok = _crash_write(header, body)
+        try:                             # 控制台也留一份（无窗口时唯一可见输出）
+            sys.stderr.write(header + '\n' + body)
+        except Exception:
+            pass
+        if ok:
+            _show_crash_modal()          # 弹窗失败不影响日志，见函数内 try
+    except Exception:
+        pass                             # 兜底：钩子内任何异常都不再向外抛
+    finally:
+        _CRASH_BUSY = False
+    try:                                 # 保留原始行为（控制台 traceback）
+        if _DEFAULT_EXCEPTHOOK is not None:
+            _DEFAULT_EXCEPTHOOK(etype, value, tb)
+    except Exception:
+        pass
+
+
+_DEFAULT_EXCEPTHOOK = sys.excepthook
+sys.excepthook = _crash_excepthook
+
+
 from kivy.config import Config
 Config.set('graphics', 'resizable', '1')
 Config.set('graphics', 'width', '1680')
@@ -39,10 +262,6 @@ Config.set('kivy', 'exit_on_escape', '0')
 # 右键会被当作一个 touch，并在落点画一个红色圆圈（左键点它 = 移除该 touch →
 # 圆圈消失）。本游戏不需要右键交互，显式声明为纯 mouse，从源头禁掉该可视化。
 Config.set('input', 'mouse', 'mouse')
-
-import os
-import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -812,9 +1031,40 @@ class RootView(FloatLayout):
         self._enter_game()
 
     def start_load_game(self, path: str) -> None:
-        """S01 → S02：读档进入。"""
-        save_manager.load(path)
+        """S01 → S02：读档进入。
+
+        P0-2：必须检查读档结果，坏档不能静默。
+          - 成功            → 直接进局；
+          - 文件不存在       → 全新玩家，静默开新档，不弹提示（避免吓人）；
+          - 损坏 / 版本过旧  → 先开新档，再弹提示告知玩家发生了什么。
+        """
+        ok, reason = save_manager.load_ex(path)
+        if ok:
+            self._enter_game()
+            return
+        engine.init_game()                 # 坏档 / 空槽都从干净初始态开局
         self._enter_game()
+        if reason != save_manager.LOAD_MISSING:
+            # 延迟到进局首帧后再弹，避免浮层被 _enter_game 的重建吞掉
+            Clock.schedule_once(
+                lambda dt, r=reason: self._show_load_fail_notice(r), 0.6)
+
+    def _show_load_fail_notice(self, reason: str) -> None:
+        """坏档提示浮层（复用 ui_modal.make_modal，与覆盖确认弹窗同一套皮）。"""
+        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
+        body.add_widget(modal_header('!', t('load_fail_title')))
+        body.add_widget(hline())
+        body.add_widget(auto_h_label(save_manager.load_fail_text(reason),
+                                     U.FS_BODY, color=COLORS['text']))
+        row = BoxLayout(orientation='horizontal', spacing=12,
+                        size_hint_y=None, height=50)
+        row.add_widget(make_button(t('ok_button'), font_size=U.FS_BODY,
+                                   height=50, bg=COLORS['panel_light'],
+                                   on_release=lambda *_: pop.dismiss()))
+        body.add_widget(row)
+        pop = make_modal(body, size_hint=(0.5, 0.42), skin='lose',
+                         close_on_outside=True)
+        pop.open()
 
     def start_new_game_on_slot(self, path: str) -> None:
         """S01 → S02：在指定槽位开新游戏。

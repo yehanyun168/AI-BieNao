@@ -1,0 +1,146 @@
+#!/bin/sh
+# ============================================================
+# pre-commit —— 《AI 别闹》提交守卫（分层 / 数据表）
+# ============================================================
+# 为什么要有这个钩子
+#   2026-09-11 的一次「清理未使用 import」重构（commit c94e480）引入了分层
+#   违规：ui_v4_screens.py(L5) 去 import 了 ui_modal.py(L7)，最后靠人工事后
+#   复跑 verify_tables.py 才发现。这个钩子把那次人工复跑固化成自动守卫。
+#
+# 跑什么（只跑快且无窗口的，合计约 4s）
+#   demo/verify_tables.py     数据表结构 + [6] 分层依赖方向（期望 35/35）
+#   demo/verify_tech_tree.py  科技树结构 + 状态机（期望 29/29）
+#
+# 刻意不跑的
+#   demo/test_v4_app.py —— 会真的弹出 Kivy 窗口，打扰开发。留给 CI / 手动跑。
+#
+# 什么时候跑
+#   仅当暂存区里有 demo/*.py、tools/*.py、v2/*.json 或 *.spec 时才跑。
+#   只改 .md 文档 → 打印跳过原因并直接放行（不拦文档改动）。
+#
+# 失败怎么处理
+#   任一脚本非 0 退出 → 打印说明并 exit 1，拒绝本次提交。
+#
+# 环境缺失怎么处理
+#   找不到可用的 Python（或没装 kivy）→ 醒目警告后**放行**。
+#   不因为机器环境差异把人卡死，但请自行补跑。
+#   可用环境变量 AI_BIE_NAO_PYTHON=/path/to/python.exe 指定解释器。
+#
+# 换行符：本文件必须是 LF，CRLF 会让 bash 报 bad interpreter。
+# ============================================================
+
+set -u
+
+say() { printf '[pre-commit] %s\n' "$*"; }
+
+# ---------- 0. 定位仓库 ----------
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "${REPO_ROOT:-}" ]; then
+  say '无法定位仓库根目录，跳过检查。'
+  exit 0
+fi
+DEMO_DIR="$REPO_ROOT/demo"
+
+# ---------- 1. 是否触发：只看本次提交实际暂存的文件 ----------
+STAGED=$(git diff --cached --name-only --diff-filter=ACMR 2>/dev/null)
+if [ -z "$STAGED" ]; then
+  say '暂存区为空，跳过检查。'
+  exit 0
+fi
+
+# 只有命中下面这些路径才跑 verify（demo/tools 下的 .py、v2 下的 .json、任意 .spec）
+TRIGGER=$(printf '%s\n' "$STAGED" | grep -E '^(demo|tools)/.*\.py$|^v2/.*\.json$|\.spec$')
+if [ -z "$TRIGGER" ]; then
+  say '本次改动不涉及代码 / 数据表（只有 .md 文档等），跳过 verify 检查。'
+  printf '%s\n' "$STAGED" | sed 's/^/[pre-commit]     · /'
+  say '放行。'
+  exit 0
+fi
+
+if [ ! -d "$DEMO_DIR" ]; then
+  say "找不到 demo/ 目录（$DEMO_DIR），跳过检查。"
+  exit 0
+fi
+
+# ---------- 2. 挑一个「装了 kivy」的 Python ----------
+# 注意：PATH 里的 python 可能是 3.13（本项目要求 3.12.x + Kivy 2.3.1），
+#       所以判据不是「能跑的 python」，而是「能 import kivy 的 python」。
+CANDS=''
+if [ -n "${AI_BIE_NAO_PYTHON:-}" ]; then
+  CANDS="$AI_BIE_NAO_PYTHON"
+fi
+CANDS="$CANDS|py -3.12|python3.12|python3|python"
+
+PY=''
+OLD_IFS=$IFS
+IFS='|'
+for cand in $CANDS; do
+  IFS=$OLD_IFS
+  [ -n "$cand" ] || { IFS='|'; continue; }
+  if sh -c "$cand -c 'import kivy' >/dev/null 2>&1"; then
+    PY="$cand"
+    break
+  fi
+  IFS='|'
+done
+IFS=$OLD_IFS
+
+if [ -z "$PY" ]; then
+  say ''
+  say '############################################################'
+  say '#  警告：没找到可用的 Python（或未安装 kivy），已放行本次提交  #'
+  say '############################################################'
+  say ''
+  say '  本次本该跑：demo/verify_tables.py + demo/verify_tech_tree.py'
+  say '  现在**没有跑**，分层违规可能因此溜进仓库。请自行补跑：'
+  say '      cd demo && python verify_tables.py && python verify_tech_tree.py'
+  say '  环境要求：Python 3.12.x + Kivy 2.3.1（3.13/3.14 不兼容）'
+  say '  也可用 AI_BIE_NAO_PYTHON=/path/to/python.exe 指定解释器。'
+  say ''
+  exit 0
+fi
+
+say "使用解释器：$PY"
+
+# ---------- 3. 跑检查（必须在 demo/ 目录下，且 KIVY_NO_FILELOG=1）----------
+run_check() {
+  _script="$1"
+  say ''
+  say ">>> 运行 $_script （cwd=$DEMO_DIR, KIVY_NO_FILELOG=1）"
+  ( cd "$DEMO_DIR" && KIVY_NO_FILELOG=1 sh -c "$PY $_script" )
+}
+
+FAILED=''
+for s in verify_tables.py verify_tech_tree.py; do
+  if [ ! -f "$DEMO_DIR/$s" ]; then
+    say "找不到 $DEMO_DIR/$s，跳过。"
+    continue
+  fi
+  if ! run_check "$s"; then
+    FAILED="$s"
+    break
+  fi
+done
+
+if [ -n "$FAILED" ]; then
+  say ''
+  say '============================================================'
+  say " 提交被拒绝：$FAILED 未通过（见上方 [FAIL] 项）"
+  say '============================================================'
+  say ' 常见原因：'
+  say '   · 低层模块 import 了高层模块 —— 违反分层宪法（低层禁止 import 高层）'
+  say '     分层表见 demo/verify_tables.py 的 LAYERS，例如 ui_v4_screens.py(L5)'
+  say '     不得 import ui_modal.py(L7)'
+  say '   · 数据表引用了不存在的字段 / id（条件表、成就、事件引用）'
+  say '   · 科技树节点 / 连线结构与断言不符'
+  say ''
+  say ' 修复后重新 git add 再提交。'
+  say ' 完整验证三连见 CONTRIBUTING.md 第 2 节。'
+  say ' 确属紧急情况才用 git commit --no-verify —— 事后必须补跑并修正。'
+  say '============================================================'
+  exit 1
+fi
+
+say ''
+say '全部通过 —— 放行本次提交。'
+exit 0

@@ -125,6 +125,14 @@ TRANSLATIONS = {
         'load_button': '读档',
         'load_ok': '读档成功',
         'load_fail': '没有可用存档',
+        # P0-2 读档容错：区分「没存档」与「存档坏了 / 版本过旧」
+        'load_corrupt': '存档损坏，已为你开始新档',
+        'load_bad_version': '存档版本过旧，已为你开始新档',
+        'load_fail_title': '读档失败',
+        # P0-3 崩溃钩子：告诉玩家日志已落盘、可以回传
+        'crash_title': '出错了',
+        'crash_body': '程序遇到错误，已记录到 demo/crash.log。\n'
+                      '你可以继续玩，也可以把 demo/crash.log 这个文件发给我，帮我修好它。',
         'ach_button': '成就',
         'ach_title': '成就',
 
@@ -285,6 +293,14 @@ TRANSLATIONS = {
         'load_button': 'Load',
         'load_ok': 'Loaded',
         'load_fail': 'No save found',
+        # P0-2 save-load tolerance: distinguish "no save" from "broken / old save"
+        'load_corrupt': 'Save corrupted — starting a new game',
+        'load_bad_version': 'Save version too old — starting a new game',
+        'load_fail_title': 'Load Failed',
+        # P0-3 crash hook: tell the player the log is on disk and shareable
+        'crash_title': 'Something Went Wrong',
+        'crash_body': 'The game hit an error and saved it to demo/crash.log.\n'
+                      'You can keep playing, or send me that file to help fix it.',
         'ach_button': 'Achv',
         'ach_title': 'Achievements',
 
@@ -1031,6 +1047,7 @@ TRANSLATIONS[LANG_ZH].update({
     'com_goal_unlock': '解锁 {target:.0f} 个新国家',
     'com_c5_bonus': '完成额外怀疑度 −{relief:.0f}',
     'com_sus_short': '怀疑',
+    'com_folded_title': '已折叠的委托',
     'cp_warn_toast': '监管预警 · {name}',
     'cp_warn_log': '{name} 政府正在筹备反制（下周期结算）',
     'cp_strike_toast': '反制结算 · {name}',
@@ -1061,6 +1078,7 @@ TRANSLATIONS[LANG_EN].update({
     'com_goal_unlock': 'Unlock {target:.0f} new country',
     'com_c5_bonus': 'Bonus suspicion -{relief:.0f} on completion',
     'com_sus_short': 'SUS',
+    'com_folded_title': 'Folded jobs',
     'cp_warn_toast': 'REG WARN · {name}',
     'cp_warn_log': '{name} is preparing a counter-move (resolves next tick)',
     'cp_strike_toast': 'COUNTER · {name}',

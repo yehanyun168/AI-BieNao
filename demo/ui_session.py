@@ -98,7 +98,8 @@ class SessionMixin:
 
     def _load_slot(self, slot: str) -> None:
         path = os.path.join(save_manager.SAVE_DIR, slot)
-        if save_manager.load(path):
+        ok, reason = save_manager.load_ex(path)
+        if ok:
             self._notify(t('load_ok'))
             self.close_page()
             self.paused = False
@@ -106,7 +107,8 @@ class SessionMixin:
             self._reschedule_tick()
             self.refresh_all()
         else:
-            self._notify(t('load_fail'))
+            # P0-2：区分「没存档」和「存档坏了」，别一律说"没有可用存档"
+            self._notify(save_manager.load_fail_text(reason))
 
     def _delete_slot(self, slot: str) -> None:
         path = os.path.join(save_manager.SAVE_DIR, slot)
@@ -123,14 +125,16 @@ class SessionMixin:
         self._notify(f"{t('save_button')} → {os.path.basename(path)}")
 
     def do_load(self) -> None:
-        if save_manager.load():
+        ok, reason = save_manager.load_ex()
+        if ok:
             self._notify(t('load_ok'))
             self.paused = False
             self.stop_ticking()
             self._reschedule_tick()
             self.refresh_all()
         else:
-            self._notify(t('load_fail'))
+            # P0-2：坏档要说清是损坏还是版本过旧
+            self._notify(save_manager.load_fail_text(reason))
 
     def toggle_lang(self) -> None:
         set_lang(LANG_EN if get_lang() == LANG_ZH else LANG_ZH)

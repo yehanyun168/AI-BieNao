@@ -64,6 +64,10 @@ def build(mode='onedir'):
         '--add-data', f'{DEMO_DIR}/test_build.py;.',
         # ⚠️ 运行时由 v2_events.py 从磁盘读取，必须随包分发（缺失会静默丢掉 37 条事件）
         '--add-data', f'{ROOT_DIR}/v2/events.json;.',
+        # ⚠️ 音效资源：整目录随包（P0-6）。目标路径 assets/sfx 必须对齐
+        #    demo/sfx.py::_base_dir() 的 os.path.join(sys._MEIPASS, 'assets', 'sfx')，
+        #    对不上会导致 exe 形态 8 个音效全哑且不报错。
+        '--add-data', f'{DEMO_DIR}/assets/sfx;assets/sfx',
         # 注意：不要用 --collect-all kivy —— 它会让 collect_submodules 扫描
         # kivy.garden 这个命名空间包并抛 ValueError。PyInstaller 自带 hook-kivy.py
         # 已会委托 Kivy 官方钩子收集资源/依赖，无需手动 collect。
