@@ -23,8 +23,8 @@ import ui_v4 as U
 import ui_shared as ST
 from ui_shared import COLORS, Panel
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
-                   SkillBarCard, Steps, Spark, mk_label, ST_FILL,
-                   MIN_TOUCH, fit_width)
+                   SkillBarCard, Steps, StrokePanel, Spark, mk_label, ST_FILL,
+                   ST_EDGE, MIN_TOUCH, fit_width)
 from world_map import WorldMap
 
 
