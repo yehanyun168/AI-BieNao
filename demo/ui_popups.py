@@ -7,6 +7,8 @@ ui_popups.py - PopupsMixin（拆分自 main.py）
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
+from kivy.clock import Clock
+from kivy.animation import Animation
 
 import i18n
 from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
@@ -296,6 +298,39 @@ class PopupsMixin:
     def show_help(self) -> None:
         """兼容旧接口：打开帮助页（设计稿 S11）"""
         self.open_page('help')
+
+    # ========================================================
+    # 顶部轻弹条（design/ardot_ui S06 ⚠ 预警样式，非阻塞）
+    # ========================================================
+    def show_top_toast(self, text: str, tone: str = 'sys',
+                       dur: float = 2.6) -> None:
+        """顶部弹条：sys=青 / cost=琥珀 / dn=红，自动消退。
+
+        与 _notify（写事件日志）互补：toast 负责「此刻看见」，日志负责留存。
+        每次新建芯片（PxChip 的 tone 在构造时定型），旧条立即移除保证唯一。
+        """
+        old = getattr(self, '_toast', None)
+        old_clock = getattr(self, '_toast_clock', None)
+        if old_clock is not None:
+            old_clock.cancel()
+        if old is not None and old.parent is not None:
+            self.remove_widget(old)
+        chip = U.PxChip(text=text, tone=tone, font_size=U.FS_H3, height=46)
+        chip.pos_hint = {'center_x': 0.5, 'top': 1.0}
+        chip.opacity = 0
+        self.add_widget(chip)
+        self._toast = chip
+        Animation(opacity=1, duration=0.15).start(chip)
+        self._toast_clock = Clock.schedule_once(
+            lambda *_: self._hide_top_toast(chip), dur)
+
+    def _hide_top_toast(self, chip) -> None:
+        if chip.parent is None:
+            return
+        anim = Animation(opacity=0, duration=0.3)
+        anim.bind(on_complete=lambda *_a: self.remove_widget(chip)
+                  if chip.parent is not None else None)
+        anim.start(chip)
 
     # ========================================================
     # 存档 / 语言 / 暂停

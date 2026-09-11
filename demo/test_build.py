@@ -312,6 +312,35 @@ assert snap_c == res_c, f"委托存档往返不一致：{snap_c} vs {res_c}"
 print(f"   ✅ P0-3 存档往返一致（在场 {res_c[0]} 单 / 完成 {res_c[1]} / "
       f"失败 {res_c[2]} / 累计偷取 {res_c[3]:.0f}）")
 
+# ---- 16) 委托/反制 UI 接线（i18n 键完整性 + 模板字段 + Mixin 装配）----
+import i18n as i18n_mod
+import commissions as commissions_mod
+import ui_commissions as ui_commissions_mod
+_needed = [
+    'com_offer_new', 'com_offer_tag', 'com_active_tag', 'com_accept',
+    'com_decline', 'com_close', 'com_reward_est', 'com_reward_unit',
+    'com_left_short', 'com_left_unit', 'com_done_toast', 'com_failed_toast',
+    'com_declined_log', 'com_goal_pen', 'com_goal_downloads',
+    'com_goal_compute', 'com_goal_skill', 'com_goal_stealth',
+    'com_goal_unlock', 'com_c5_bonus', 'com_sus_short',
+    'cp_warn_toast', 'cp_warn_log', 'cp_strike_toast',
+    'cp_type_compute_seizure', 'cp_type_budget_reinforce',
+    'cp_type_cross_inquiry',
+]
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    _miss = [k for k in _needed if k not in i18n_mod.TRANSLATIONS[_lang]]
+    assert not _miss, f"i18n[{_lang}] 缺委托/反制键: {_miss}"
+for _tpl in commissions_mod.COMMISSION_TEMPLATES:
+    for _f in ('id', 'icon', 'name_zh', 'name_en', 'goal', 'window',
+               'reward_mult'):
+        assert _f in _tpl, f"模板 {_tpl.get('id')} 缺字段 {_f}"
+assert hasattr(main_module.GameUI, 'refresh_commissions'), \
+    "GameUI 应装配 CommissionMixin（委托芯片条）"
+assert hasattr(main_module.GameUI, 'show_top_toast'), \
+    "GameUI 应具备顶部弹条（反制预警）"
+print(f"   ✅ 16) 委托/反制 UI 接线（i18n zh+en ×{len(_needed)} 键 / "
+      f"模板字段 / Mixin 装配）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

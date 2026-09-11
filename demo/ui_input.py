@@ -29,6 +29,7 @@ from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
 from ui_hud import (REGIONS, region_name, region_codes, LANG_CHIP_TAG,
                     LAYER_KEYS, LAYER_LABEL_KEY, HEAT_SCALE, BLOCK_SCALE,
                     COMPUTE_SCALE, STATE_SHAPE)
+from ui_commissions import _name_of as _com_name
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
                    ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
                    StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
@@ -113,6 +114,9 @@ class InputMixin:
         p = engine.player
         if p is None:
             return
+
+        # --- 委托芯片条（P0-3；无委托时自动隐藏）---
+        self.refresh_commissions()
 
         # --- 顶栏（设计稿 .bar）---
         s_color = (U.MK['bad'] if p.suspicion >= SUSPICION_CRISIS
@@ -235,6 +239,45 @@ class InputMixin:
                     ach_name = a.name(get_lang()) if a else str(item)
                 self.stats.push_log(engine.player.tick_count,
                                     f"{t('log_tone_g')}: {ach_name}", 'g')
+
+        # --- P0-3 委托事件（toast + 日志；芯片条随 refresh_all 重建）---
+        offered = report.get("commission_offered")
+        if offered is not None:
+            self.show_top_toast(
+                f"{offered.icon} {t('com_offer_new')} · {_com_name(offered)}",
+                tone='cost')
+            self._notify(f"{t('com_offer_new')}: {_com_name(offered)}")
+        done = report.get("commission_done")
+        if done is not None:
+            self.show_top_toast(
+                f"{done.icon} {t('com_done_toast')} · {_com_name(done)}",
+                tone='up')
+            self._notify(f"{t('com_done_toast')}: {_com_name(done)} "
+                         f"+{done.reward:.0f}{t('com_reward_unit')}")
+        failed = report.get("commission_failed")
+        if failed is not None:
+            self.show_top_toast(
+                f"{t('com_failed_toast')} · {_com_name(failed)}", tone='dn')
+            self._notify(f"{t('com_failed_toast')}: {_com_name(failed)}")
+
+        # --- P0-3 政府反制（ardot_ui S06 ⚠ 预警样式）---
+        cp_events = report.get("counterplay")
+        if cp_events:
+            for ev in cp_events:
+                cname = (get_country_name(ev.get('country', ''))
+                         or ev.get('name', ''))
+                if ev.get('phase') == 'warn':
+                    self.show_top_toast(
+                        t('cp_warn_toast').format(name=cname), tone='cost')
+                    self._notify(t('cp_warn_log').format(name=cname))
+                elif ev.get('phase') == 'strike':
+                    body = t(f"cp_type_{ev.get('type', '')}").format(
+                        detail=ev.get('detail', ''))
+                    self.show_top_toast(
+                        f"{t('cp_strike_toast').format(name=cname)} {body}",
+                        tone='dn')
+                    self._notify(
+                        f"{t('cp_strike_toast').format(name=cname)} {body}")
 
         self.refresh_all()
 

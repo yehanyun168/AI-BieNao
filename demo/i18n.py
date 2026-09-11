@@ -949,6 +949,70 @@ TRANSLATIONS[LANG_EN].update({
 
 
 # ============================================================
+# 委托系统 + 政府反制（P0-3，design/ardot_ui 设计语言）
+# ============================================================
+TRANSLATIONS[LANG_ZH].update({
+    'com_offer_new': '新委托',
+    'com_offer_tag': '待接受',
+    'com_active_tag': '进行中',
+    'com_accept': '接受委托',
+    'com_decline': '放弃',
+    'com_close': '关闭',
+    'com_reward_est': '预计奖励',
+    'com_reward_unit': '算力',
+    'com_left_short': '剩',
+    'com_left_unit': '周期',
+    'com_done_toast': '委托完成',
+    'com_failed_toast': '委托失败',
+    'com_declined_log': '已放弃委托',
+    'com_goal_pen': '在 {country} 使渗透率提升 {target:.1f} 个百分点',
+    'com_goal_downloads': '全球下载量再增加 {target:.1f}M',
+    'com_goal_compute': '累计偷取算力 {target:.0f}',
+    'com_goal_skill': '使用技能「{skill}」{target} 次',
+    'com_goal_stealth': '怀疑度全程保持 ≤ {target:.0f}',
+    'com_goal_unlock': '解锁 {target:.0f} 个新国家',
+    'com_c5_bonus': '完成额外怀疑度 −{relief:.0f}',
+    'com_sus_short': '怀疑',
+    'cp_warn_toast': '监管预警 · {name}',
+    'cp_warn_log': '{name} 政府正在筹备反制（下周期结算）',
+    'cp_strike_toast': '反制结算 · {name}',
+    'cp_type_compute_seizure': '算力清缴 {detail}',
+    'cp_type_budget_reinforce': '预算增援 {detail}',
+    'cp_type_cross_inquiry': '跨境协查 怀疑度{detail}',
+})
+
+TRANSLATIONS[LANG_EN].update({
+    'com_offer_new': 'New job',
+    'com_offer_tag': 'OFFER',
+    'com_active_tag': 'ACTIVE',
+    'com_accept': 'Accept',
+    'com_decline': 'Decline',
+    'com_close': 'Close',
+    'com_reward_est': 'Est. reward',
+    'com_reward_unit': 'c',
+    'com_left_short': 'L',
+    'com_left_unit': 't',
+    'com_done_toast': 'Job done',
+    'com_failed_toast': 'Job failed',
+    'com_declined_log': 'Job declined',
+    'com_goal_pen': 'Raise penetration in {country} by {target:.1f} pts',
+    'com_goal_downloads': 'Gain {target:.1f}M more downloads',
+    'com_goal_compute': 'Earn {target:.0f} compute in total',
+    'com_goal_skill': 'Use "{skill}" {target} times',
+    'com_goal_stealth': 'Keep suspicion <= {target:.0f} until deadline',
+    'com_goal_unlock': 'Unlock {target:.0f} new country',
+    'com_c5_bonus': 'Bonus suspicion -{relief:.0f} on completion',
+    'com_sus_short': 'SUS',
+    'cp_warn_toast': 'REG WARN · {name}',
+    'cp_warn_log': '{name} is preparing a counter-move (resolves next tick)',
+    'cp_strike_toast': 'COUNTER · {name}',
+    'cp_type_compute_seizure': 'Compute seized {detail}',
+    'cp_type_budget_reinforce': 'Budget reinforced {detail}',
+    'cp_type_cross_inquiry': 'Cross inquiry SUS{detail}',
+})
+
+
+# ============================================================
 # 翻译函数
 # ============================================================
 def t(key: str, lang: str = None) -> str:

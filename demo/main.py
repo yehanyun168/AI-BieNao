@@ -159,6 +159,7 @@ from ui_drop import DropMixin
 from ui_popups import PopupsMixin
 from ui_session import SessionMixin
 from ui_input import InputMixin
+from ui_commissions import CommissionMixin
 
 _update_window_title()
 Window.clearcolor = (0.051, 0.067, 0.090, 1)
@@ -173,7 +174,7 @@ Window.clearcolor = (0.051, 0.067, 0.090, 1)
 #   ui_session.SessionMixin 存档 / 语言 / 暂停 / 缩放 / 全屏
 #   ui_input.InputMixin  键盘 / 主循环 / 刷新 / 兼容别名
 # ============================================================
-class GameUI(HudMixin, PagesMixin, DropMixin, PopupsMixin,
+class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
              SessionMixin, InputMixin, FloatLayout):
     """S02 主界面：地图为绝对主体 + HUD 悬浮 + 右侧指令栏 + 底部技能带"""
 
