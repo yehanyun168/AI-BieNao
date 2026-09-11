@@ -14,6 +14,8 @@ import i18n
 from i18n import (t, set_lang, get_lang, get_country_name, get_continent_name,
                   LANG_ZH, LANG_EN)
 import engine
+import commissions as C
+from balance import TUNE
 import tech_tree
 from tech_tree import TECH_TREE, SLOT_MAP
 from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
@@ -29,7 +31,7 @@ from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
 from ui_hud import (REGIONS, region_name, region_codes, LANG_CHIP_TAG,
                     LAYER_KEYS, LAYER_LABEL_KEY, HEAT_SCALE, BLOCK_SCALE,
                     COMPUTE_SCALE, STATE_SHAPE)
-from ui_commissions import _name_of as _com_name
+from ui_commissions import _name_of as _com_name, _goal_text as _com_goal
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
                    ChipRow, SkillBarCard, Steps, Reticle, TgtLabel, StatsGrid,
                    StrokePanel, SaveSlotRow, mk_label, ST_FILL, ST_EDGE,
@@ -243,21 +245,30 @@ class InputMixin:
         # --- P0-3 委托事件（toast + 日志；芯片条随 refresh_all 重建）---
         offered = report.get("commission_offered")
         if offered is not None:
+            est = C.compute_reward(engine.player.tick_count, offered.reward_mult)
+            left = max(TUNE['commission_offer_ttl'] - (
+                engine.player.tick_count - offered.offered_tick), 0)
             self.show_top_toast(
                 f"{offered.icon} {t('com_offer_new')} · {_com_name(offered)}",
-                tone='cost')
+                tone='cost',
+                detail=f"{_com_goal(offered)} · "
+                       f"{t('com_reward_est')} ~{est:.0f}{t('com_reward_unit')} · "
+                       f"{t('com_left_short')}{left}{t('com_left_unit')}")
             self._notify(f"{t('com_offer_new')}: {_com_name(offered)}")
         done = report.get("commission_done")
         if done is not None:
             self.show_top_toast(
                 f"{done.icon} {t('com_done_toast')} · {_com_name(done)}",
-                tone='up')
+                tone='up',
+                detail=f"{_com_goal(done)} · "
+                       f"+{done.reward:.0f}{t('com_reward_unit')}")
             self._notify(f"{t('com_done_toast')}: {_com_name(done)} "
                          f"+{done.reward:.0f}{t('com_reward_unit')}")
         failed = report.get("commission_failed")
         if failed is not None:
             self.show_top_toast(
-                f"{t('com_failed_toast')} · {_com_name(failed)}", tone='dn')
+                f"{t('com_failed_toast')} · {_com_name(failed)}", tone='dn',
+                detail=_com_goal(failed))
             self._notify(f"{t('com_failed_toast')}: {_com_name(failed)}")
 
         # --- P0-3 政府反制（ardot_ui S06 ⚠ 预警样式）---

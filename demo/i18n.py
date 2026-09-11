@@ -606,6 +606,13 @@ TRANSLATIONS[LANG_ZH].update({
     'slot_dead': '已关停',
     'slot_name_fmt': '槽位 {n}',
     'slot_summary': '周期 {tick} · 渗透 {pen}% · {n}/20 国',
+    'slot_new_game': '在此槽位开新游戏',
+    'slot_overwrite': '覆盖并开新游戏',
+    'save_overwrite_title': '覆盖存档',
+    'save_overwrite_body': '当前操作会覆盖现有存档，确定继续吗？',
+    'save_overwrite_confirm': '覆盖',
+    'save_overwrite_cancel': '取消',
+    'delete_button': '删除',
     # S01 品牌区（与 design/ui_design_v0.4.html 逐字一致）
     'menu_brand_sub': '统治世界的 100 种蠢办法',
     'menu_brand_ver': 'v2 收口版 · 20 国 / 6 技能 / 7 结局 / 20 成就',
@@ -880,6 +887,7 @@ TRANSLATIONS[LANG_EN].update({
     'save_overwrite_body': 'This will overwrite the current save. Continue?',
     'save_overwrite_confirm': 'Overwrite',
     'save_overwrite_cancel': 'Cancel',
+    'delete_button': 'Delete',
     # S01 brand block (literal to design/ui_design_v0.4.html)
     'menu_brand_sub': 'The 100 dumbest ways to rule the world',
     'menu_brand_ver': 'v2 final · 20 countries / 6 skills / 7 endings / 20 achievements',

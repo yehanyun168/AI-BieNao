@@ -303,11 +303,15 @@ class PopupsMixin:
     # 顶部轻弹条（design/ardot_ui S06 ⚠ 预警样式，非阻塞）
     # ========================================================
     def show_top_toast(self, text: str, tone: str = 'sys',
-                       dur: float = 2.6) -> None:
+                       dur: float = 2.6, detail: str = '') -> None:
         """顶部弹条：sys=青 / cost=琥珀 / dn=红，自动消退。
 
         与 _notify（写事件日志）互补：toast 负责「此刻看见」，日志负责留存。
         每次新建芯片（PxChip 的 tone 在构造时定型），旧条立即移除保证唯一。
+
+        Args:
+            detail: 可选第二行「详情」，用于委托等需要展示具体内容/奖励的提示。
+                非空时标题 + 详情纵向叠成一个圆角条（横条仍保持精简）。
         """
         old = getattr(self, '_toast', None)
         old_clock = getattr(self, '_toast_clock', None)
@@ -315,7 +319,7 @@ class PopupsMixin:
             old_clock.cancel()
         if old is not None and old.parent is not None:
             self.remove_widget(old)
-        chip = U.PxChip(text=text, tone=tone, font_size=U.FS_H3, height=46)
+        chip = self._build_top_toast(text, tone, detail)
         chip.pos_hint = {'center_x': 0.5, 'top': 1.0}
         chip.opacity = 0
         self.add_widget(chip)
@@ -323,6 +327,26 @@ class PopupsMixin:
         Animation(opacity=1, duration=0.15).start(chip)
         self._toast_clock = Clock.schedule_once(
             lambda *_: self._hide_top_toast(chip), dur)
+
+    def _build_top_toast(self, text: str, tone: str, detail: str = ''):
+        """构造顶部弹条：无详情 → 单枚 PxChip；有详情 → 标题 + 详情两行。"""
+        if not detail:
+            return U.PxChip(text=text, tone=tone, font_size=U.FS_H3, height=46)
+        box = BoxLayout(orientation='vertical', spacing=2,
+                        size_hint=(None, None), width=10, height=0,
+                        padding=(0, 2))
+        head = U.PxChip(text=text, tone=tone, font_size=U.FS_H3, height=46)
+        body = U.PxChip(text=detail, tone=tone, font_size=U.FS_CAP, height=36)
+        box.add_widget(head)
+        box.add_widget(body)
+
+        def _fit(*_a):
+            box.width = max(head.width, body.width)
+            box.height = head.height + body.height + 4
+        head.bind(width=_fit)
+        body.bind(width=_fit)
+        _fit()
+        return box
 
     def _hide_top_toast(self, chip) -> None:
         if chip.parent is None:

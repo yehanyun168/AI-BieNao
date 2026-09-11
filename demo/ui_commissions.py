@@ -168,8 +168,7 @@ class CommissionMixin:
         tag = t('com_offer_tag') if offered else t('com_active_tag')
         body.add_widget(modal_header(
             com.icon, _name_of(com),
-            chips=[PxChip(text=f"{com.template_id} · {tag}",
-                          tone='cost' if offered else 'on')]))
+            chips=[(f"{com.template_id} · {tag}", 'cost' if offered else 'on')]))
         body.add_widget(mk_label(_goal_text(com), font_size=U.FS_BODY,
                                  color=COLORS['text'], size_hint_y=None,
                                  height=56))
@@ -220,6 +219,7 @@ class CommissionMixin:
         body.add_widget(btns)
 
         holder['m'] = make_modal(body, size_hint=(0.5, 0.62))
+        holder['m'].open()
 
     # ---- 引擎调用（纯接口，无 UI 逻辑）----
     def _accept_commission(self, uid: int) -> None:

@@ -433,17 +433,47 @@ class PagesMixin:
         return rows
 
     def _slot_actions(self, title):
-        """按槽位名生成 保存/读取/删除 三个动作"""
+        """按槽位名生成 保存/读取/删除 三个动作。
+
+        保存按钮指向 ``_save_slot_confirm``：槽位已有档时先弹覆盖确认，
+        空槽直接保存。删除按钮用 i18n 的「删除」文案（不再用 ✕ 符号）。
+        """
         import re
         m = re.search(r'(\d+)', title)
         idx = int(m.group(1)) if m else 1
         slot = f'slot{idx}.json'
         return [
-            (t('save_button'), 'primary', lambda s=slot: self._save_slot(s)),
+            (t('save_button'), 'primary', lambda s=slot: self._save_slot_confirm(s)),
             (t('load_button'), 'plain', lambda s=slot: self._load_slot(s)),
-            (t('delete_button') if 'delete_button' in dir() else U.SYM['close'], 'danger',
-             lambda s=slot: self._delete_slot(s)),
+            (t('delete_button'), 'danger', lambda s=slot: self._delete_slot(s)),
         ]
+
+    def _save_slot_confirm(self, slot: str) -> None:
+        """保存到槽位：空槽直接存；已有档先弹覆盖确认弹窗。"""
+        path = os.path.join(save_manager.SAVE_DIR, slot)
+        if not os.path.exists(path):
+            self._save_slot(slot)
+            return
+        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
+        body.add_widget(modal_header('!', t('save_overwrite_title')))
+        body.add_widget(hline())
+        body.add_widget(auto_h_label(t('save_overwrite_body'), U.FS_BODY,
+                                     color=COLORS['text']))
+        row = BoxLayout(orientation='horizontal', spacing=12,
+                        size_hint_y=None, height=50)
+        cancel = make_button(t('save_overwrite_cancel'), font_size=U.FS_BODY,
+                             height=50, bg=COLORS['panel_light'],
+                             on_release=lambda *_: pop.dismiss())
+        ok = make_button(t('save_overwrite_confirm'), font_size=U.FS_BODY,
+                         height=50, bg=(0.227, 0.118, 0.118, 1),
+                         on_release=lambda *_: (pop.dismiss(),
+                                                self._save_slot(slot)))
+        row.add_widget(cancel)
+        row.add_widget(ok)
+        body.add_widget(row)
+        pop = make_modal(body, size_hint=(0.5, 0.62), skin='lose',
+                         close_on_outside=True)
+        pop.open()
 
 
 

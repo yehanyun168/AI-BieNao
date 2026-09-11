@@ -162,8 +162,9 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     auto_choice: True  → v2 选择型事件自动选第 1 个选项（无 UI 的自测/模拟用）
                  False → 只把事件放进 report['choice_event']，等 UI 让玩家选，
                          选完调用 resolve_choice(evt, idx)
-    dt_seconds:        本周期对应的墙钟秒数（冷却按秒递减用）。
+    dt_seconds:        本周期对应的墙钟秒数（v2 事件冷却按秒递减用）。
                         模拟/测试默认 1.0，真实 UI 传实际 tick 间隔。
+                        注意：技能冷却按「周期」递减，与此参数无关。
     """
     if player is None:
         init_game()
@@ -372,9 +373,11 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         for c in player_countries:
             c.downloads_m *= CRISIS_DOWNLOAD_DECAY
 
-    # === 阶段6: 冷却递减（按秒，与 tick 时长解耦）===
+    # === 阶段6: 冷却递减（按周期，与 tick 墙钟时长解耦）===
+    # 技能冷却单位是「周期」（data.SKILLS.cooldown），每推进一个周期减 1。
+    # 不能用 dt_seconds 递减：base_tick_seconds=30，会把 cooldown=3 一步扣成负数。
     player.skill_cooldowns = {
-        k: v - dt_seconds for k, v in player.skill_cooldowns.items() if v > dt_seconds
+        k: v - 1 for k, v in player.skill_cooldowns.items() if v > 1
     }
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
 
