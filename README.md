@@ -244,7 +244,7 @@ python tools/repack.py
 
 ## 🤝 参与开发
 
-欢迎协作！动手前请先读 **[CONTRIBUTING.md](CONTRIBUTING.md)**——标准开发循环：改动 → 验证三连全绿 → 一个任务一个提交。环境配置见《交付文档.md》第 2 节。
+欢迎协作！动手前请先读 **[CONTRIBUTING.md](CONTRIBUTING.md)**——标准开发循环：改动 → 验证三连全绿 → 一个任务一个提交。环境配置见《[docs/交付文档.md](docs/交付文档.md)》第 2 节。
 
 ---
 

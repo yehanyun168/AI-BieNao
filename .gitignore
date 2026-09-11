@@ -25,6 +25,7 @@ _v4shots/
 _crops/
 demo/_probe*.py
 demo/_probe*.txt
+demo/_crop*.py
 
 # ===== IDE / 操作系统 =====
 .idea/

@@ -1,5 +1,5 @@
 """
-repack.py - 重新打包分享包（当前版本：20 国 / 6 技能 / 7 结局 / 20 成就）
+repack.py - 重新打包分享包（当前版本：20 国 / 6 技能 / 7 结局 / 22 成就）
 
 用法：
   py -3.12 tools/repack.py
@@ -27,24 +27,22 @@ print(f"   输出:   {OUT_ZIP}")
 # 顶层分组目录（解压后同伴看到的结构）
 PKG = "AI别闹_项目方案_v2"
 
-# v2 方案文档与数据
-# 2026-09-10：project_plan_v2.html（Day1 口径）已清理，改用当前口径的 v3 计划书
+# v2 事件数据（引擎运行时依赖：demo/v2_events.py 从磁盘读取）
+# 2026-09-11：目录整理——原型期数据/规划稿（compute_system_demo、generate_v2_data、
+# countries/tech_tree/game_data_v2.json、project_plan_v3、team_division）已清理，
+# git 历史可追溯；仅保留运行时必需的 events.json
 v2_files = [
-    "v2/project_plan_v3.html",
-    "v2/team_division.html",
-    "v2/game_data_v2.json",
-    "v2/countries.json",
-    "v2/tech_tree.json",
     "v2/events.json",
-    "v2/compute_system_demo.py",
-    "v2/generate_v2_data.py",
 ]
 
-# demo 全部源码（20 国 / 6 技能 / 7 结局 / 20 成就）
+# demo 全部源码（20 国 / 6 技能 / 7 结局 / 22 成就）
 demo_files = [
     "demo/data.py",                     # 20 国 + polygon + 6 技能 + 通用事件
     "demo/tech_tree.py",                # 6 槽位 × 3 分支 × 3 级
     "demo/engine.py",                   # 主循环 + 阻止 + 偷算力 + 事件 + 结局 + 成就
+    "demo/balance.py",                  # TUNE 数值表（数值唯一来源）
+    "demo/conditions.py",               # 声明式条件引擎（engine 依赖）
+    "demo/commissions.py",              # 动态委托系统（6 模板）
     "demo/i18n.py",                     # 中英双语
     "demo/country_events.py",           # 20 国专属事件（27 条）
     "demo/v2_events.py",                # v2/events.json 适配器（37 条选择型事件）
@@ -76,9 +74,10 @@ demo_files = [
     "demo/test_ui_v4.py",               # v0.4 组件库单元自测
     "demo/test_v4_app.py",              # v0.4 十四屏冒烟测试
     "demo/test_country_events.py",
-    "demo/legacy/render_map_preview.py",       # 早期离线预览（已废弃，仅追溯）
-    "demo/legacy/render_pixel_ui_preview.py",  # 早期离线手稿（已废弃，仅追溯）
-    "demo/legacy/README.md",
+    "demo/verify_tables.py",            # 35 项数据表校验
+    "demo/verify_tech_tree.py",         # 科技树校验
+    "demo/verify_popup_fix.py",         # 弹窗修复校验
+    "demo/verify_rail_fix.py",          # 滚动条修复校验
     "demo/diagnose.bat",                # 故障排查
     "demo/run_demo.bat",
     "demo/run_demo.sh",
@@ -92,10 +91,14 @@ screenshot_files = [
     "demo/screenshot_achievements.png",
 ]
 
-# 项目级文档 + 打包工具
+# 项目级文档 + 打包工具（文档已归类至 docs/，2026-09-11）
 misc_files = [
     "README.md",
-    "WHERE_IS_EVERYTHING.md",
+    "CONTRIBUTING.md",
+    "docs/交付文档.md",
+    "docs/DeepSeek_接手文档.md",
+    "docs/游戏开发待办清单.md",
+    "docs/WHERE_IS_EVERYTHING.md",
     "AI别闹.spec",
     "build_exe.bat",
     "tools/build_exe.py",
