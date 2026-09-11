@@ -98,6 +98,7 @@ misc_files = [
     "docs/DeepSeek_接手文档.md",
     "docs/游戏开发待办清单.md",
     "docs/WHERE_IS_EVERYTHING.md",
+    "docs/真人测试指南.md",
     "AI别闹.spec",
     "build_exe.bat",
     "tools/build_exe.py",
