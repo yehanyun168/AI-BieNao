@@ -31,7 +31,7 @@ from flag_draw import FlagWidget
 from pixel_assets import OWNER_CODES as FLAG_CODES
 
 from pixel_ui import COLORS, PixelLabel, add_pixel_border
-from ui_modal import hline
+from ui_v4 import hline
 
 import i18n
 import ui_v4 as U

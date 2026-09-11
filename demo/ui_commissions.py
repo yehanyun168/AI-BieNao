@@ -20,7 +20,8 @@ import ui_v4 as U
 from ui_v4 import PxChip, mk_label
 from ui_shared import COLORS
 from ui_hud import HudBox
-from ui_modal import make_button, make_modal, modal_header, hline
+from ui_modal import make_button, make_modal, modal_header
+from ui_v4 import hline
 from i18n import t, get_lang, get_country_name
 
 

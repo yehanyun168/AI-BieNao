@@ -33,7 +33,6 @@ from pixel_ui import hex_rgba
 # 动效时长统一在这里收口（减弱模式下一律走 _disabled 分支）
 DUR_PULSE = 0.16
 DUR_COUNT = 0.45
-DUR_FLOAT = 0.85
 DUR_SHAKE = 0.22
 
 
@@ -162,100 +161,9 @@ def count_up(label: Label, from_value: float, to_value: float,
     Clock.schedule_interval(_tick, max(duration / steps, 1 / 60.0))
 
 
-def float_text(parent: Widget, x: float, y: float, text: str, tone: str = 'up',
-               duration: float = DUR_FLOAT) -> None:
-    """浮动文字：从 (x, y) 向上飘并淡出（"下载量 +12.3M" 这类即时反馈）。
-
-    Args:
-        parent: 承载浮动文字的容器（通常是地图舞台 FloatLayout）。
-        x, y: 起始坐标（**parent 局部坐标系**）。
-        text: 显示文本。
-        tone: up=青 / dn=红 / cost=琥珀 / sys=灰。
-        duration: 总时长，结束后自动从 parent 移除。
-    """
-    if parent is None:
-        return
-    if not motion_on():
-        return                              # 减弱模式：不飘字（避免无谓控件）
-    col = {'up': COLORS['cyan'], 'dn': COLORS['red'],
-           'cost': COLORS['orange'], 'sys': COLORS['text_mute']}.get(
-               tone, COLORS['cyan'])
-    lbl = Label(text=text, font_size=15, color=_rgba(col),
-                bold=True, outline_width=2, outline_color=(0, 0, 0, 0.85))
-    lbl.size_hint = (None, None)
-    lbl.size = (200, 22)
-    lbl.pos = (x - 100, y)
-    lbl.opacity = 0.0
-    parent.add_widget(lbl)
-
-    def _drop(*_a):
-        try:
-            parent.remove_widget(lbl)
-        except Exception:
-            pass
-
-    anim = (Animation(opacity=1.0, y=y + 14, duration=duration * 0.35,
-                      t='out_quad')
-            + Animation(y=y + 34, opacity=0.0, duration=duration * 0.65,
-                        t='in_quad'))
-    anim.bind(on_complete=_drop)
-    anim.start(lbl)
-
-
-def flash_border(widget: Widget, color, times: int = 2,
-                 duration: float = 0.12) -> None:
-    """边框闪动：在控件四周画一圈临时亮框并淡出（技能卡/信标命中提示）。
-
-    ``color`` 既接受 ``'#4ec9b0'`` 这类 hex 字符串，也接受 ``COLORS[...]`` 元组。
-    """
-    if not motion_on() or widget is None:
-        return
-    parent = widget.parent
-    if parent is None:
-        return
-    holder = Widget(size_hint=(None, None))
-    holder.pos = widget.pos
-    holder.size = widget.size
-    with holder.canvas:
-        Color(*_rgba(color))
-        rect = Rectangle(pos=widget.pos, size=widget.size)
-
-    def _sync(*_a):
-        holder.pos = widget.pos
-        holder.size = widget.size
-        rect.pos = widget.pos
-        rect.size = widget.size
-
-    widget.bind(pos=_sync, size=_sync)
-    parent.add_widget(holder)
-
-    def _clean(*_a):
-        try:
-            widget.unbind(pos=_sync, size=_sync)
-        except Exception:
-            pass
-        try:
-            parent.remove_widget(holder)
-        except Exception:
-            pass
-
-    holder.opacity = 0.9
-    anim = Animation(opacity=0.0, duration=duration * times * 2, t='out_quad')
-    anim.bind(on_complete=_clean)
-    anim.start(holder)
-
-
 # ============================================================
 # 组合动效（业务语义）
 # ============================================================
-def skill_cast(card: Widget, target=None, code: str = '',
-               container: Optional[Widget] = None) -> None:
-    """技能投放成功的反馈：技能卡脉冲 + （有地图时）目标国浮标。"""
-    pulse(card)
-    if target is not None and code:
-        beacon(target, code, container=container)
-
-
 def beacon(target: Widget, code: str,
            container: Optional[Widget] = None) -> None:
     """在地图上给某国打一个脉冲光环。

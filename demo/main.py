@@ -129,8 +129,8 @@ from tutorial import TutorialController   # P0-1 新手引导步骤机
 # ============================================================
 import ui_shared as ST
 from ui_shared import COLORS, Panel, _update_window_title
-from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline)
+from ui_modal import (make_button, make_modal, modal_header, auto_h_label)
+from ui_v4 import hline
 from ui_hud import HudMixin
 from ui_pages import PagesMixin
 from ui_drop import DropMixin

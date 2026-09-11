@@ -324,8 +324,6 @@ from balance import TUNE as _TUNE  # noqa: E402
 
 BASE_STEALTH_RATIO = _TUNE['stealth_ratio_base']
 MAX_STEALTH_RATIO = _TUNE['stealth_ratio_max']
-BASE_COMPUTE_PER_USER = _TUNE['compute_per_user']
-SUSPICION_WARNING = _TUNE['suspicion_warning']
 SUSPICION_CRISIS = _TUNE['suspicion_crisis']
 SUSPICION_BASE_SENSITIVITY = _TUNE['suspicion_sensitivity_base']
 SUSPICION_ADOPTION_FACTOR = _TUNE['suspicion_adoption_factor']

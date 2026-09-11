@@ -2,8 +2,9 @@
 ui_modal.py - 通用弹窗 / 小件构建器（拆分自 main.py）
 
 内容：make_button / _purge_lingering_modals / make_modal / _wire_close /
-      auto_h_label / modal_header / hline
+      auto_h_label / modal_header
 只依赖 ui_v4 与 ui_shared（更低层），禁止反向 import。
+（2026-09-11：``hline`` 已下移到 ui_v4，因 ui_v4_screens L5 不能引 L7 的 ui_modal。）
 """
 from typing import Callable
 
@@ -334,15 +335,4 @@ def modal_header(icon: str, title: str, chips=()) -> BoxLayout:
     hd.add_widget(close_btn)
     hd.set_close = _bind_close        # 挂到 header 容器上供 make_modal 发现
     return hd
-
-
-def hline() -> Widget:
-    """1px 硬分割线"""
-    d = Widget(size_hint_y=None, height=2)
-    with d.canvas.before:
-        Color(*COLORS['border'])
-        d._r = Rectangle(pos=d.pos, size=d.size)
-    d.bind(pos=lambda i, v: setattr(i._r, 'pos', v),
-           size=lambda i, v: setattr(i._r, 'size', v))
-    return d
 

@@ -87,20 +87,6 @@ COUNTRY_STYLES = {
 }
 COUNTRY_CENTERS = {code: PA.ANCHORS[code] for code in PA.OWNER_CODES}
 
-def point_in_polygon(px, py, polygon):
-    """射线法（保留：外部脚本 / 旧逻辑偶尔会用到）"""
-    n = len(polygon)
-    inside = False
-    j = n - 1
-    for i in range(n):
-        xi, yi = polygon[i]
-        xj, yj = polygon[j]
-        if ((yi > py) != (yj > py)) and (px < (xj - xi) * (py - yi) / (yj - yi + 1e-12) + xi):
-            inside = not inside
-        j = i
-    return inside
-
-
 # ============================================================
 # 世界地图 Widget
 # ============================================================
@@ -336,8 +322,9 @@ class WorldMap(FloatLayout):
         if abs(dx) < 1e-9 and abs(dy) < 1e-9:
             return cx, cy
         best = None
-        for t in ([ (x0 - ax) / dx, (x1 - ax) / dx ] if abs(dx) > 1e-9 else []) + \
-                 ([ (y0 - ay) / dy, (y1 - ay) / dy ] if abs(dy) > 1e-9 else []):
+        xs = [(x0 - ax) / dx, (x1 - ax) / dx] if abs(dx) > 1e-9 else []
+        ys = [(y0 - ay) / dy, (y1 - ay) / dy] if abs(dy) > 1e-9 else []
+        for t in xs + ys:
             if t <= 0:
                 continue
             px, py = ax + dx * t, ay + dy * t
@@ -355,7 +342,7 @@ class WorldMap(FloatLayout):
         return self._states.get(code, 'lk')
 
     def _layer_tone(self, code):
-        """当前显示色 (fill_hex, edge_hex, text_hex, lead_alpha) —— 图层覆盖优先。
+        """当前显示色 (fill_hex, edge_hex, text_hex) —— 图层覆盖优先。
 
         Returns:
             tuple | None: 图层强制着色时的三元组；图层关闭（四态模式）返回 None。
@@ -479,10 +466,6 @@ class WorldMap(FloatLayout):
         self._continent_codes = new
         self._apply_colors()
 
-    def _refresh_label_colors(self):
-        """兼容旧接口名"""
-        self._apply_colors()
-
     # --------------------------------------------------------
     # 点击命中：归属格查表 O(1)
     # --------------------------------------------------------
@@ -529,8 +512,6 @@ if __name__ == '__main__':
     Config.set('graphics', 'height', '760')
     from kivy.app import App
     from kivy.core.window import Window
-
-    STATES = ['lk', 'on', 'blk']
 
     class MapApp(App):
         def build(self):

@@ -50,14 +50,6 @@ class CountryState:
             return 0.0
         return self.downloads_m / self.config.population_m
 
-    @property
-    def display_text(self) -> str:
-        block_icon = "[B]" if self.current_block_intensity > 0.1 else ""
-        return (f"{self.config.flag} {self.config.name}  "
-                f"{self.downloads_m:>6.1f}M ({self.penetration_rate * 100:>5.2f}%)  "
-                f"{block_icon}阻止 {self.current_block_intensity*100:>3.0f}%")
-
-
 # ============================================================
 # 玩家状态
 # ============================================================

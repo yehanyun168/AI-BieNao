@@ -170,14 +170,6 @@ def list_saves() -> List[str]:
     return files
 
 
-def delete(path: str) -> bool:
-    try:
-        os.remove(path)
-        return True
-    except OSError:
-        return False
-
-
 if __name__ == "__main__":
     import engine
     engine.init_game()

@@ -163,11 +163,6 @@ def get(ach_id: str) -> Achievement:
     return ALL_BY_ID.get(ach_id)
 
 
-def display_name(ach_id: str, lang: str = 'zh') -> str:
-    a = ALL_BY_ID.get(ach_id)
-    return a.name(lang) if a else ach_id
-
-
 if __name__ == "__main__":
     print(f"[achievements] 条件型 {len(ACHIEVEMENTS)} 个 + "
           f"事件型 {len(EVENT_ACHIEVEMENTS)} 个 = {len(ALL_BY_ID)} 个\n")

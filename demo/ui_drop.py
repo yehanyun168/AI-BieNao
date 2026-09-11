@@ -11,7 +11,6 @@ import sfx
 import pixel_assets as PA
 from data import SKILLS
 import ui_v4_screens as S
-from ui_hud import region_codes
 from ui_v4 import Reticle, TgtLabel
 
 
@@ -113,23 +112,6 @@ class DropMixin:
         self.drop_step = 2 if self.drop_targets else 1
         self._sync_drop_ui()
 
-    def _select_region_targets(self) -> None:
-        """「按区域全选」：把当前区域所有可投国家加入/移出目标"""
-        if not self.active_region or not self.drop_skill:
-            return
-        codes = [c for c in region_codes(self.active_region)
-                 if engine.target_availability(c, self.drop_skill,
-                                               len(self.drop_targets))[0]]
-        if all(c in self.drop_targets for c in codes) and codes:
-            for c in codes:
-                self.drop_targets.remove(c)
-        else:
-            for c in codes:
-                if c not in self.drop_targets:
-                    self.drop_targets.append(c)
-        self.drop_step = 2 if self.drop_targets else 1
-        self._sync_drop_ui()
-
     def _reason_text(self, reason: str, code: str = '') -> str:
         if reason == engine.TARGET_NO_COMPUTE:
             skill = SKILLS.get(self.drop_skill)
@@ -179,8 +161,8 @@ class DropMixin:
                     code, self.drop_skill, len(self.drop_targets))
                 if code in self.drop_targets:
                     targets.append(code)
-                elif ok:
-                    targets.append(code) if code not in targets else None
+                elif ok and code not in targets:
+                    targets.append(code)
                 else:
                     dims.append(code)
         if self.drop_skill:
@@ -375,7 +357,7 @@ class DropMixin:
 
     # ---- 动效反馈（玩家反馈 5：让"这一下生效了"看得见）----
     def _fx_cast(self, sid: str, targets) -> None:
-        """技能释放成功的视觉反馈：技能卡脉冲 + 目标国信标光环 + 浮字。
+        """技能释放成功的视觉反馈：技能卡脉冲 + 目标国信标光环。
 
         全部走 ui_fx（尊重「动效减弱」开关）；动效失败绝不影响游戏逻辑，
         因此整段包在 try 里 —— 动效是锦上添花，不能成为新的崩溃点。

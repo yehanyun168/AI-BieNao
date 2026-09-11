@@ -99,16 +99,6 @@ def draw_flag_frame(canvas, x, y, w, h):
                     close=True, width=1))
 
 
-def flag_instruction_count(code):
-    """某个国旗的 canvas 指令数（color + rect），自检用"""
-    rects = _clamp_rects(flag_rects(code))
-    n = 1
-    for i in range(1, len(rects)):
-        if rects[i][0] != rects[i - 1][0]:
-            n += 1
-    return n + len(rects)
-
-
 # ============================================================
 # FlagWidget（Kivy 组件版）
 # ============================================================

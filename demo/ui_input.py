@@ -86,31 +86,12 @@ class InputMixin:
             self._cast_skill_direct(sid)
             self.refresh_all()
 
-    # 兼容旧接口（test_build / make_screenshots 仍会调用）
-    def on_skill_click(self, skill_id: str) -> None:
-        self.on_skill_card_click(skill_id)
-
-    def on_country_click(self, code: str) -> None:
-        self.on_map_country_click(code)
-
     def on_unlock_t0(self, slot_id: str) -> None:
         if engine.unlock_t0(slot_id):
             self.refresh_all()
             if isinstance(self._page, S.TechPage):
                 self._page.selected_key = f"t0:{slot_id}"
                 self._refresh_tech_page()
-
-    def on_pick_branch(self, slot_id: str, branch_id: str) -> None:
-        """v0.5 起**取消互斥**：点选分支仅作选中（不锁定、不排他），升级由 upgrade 流程负责。
-
-        保留该入口以兼容旧测试与截图脚本；真正的行为等价于「在网络图上选中该分支节点」。
-        """
-        if not engine.player.tech.t0_unlocked.get(slot_id):
-            self._notify(t('need_t0'))
-            return
-        if isinstance(self._page, S.TechPage):
-            self._page.selected_key = f"br:{branch_id}"
-            self._refresh_tech_page()
 
     def on_upgrade_branch(self, slot_id: str, branch_id: str, level: int = None) -> None:
         if engine.upgrade_branch(slot_id, branch_id):

@@ -18,7 +18,8 @@ import endings as endings_mod
 import ui_v4 as U
 import ui_v4_screens as S
 from ui_shared import COLORS
-from ui_modal import make_modal, modal_header, auto_h_label, hline
+from ui_modal import make_modal, modal_header, auto_h_label
+from ui_v4 import hline
 from ui_v4 import PxChip, ChipRow, StatsGrid, StrokePanel, mk_label, ST_FILL
 
 
@@ -311,10 +312,6 @@ class PopupsMixin:
     def show_achievements(self) -> None:
         """兼容旧接口：打开成就页（设计稿 S10）"""
         self.open_page('ach')
-
-    def show_help(self) -> None:
-        """兼容旧接口：打开帮助页（设计稿 S11）"""
-        self.open_page('help')
 
     # ========================================================
     # 顶部轻弹条（design/ardot_ui S06 ⚠ 预警样式，非阻塞）

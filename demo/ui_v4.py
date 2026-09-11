@@ -1862,10 +1862,6 @@ class PageScreen(StrokePanel):
         self.add_widget(self.header)
         self.add_widget(self.body)
 
-    def _sync_title_w(self, inst, val) -> None:
-        """兼容旧调用点：改走 fit_width 的测量逻辑（避免自反馈撑宽）。"""
-        fit_width(inst, pad=12)
-
     def set_back_button(self, text: str, callback: Callable) -> None:
         self.btn_back.text = text
         self.btn_back.opacity = 1
@@ -1902,6 +1898,22 @@ class PageScreen(StrokePanel):
             measure()
 
 
+def hline() -> Widget:
+    """1px 硬分割线 —— 弹窗 / 页面 / 设置项之间的视觉断点。
+
+    2026-09-11 来自 ui_modal.L7 → ui_v4_screens.L5 的反向依赖修复：
+    L5 屏组件不允许 import L7 弹窗层，把这个被 6 处共用的视觉小件
+    下移到 L4（ui_v4 本就是视觉原语层，StrokePanel/Spark 等同类元素）。
+    """
+    d = Widget(size_hint_y=None, height=2)
+    with d.canvas.before:
+        Color(*COLORS['border'])
+        d._r = Rectangle(pos=d.pos, size=d.size)
+    d.bind(pos=lambda i, v: setattr(i._r, 'pos', v),
+           size=lambda i, v: setattr(i._r, 'size', v))
+    return d
+
+
 __all__ = [
     'ST_FILL', 'ST_EDGE', 'FS_DISPLAY', 'FS_H1', 'FS_H2', 'FS_H3',
     'FS_BODY', 'FS_SM', 'FS_CAP', 'S1', 'S2', 'S3', 'S4', 'S6', 'MIN_TOUCH',
@@ -1910,5 +1922,5 @@ __all__ = [
     'BlockBar', 'Steps', 'Reticle', 'TgtLabel', 'RailButton', 'RegionTab',
     'SegSwitch', 'LegendChip', 'KvGrid', 'SkillBarCard', 'OptButton',
     'StatCell', 'StatsGrid', 'AchCell', 'LogRow', 'LOG_TONE', 'KeyBox',
-    'SaveSlotRow', 'PageScreen',
+    'SaveSlotRow', 'PageScreen', 'hline',
 ]

@@ -20,8 +20,8 @@ import achievements as achievements_mod
 import ui_v4 as U
 import ui_v4_screens as S
 from ui_shared import COLORS
-from ui_modal import (make_button, make_modal, modal_header, auto_h_label,
-                      hline)
+from ui_modal import (make_button, make_modal, modal_header, auto_h_label)
+from ui_v4 import hline
 
 
 # ============================================================
@@ -346,8 +346,6 @@ class PagesMixin:
         return "；".join(parts)[:22] or '--'
 
     # ---- S10 成就页 ----
-    ACH_ICONS = {}
-
     def _refresh_ach_page(self, filt=None, page=None) -> None:
         page = page if page is not None else self._page
         if not isinstance(page, S.AchPage):
