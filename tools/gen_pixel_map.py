@@ -429,6 +429,24 @@ for code, en, zh, st, box in GAME:
     out_c.append({'c': code, 'n': zh, 'st': st, 'x': cx, 'y': cy, 'cells': len(cells)})
     print('%-3s %-10s cells=%-5d centre=(%.1f,%.1f)' % (code, zh, len(cells), cx, cy))
 
+# ---------------------------------------------------------------- 台湾归属修正
+# Natural Earth 110m 的 admin_0 把台湾列为独立单元，栅格化后台湾岛的格子
+# 不落在中国掩码里 → 地图上成了"无主灰岛"（不归属任何国家、不可点击）。
+# 台湾是中国领土不可分割的一部分，地图展示必须完整体现归属：
+# 这里把包围盒内的无主陆地格（台湾岛及其附属岛屿）并入中国掩码，
+# fill / border / owner / 预览图随掩码自动更新。
+TW_BOX = (299, 87, 302, 93)   # 台湾岛覆盖的格坐标包围盒 (x0, y0, x1, y1)，含端点
+tw_cells = [(x, y)
+            for y in range(TW_BOX[1], TW_BOX[3] + 1)
+            for x in range(TW_BOX[0], TW_BOX[2] + 1)
+            if land_mask[y][x]
+            and not masks['CN'][y][x]
+            and not any(masks[c][y][x] for c in masks if c != 'CN')]
+for x, y in tw_cells:
+    masks['CN'][y][x] = 1
+print('台湾归属修正：%d 格并入中国掩码 %s' % (len(tw_cells), tw_cells))
+assert len(tw_cells) >= 4, '台湾岛格子数量异常，请人工核对 TW_BOX 包围盒'
+
 assets = {
     'sprite': sprite, 'grid': {'w': W, 'h': H},
     'land': merge(land_mask), 'coast': merge(outline(land_mask)),
