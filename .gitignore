@@ -37,3 +37,7 @@ demo/_crop*.py
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# T07 帧率基线的本机采集产物（每次跑 append，机器相关，不入库；
+# 汇总后的稳定基线见 docs/帧率基线_0913.md）
+demo/perf.log

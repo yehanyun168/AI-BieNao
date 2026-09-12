@@ -446,12 +446,21 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
 def _first_crisis_report(seeds: int = 30) -> None:
     """T03 首局压力验收：新档（默认 TUNE，含门控与引导静默）的早期节奏。
 
-    验收线（任务清单 T03）：首危机均值 ≤30 周期；60 周期内无危机局 ≤3/30。
-    只在 default 策略上跑 —— 真人新手对应「中等玩家」而不是 afk/合规专精。
+    验收线（2026-09-13 用户拍板修正）：
+      原线「首危机均值 ≤30 周期」与改动方向自相矛盾 —— 引导期静默的本意
+      是「先教学、再压力」，它必然把首个危机往后推（实测 39.7 → 42.7）。
+      修正为「**引导期结束后 20 个周期内**必须出现首个关键决策点」：
+      引导期 = tutorial_silent_ticks，故目标 = 引导期长度 + 20。
+      另一条不变：60 周期内无危机局 ≤3/30。
+
+    只在 default 策略上跑 —— 真人新手对应「中等玩家」而非 afk/合规专精。
     """
-    print(f'=== T03 首局压力验收（default 策略 × {seeds} 局 × 含 T03 开关）===')
+    silent = int(balance.TUNE.get('tutorial_silent_ticks', 0) or 0)
+    target = silent + 20
+    print(f'=== T03 首局压力验收（default × {seeds} 局）===')
     print(f"unlock_per_tick_cap={balance.TUNE['unlock_per_tick_cap']}  "
-          f"tutorial_silent_ticks={balance.TUNE['tutorial_silent_ticks']}")
+          f"tutorial_silent_ticks={silent}  "
+          f"首危机目标 ≤{target} 周期（引导期 {silent} + 20）")
     firsts = []
     nocr = 0
     unlock_at = {}
@@ -474,19 +483,38 @@ def _first_crisis_report(seeds: int = 30) -> None:
             nocr += 1
     got = [x for x in firsts if x < 999]
     avg = sum(got) / len(got) if got else 0
-    print(f'  首危机均值 {avg:.1f} 周期（验收 ≤30）  '
-          f'{"PASS" if avg <= 30 else "FAIL"}')
-    print(f'  60 周期内无危机 {nocr}/{seeds}（验收 ≤3）  '
+    print(f'  首危机均值 {avg:.1f} 周期（目标 ≤{target}）  '
+          f'{"PASS" if avg <= target else "FAIL"}')
+    print(f'  60 周期内无危机 {nocr}/{seeds}（目标 ≤3）  '
           f'{"PASS" if nocr <= 3 else "FAIL"}')
     print(f'  有危机局 {len(got)}/{seeds}')
     print()
-    print('  前 6 国解锁节奏（各 tick 解锁的国数）:')
+    print('  早期解锁节奏（各 tick 解锁的国数，门控生效则应 ≤'
+          f"{balance.TUNE['unlock_per_tick_cap']}）:")
     per_tick = {}
     for name, ticks in unlock_at.items():
         t = ticks[0]
         per_tick[t] = per_tick.get(t, 0) + 1
+    over = [t for t, n in per_tick.items()
+            if n > max(balance.TUNE['unlock_per_tick_cap'], 0) > 0]
     for t in sorted(per_tick)[:12]:
         print(f'    tick {t:>3}: {per_tick[t]} 国')
+    print(f'  门控校验：{"PASS（无周期超额）" if not over else f"FAIL 超额周期 {over}"}')
+    print()
+    print('  引导期静默校验（前 %d tick 应无随机事件）:' % silent)
+    random.seed(1)
+    engine.init_game()
+    evt_ticks = []
+    for i in range(silent + 4):
+        report = engine.tick_one_round()
+        if report.get('events'):
+            evt_ticks.append(engine.player.tick_count)
+        if report['ending']:
+            break
+    early = [t for t in evt_ticks if t <= silent]
+    print(f'    前 {silent} tick 内事件: {early or "无"}  '
+          f'{"PASS" if not early else "FAIL"}')
+    print(f'    引导后事件 tick: {[t for t in evt_ticks if t > silent] or "无"}')
 
 
 def run_matrix(args) -> None:
