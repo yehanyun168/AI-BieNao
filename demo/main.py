@@ -25,6 +25,11 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
   Space 暂停 · 1–6 选技能（进投放模式）· F 投放 · K 科技树 · A 成就
   Tab 切区域 · +/- 缩放 · F11 全屏 · F12 适配 · F1 帮助
   S/R 存/读档 · L 中英切换 · Esc 返回上一层 · Enter 确认投放
+
+性能探针（P1-3，**默认关闭**，零开销）：
+  python main.py --perf   或   set AI_PERF=1
+  帧时 p50/p95/max + 控件数 + canvas 指令数 → demo/perf.log
+  自动压测：python perf_stress.py（空闲 / 周期推进 / 高压 三场景各跑一段）
 """
 import os
 import sys
@@ -52,6 +57,33 @@ if _HERE not in sys.path:
 # 为什么用 setdefault 而不是直接赋值：尊重外部环境已设置的值
 # （run_demo.bat 已设 1；开发者需要排查时也可自行设 0 重新打开日志）。
 os.environ.setdefault('KIVY_NO_FILELOG', '1')
+
+
+# ============================================================
+# P1-3 帧率探针开关（默认关闭 —— 详见 perf.py 模块头）
+# ============================================================
+# 开启方式（二选一）：
+#   python main.py --perf
+#   set AI_PERF=1          （Windows）
+#   AI_PERF=1 python main.py
+# 可选：AI_PERF_EVERY=5（汇总周期秒数）、AI_PERF_LOG=xxx.log（自定义路径）
+# 日志写 demo/perf.log（*.log 已被 .gitignore 忽略，不会入库）。
+#
+# 为什么在这里（import kivy 之前）就算好：
+#   1) ``--perf`` 必须从 sys.argv 里摘掉，否则会被 Kivy 自己的参数解析
+#      当成未知选项处理，污染后续解析；
+#   2) 关闭时 main 根本不 import perf —— 不注册 Clock 回调、不开文件句柄，
+#      连模块导入的几微秒都省掉，做到真正零开销（只多两次字符串比较）。
+def _perf_requested() -> bool:
+    if '--perf' in sys.argv:
+        return True
+    v = os.environ.get('AI_PERF', '').strip().lower()
+    return v not in ('', '0', 'false', 'no', 'off')
+
+
+PERF_ON = _perf_requested()
+if PERF_ON and '--perf' in sys.argv:
+    sys.argv.remove('--perf')
 
 
 # ============================================================
@@ -409,6 +441,8 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._reticles = []
 
         self._build_ui()
+        # P1-2：悬停技能卡 → 底部预览条（只加信息，不改点击即释放的手感）
+        self._bind_skill_hover()
         self.refresh_all()
         self._apply_scale()
         Window.bind(on_resize=self._on_window_resize)
@@ -1117,12 +1151,30 @@ class AIBienaoApp(App):
         except Exception:
             pass
 
+        # P1-3 帧率探针：仅 --perf / AI_PERF=1 时才导入并启动。
+        # 整块包 try/except —— 探针是旁路观测，任何异常都不能影响开局。
+        self._perf_on = False
+        if PERF_ON:
+            try:
+                import perf
+                perf.start(self.root, scene='boot')
+                self._perf_on = True
+            except Exception:
+                self._perf_on = False
+
     @staticmethod
     def _swallow_right_click(_win, touch) -> bool:
         # 只拦截右键；左键 / 触摸正常下传。返回 True = 吞掉该事件。
         return getattr(touch, 'button', None) == 'right'
 
     def on_stop(self) -> None:
+        # P1-3：探针收尾（写最后一段 + 总计 + 关句柄），失败安全。
+        if getattr(self, '_perf_on', False):
+            try:
+                import perf
+                perf.stop()
+            except Exception:
+                pass
         rv = getattr(self, 'root_view', None)
         if rv is not None and rv.game is not None:
             try:

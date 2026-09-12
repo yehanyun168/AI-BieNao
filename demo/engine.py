@@ -1109,6 +1109,245 @@ def target_availability(code: str, skill_id: str,
     return True, TARGET_OK, 1.0
 
 
+# ============================================================
+# 技能预览（P1-2：投放前让玩家看到"会怎样"）
+# ============================================================
+# 设计红线：**纯展示** —— 不写状态、不扣算力、不设冷却、不消耗
+# ``pending_skill``。可以放心地在 hover / 详情区每帧调用。
+#
+# 预测口径与「use_skill + tick_one_round 的结算」同源同式，不另写一套估算：
+#   · 消耗          → ``skill_cost_for()``（use_skill 里同一份算法）
+#   · 可用性        → ``target_availability()``（同一套校验，不重写）
+#   · 效果（阶段1） → 下载量增长，含邻国解锁、网络效应、阻止惩罚、
+#                     effects['global_downloads_mult'] / regional（科技加成）
+#   · 效果（阶段2） → 偷算力 + 怀疑度，含 ratio 封顶、敏感度、
+#                     effects['suspicion_mult'] / compute_per_user_mult /
+#                     stealth_ratio_bonus（科技加成）
+#   · 阶段 5 / 5.1  → 危机下载衰减、收网压力（两者都是确定性的）
+#
+# ⚠️ 明确不计入（都是**随机**项，写进去就是假装精确）：
+#   阶段 3 政府阻止（其强度要到**下一**周期才影响增长，本周期无影响）、
+#   阶段 3.5 政府反制、阶段 4 / 4.5 / 6.5 随机事件、阶段 6.6 委托。
+#   因此预览是「确定性部分的预测」，实际结算会与它有随机项造成的偏差。
+PREVIEW_COOLDOWN = 'cooldown'        # 技能冷却中
+PREVIEW_GAME_OVER = 'game_over'      # 对局已结束（tick 不再推进，预览无意义）
+PREVIEW_CAVEAT_KEY = 'sk_pv_caveat'  # 口径说明的 i18n 键（UI 显示用）
+
+
+def preview_skill(skill_id: str, targets: list = None,
+                  player=None, countries=None) -> Dict:
+    """预测「现在投放这个技能，本周期会怎样」（纯函数，不写任何状态）。
+
+    Args:
+        skill_id: 技能 id。
+        targets: 目标国家代码列表；``None`` / 空 => 全局投放。
+        player: 玩家状态；``None`` => 用引擎当前的 ``engine.player``。
+        countries: 国家状态列表；``None`` => 用引擎当前的 ``player_countries``。
+            注：``target_availability`` 内部读引擎全局，自定义 ``countries``
+            时目标校验仍按全局状态走（预览默认走全局，不影响正确性）。
+
+    Returns:
+        dict: 固定键集，永远不抛异常。关键字段 ——
+        ``ok``/``reason``（不可用时 ``reason`` 给出原因码）、``cost``、
+        ``downloads_before/after/delta``、``suspicion_before/after/delta``、
+        ``suspicion_to_crisis``（距危机线 80 还有多少，越过则为负）、
+        ``crisis_crossed``、``compute_before/after/delta``、``compute_stolen``。
+        不可用时数值字段停在 before（**不给假数值**）。
+    """
+    p = player if player is not None else globals().get('player')
+    cslist = (list(countries) if countries is not None
+              else list(globals().get('player_countries') or []))
+    tgt = [c for c in (targets or []) if c]
+
+    out = {
+        'ok': False,
+        'reason': TARGET_LOCKED,     # 默认最保守的原因
+        'skill_id': skill_id,
+        'targets': list(tgt),
+        'n_targets': len(tgt),
+        'cost': 0.0,
+        'cooldown_left': 0,
+        'compute_before': 0.0, 'compute_after': 0.0, 'compute_delta': 0.0,
+        'compute_stolen': 0.0,
+        'downloads_before': 0.0, 'downloads_after': 0.0, 'downloads_delta': 0.0,
+        'suspicion_before': 0.0, 'suspicion_after': 0.0, 'suspicion_delta': 0.0,
+        'suspicion_to_crisis': float(SUSPICION_CRISIS),
+        'crisis_crossed': False,
+        'blocked_targets': [],
+        'discount': 1.0,
+        'growth_by_country': {},   # 各国本周期下载增量（阶段1，与结算同源）
+        'caveat': PREVIEW_CAVEAT_KEY,
+    }
+
+    # ---- 边界：无玩家 / 技能不存在 / 未解锁 / 已结束 / 冷却中 ----
+    if p is None:
+        return out
+    out['compute_before'] = float(p.compute)
+    out['suspicion_before'] = float(p.suspicion)
+    out['downloads_before'] = float(sum(c.downloads_m for c in cslist))
+    # 不可用时 *_after 一律等于 *_before —— **不给假数值**
+    # （预测一个不会发生的增量，比没有预览更伤信任）。
+    out['compute_after'] = out['compute_before']
+    out['suspicion_after'] = out['suspicion_before']
+    out['downloads_after'] = out['downloads_before']
+    out['suspicion_to_crisis'] = float(SUSPICION_CRISIS) - out['suspicion_before']
+
+    if skill_id not in SKILLS:
+        return out
+    if skill_id not in (getattr(p, 'unlocked_skills', None) or ()):
+        out['reason'] = TARGET_LOCKED
+        return out
+    if getattr(p, 'game_over', False):
+        # 已结束：tick 会直接 return，效果永不落地 —— 给预测数值就是骗人
+        out['reason'] = PREVIEW_GAME_OVER
+        return out
+    cd_left = (getattr(p, 'skill_cooldowns', None) or {}).get(skill_id, 0)
+    if cd_left > 0:
+        out['reason'] = PREVIEW_COOLDOWN
+        out['cooldown_left'] = int(cd_left)
+        return out
+
+    skill = SKILLS[skill_id]
+    # 与 use_skill 一致：全局投放也按 1 份计
+    cost = skill_cost_for(skill_id, max(len(tgt), 1))
+    out['cost'] = cost
+
+    # ---- 目标可用性：直接复用 target_availability，不另写一套校验 ----
+    blocked, discounts = [], []
+    for code in tgt:
+        ok_i, reason_i, disc_i = target_availability(
+            code, skill_id, max(len(tgt) - 1, 0))
+        if not ok_i and reason_i == TARGET_NO_COMPUTE:
+            # 份数口径差异：target_availability 按「再多选一国」估算，
+            # 而这里是「已选 N 份」的实际总额。N==1 时前者会按 2 份算而
+            # 误判，故按真实总额复核一次（只在它说算力不够时才复核）。
+            if p.compute >= cost:
+                ok_i, reason_i, disc_i = True, TARGET_OK, 1.0
+        if not ok_i:
+            out['reason'] = reason_i
+            return out
+        if reason_i == TARGET_BLOCKED:
+            blocked.append(code)
+            discounts.append(disc_i)
+    out['blocked_targets'] = blocked
+    out['discount'] = min(discounts) if discounts else 1.0
+
+    if p.compute < cost:
+        out['reason'] = TARGET_NO_COMPUTE
+        return out
+
+    # ---- 效果预测：复刻 tick_one_round 的阶段 1 / 2 / 5 / 5.1 ----
+    effects = aggregate_effects(p.tech)
+    targeted = bool(tgt)
+    tgtset = set(tgt)
+
+    # 影子副本：解锁 / 增长都只写在副本上，真实状态一动不动
+    shadow = [{'cfg': c.config, 'code': c.config.code,
+               'unlocked': c.unlocked, 'dl': c.downloads_m,
+               'growth': 0.0, 'block': c.current_block_intensity}
+              for c in cslist]
+    by = {s['code']: s for s in shadow}
+    out['growth_by_country'] = {s['code']: s['growth'] for s in shadow}
+
+    def _pen(s):
+        pop = s['cfg'].population_m
+        return (s['dl'] / pop) if pop > 0 else 0.0
+
+    total_dl = sum(s['dl'] for s in shadow)
+
+    # === 阶段1: 各国下载量增长 ===
+    for s in shadow:
+        cfg = s['cfg']
+        if not s['unlocked']:
+            # 未解锁国家按邻国渗透触发（与引擎同一顺序、同一阈值）
+            boost = sum(_pen(by[n]) for n in cfg.neighbors
+                        if n in by and by[n]['unlocked'])
+            if boost >= UNLOCK_PENETRATION_THRESHOLD:
+                s['unlocked'] = True
+                s['growth'] = UNLOCK_SEED_DOWNLOADS_M - s['dl']
+                s['dl'] = UNLOCK_SEED_DOWNLOADS_M
+                total_dl += s['dl']
+                continue
+        age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
+        base_growth = (cfg.population_m * TUNE['growth_base']
+                       * cfg.tech_adoption * age_bonus)
+        # 网络效应用**实时**全球渗透（引擎里是 property，随循环推进而增大）
+        network = 1.0 + (total_dl / POTENTIAL_USERS_M) * TUNE['growth_network']
+        growth = base_growth * network * (1.0 - s['block'])
+        on = (not targeted) or (s['code'] in tgtset)
+        growth *= effects['global_downloads_mult'] * (
+            skill.downloads_mult if on else 1.0)
+        for scope, mult in effects['regional_downloads_mult'].items():
+            if scope == 'unlocked':
+                growth *= mult
+            elif '+' in scope:
+                if s['code'] in scope.split('+'):
+                    growth *= mult
+            elif scope.startswith('region:'):
+                if cfg.continent == scope.split(':', 1)[1]:
+                    growth *= mult
+        s['dl'] += growth
+        s['growth'] = growth
+        total_dl += growth
+
+    # === 阶段2: 偷算力 + 怀疑度 ===
+    stolen_total = 0.0
+    sus_total = 0.0
+    for s in shadow:
+        if s['dl'] <= 0 or not s['unlocked']:
+            continue
+        cfg = s['cfg']
+        on = (not targeted) or (s['code'] in tgtset)
+        unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
+        active_users_m = s['dl'] * TUNE['active_user_ratio']
+        ratio = min(BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
+                    + (skill.stealth_ratio_bonus if on else 0.0),
+                    MAX_STEALTH_RATIO)
+        ratio = min(ratio * (skill.stealth_ratio_mult if on else 1.0),
+                    MAX_STEALTH_RATIO)
+        stolen_base = (active_users_m * unit_compute * ratio
+                       * TUNE['compute_scale']
+                       * (skill.compute_mult if on else 1.0))
+        stolen_total += stolen_base + (skill.compute_delta if on else 0.0)
+        sensitivity = (SUSPICION_BASE_SENSITIVITY
+                       + (1 - cfg.tech_adoption) * SUSPICION_ADOPTION_FACTOR)
+        if cfg.age_structure == 'young':
+            sensitivity *= TUNE['suspicion_young_mult']
+        elif cfg.age_structure == 'aging':
+            sensitivity *= TUNE['suspicion_aging_mult']
+        sus_total += (stolen_base * sensitivity * effects['suspicion_mult']
+                      * (skill.suspicion_mult if on else 1.0)
+                      + (skill.suspicion_delta if on else 0.0))
+
+    compute_after = (p.compute - cost + stolen_total
+                     + (skill.compute_delta if not targeted else 0.0))
+    sus_after = p.suspicion + sus_total + (
+        skill.suspicion_delta if not targeted else 0.0)
+    sus_after = max(0.0, min(100.0, sus_after))
+    dl_after = total_dl
+
+    # === 阶段5: 危机 → 各国下载量衰减（确定性）===
+    if sus_after >= SUSPICION_CRISIS:
+        dl_after = sum(s['dl'] for s in shadow) * CRISIS_DOWNLOAD_DECAY
+    # === 阶段5.1: 收网压力（确定性）===
+    if (TUNE['sus_pressure_per_tick'] > 0
+            and sus_after >= TUNE['sus_pressure_threshold']):
+        sus_after = min(100.0, sus_after + TUNE['sus_pressure_per_tick'])
+
+    out['ok'] = True
+    out['reason'] = TARGET_OK
+    out['compute_stolen'] = stolen_total
+    out['compute_after'] = compute_after
+    out['compute_delta'] = compute_after - float(p.compute)
+    out['downloads_after'] = dl_after
+    out['downloads_delta'] = dl_after - out['downloads_before']
+    out['suspicion_after'] = sus_after
+    out['suspicion_delta'] = sus_after - out['suspicion_before']
+    out['suspicion_to_crisis'] = float(SUSPICION_CRISIS) - sus_after
+    out['crisis_crossed'] = sus_after >= SUSPICION_CRISIS
+    return out
+
+
 def unlock_t0(slot_id: str) -> bool:
     if player is None:
         return False

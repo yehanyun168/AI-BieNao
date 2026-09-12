@@ -212,7 +212,9 @@ class PagesMixin:
             foot = t('targets') + f": {engine.player.selected_country or '--'}"
         else:
             act, enabled = t('sk_action_cast'), (cd == 0 and p.compute >= skill.cost)
-            foot = f"{t('stats_compute')} {p.compute:.0f} → {p.compute - skill.cost:.0f}"
+        # P1-2：底部这一行从「算力 X → Y」升级成真实预览
+        # （走 engine.preview_skill，与 tick 结算同源同式；不可用时给原因）
+        foot = self._skill_preview_foot(sid)
         card.update(skill, self.SKILL_ICON[sid], self._skill_name(sid),
                     str(SKILL_ORDER.index(sid) + 1), chips,
                     rich_desc, uses, f"{contrib:.1f}M",

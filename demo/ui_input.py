@@ -72,6 +72,141 @@ class InputMixin:
     # ========================================================
 
 
+    # ========================================================
+    # P1-2 技能预览（悬停技能卡 → 预览条显示"会怎样"）
+    # ========================================================
+    def _bind_skill_hover(self) -> None:
+        """绑定鼠标位置实现「悬停技能卡 → 底部预览条」。
+
+        ⚠️ 只**加信息**、不加确认步骤：点击仍然立即释放，手感完全不变。
+        绑定失败（无 Window / 无鼠标的环境）时静默降级 —— 预览是增强项，
+        绝不能成为新的崩溃点。
+        """
+        try:
+            from kivy.core.window import Window
+            Window.bind(mouse_pos=self._on_skill_hover)
+        except Exception:
+            pass
+
+    @staticmethod
+    def _widget_hit(w, pos) -> bool:
+        """窗口坐标是否落在控件上。
+
+        手工沿 parent 链累加坐标（而不是用 to_window/to_widget）——
+        这两个 API 的 ``relative`` 语义各版本有差异，而本应用的控件树
+        是纯布局容器（无 scatter / 无旋转缩放），累加结果等于窗口坐标。
+        """
+        try:
+            x, y = w.x, w.y
+            p = w.parent
+            while p is not None:
+                x += p.x
+                y += p.y
+                p = p.parent
+            return x <= pos[0] <= x + w.width and y <= pos[1] <= y + w.height
+        except Exception:
+            return False
+
+    def _on_skill_hover(self, _win, pos) -> None:
+        """鼠标移动 → 命中哪张技能卡 → 刷新预览条（纯展示，不写状态）。"""
+        try:
+            hud = getattr(self, 'skill_pv_hud', None)
+            if hud is None:
+                return
+            # 投放模式下右下角 DropPreview 已给出更完整的信息，
+            # 两层预览同时出现只会打架 —— 这里让位。
+            if getattr(self, 'drop_mode', False):
+                hud.opacity = 0
+                self._skill_pv_sid = None
+                return
+            sid = None
+            for s, card in getattr(self, 'skill_cards', {}).items():
+                if self._widget_hit(card, pos):
+                    sid = s
+                    break
+            if sid != getattr(self, '_skill_pv_sid', None):
+                self._skill_pv_sid = sid
+                self._render_skill_preview(sid)
+        except Exception:
+            pass
+
+    def _preview_targets(self, sid: str) -> list:
+        """预览用的目标集合：与真实投放口径保持一致。
+
+        下载类技能在 UI 里走投放模式，悬停时尚未选目标 —— 用当前选中
+        国家作单目标预估（与技能页「投放到 {code}」同一个来源）；
+        偷算力类技能是全局的，返回空（= 全局投放）。
+        """
+        if not self._skill_needs_target(sid):
+            return []
+        code = engine.player.selected_country or ''
+        return [code] if code else []
+
+    def _preview_reason_text(self, pv: dict) -> str:
+        """把 preview_skill 的 reason 码翻成文案（复用既有 i18n 键）。"""
+        r = pv.get('reason', '')
+        if r == engine.PREVIEW_COOLDOWN:
+            return f"{t('sk_state_cd')} {pv.get('cooldown_left', 0)}"
+        if r == engine.TARGET_NO_COMPUTE:
+            return t('sk_state_no_compute')
+        if r == engine.PREVIEW_GAME_OVER:
+            return t('sk_pv_game_over')
+        if r == engine.TARGET_SATURATED:
+            return t('reason_saturated')
+        if r == engine.TARGET_BLOCKED:
+            return t('reason_blocked').format(
+                n=f"{(1.0 - pv.get('discount', 1.0)) * 100:.0f}")
+        return t('sk_state_lock')
+
+    def _render_skill_preview(self, sid: str) -> None:
+        """把 preview_skill 的结果画进底部预览条（5 枚 PxChip）。"""
+        hud = getattr(self, 'skill_pv_hud', None)
+        chips = getattr(self, 'skill_pv_chips', None)
+        if hud is None or chips is None:
+            return
+        if not sid:
+            hud.opacity = 0
+            return
+        pv = engine.preview_skill(sid, self._preview_targets(sid))
+        chips[0].set_tone('plain', self._skill_name(sid))
+        if not pv['ok']:
+            # 不可用时给原因，不给假数值（预测骗人比没有预览更伤信任）
+            chips[1].set_tone('dn', self._preview_reason_text(pv))
+            chips[2].set_tone('lock', '')
+            chips[3].set_tone('lock', '')
+            chips[4].set_tone('lock', '')
+        else:
+            chips[1].set_tone('up', t('sk_pv_dl').format(
+                d=f"{pv['downloads_delta']:+.1f}M"))
+            chips[2].set_tone('dn', t('sk_pv_sus').format(
+                a=f"{pv['suspicion_before']:.0f}",
+                b=f"{pv['suspicion_after']:.0f}"))
+            chips[3].set_tone('cost', t('sk_pv_cp').format(
+                a=f"{pv['compute_before']:.0f}",
+                b=f"{pv['compute_after']:.0f}"))
+            if pv['crisis_crossed']:
+                chips[4].set_tone('dn', t('sk_pv_over'))
+            else:
+                chips[4].set_tone('cost', t('sk_pv_to_crisis').format(
+                    n=f"{pv['suspicion_to_crisis']:.0f}"))
+        hud.opacity = 1
+
+    def _skill_preview_foot(self, sid: str) -> str:
+        """技能页卡片底部一行预览（与预览条同源，同一份 preview_skill）。"""
+        pv = engine.preview_skill(sid, self._preview_targets(sid))
+        if not pv['ok']:
+            return self._preview_reason_text(pv)
+        parts = [t('sk_pv_sus').format(a=f"{pv['suspicion_before']:.0f}",
+                                       b=f"{pv['suspicion_after']:.0f}"),
+                 t('sk_pv_cp').format(a=f"{pv['compute_before']:.0f}",
+                                      b=f"{pv['compute_after']:.0f}")]
+        if pv['crisis_crossed']:
+            parts.append(t('sk_pv_over'))
+        else:
+            parts.append(t('sk_pv_to_crisis').format(
+                n=f"{pv['suspicion_to_crisis']:.0f}"))
+        return " · ".join(parts)
+
     def on_skill_card_click(self, sid: str) -> None:
         """点技能带卡片：下载类 → 进投放模式；偷算力类 → 直接释放"""
         if sid not in engine.player.unlocked_skills:
@@ -184,9 +319,9 @@ class InputMixin:
             if abs(delta) < (10 ** -digits) / 2:
                 arrow, mcol, dtext = '→', U.MK['dim'], '0'
             elif delta > 0:
-                arrow, mcol, dtext = '↑', U.MK['up'], f"{delta:.{digits}f}{unit}"
+                arrow, mcol, dtext = '↑', U.MK['green'], f"{delta:.{digits}f}{unit}"
             else:
-                arrow, mcol, dtext = '↓', U.MK['dn'], f"{abs(delta):.{digits}f}{unit}"
+                arrow, mcol, dtext = '↓', U.MK['red'], f"{abs(delta):.{digits}f}{unit}"
             suffix = f"  [color={mcol}]{arrow}{dtext}[/color]"
             # 只写缓存：真正的 label.text 由紧随其后的 _animate_stat 写入
             # （它会带上这个后缀）。这样两边永不互相覆盖，滚动动效也不会
@@ -275,6 +410,11 @@ class InputMixin:
             else:
                 card.set_state('ready', 0, 0.0, t('sk_state_ready'))
             card.set_selected(self.drop_mode and sid == self.drop_skill)
+
+        # P1-2：悬停中的预览条跟着状态一起刷新 ——
+        # 否则鼠标不动时，预览会停在上一周期的旧数值上。
+        if getattr(self, '_skill_pv_sid', None) and not self.drop_mode:
+            self._render_skill_preview(self._skill_pv_sid)
 
         # --- 日志未读角标 ---
         self.rail.buttons['log'].set_badge(self.stats.unread)

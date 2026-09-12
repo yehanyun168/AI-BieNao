@@ -226,6 +226,11 @@ class DropMixin:
             self.map_stage.add_widget(self._drop_preview)
         skill = SKILLS[self.drop_skill]
         p = engine.player
+        #
+        # P1-2：预估改走 engine.preview_skill —— 与 tick_one_round 结算
+        # **同源同式**，不再用「现值 × 倍率」那套假估算（假估算会让玩家
+        # 以为点了就能拿 +50%，实际 downloads_mult 只作用于本周期增量）。
+        pv = engine.preview_skill(self.drop_skill, list(self.drop_targets))
         effects = []
         if skill.downloads_mult > 1.0:
             effects.append((f"{t('stats_downloads')} ×{skill.downloads_mult:.2f}"
@@ -236,16 +241,24 @@ class DropMixin:
         if skill.compute_mult > 1.0:
             effects.append((f"steal ×{skill.compute_mult:.1f}", 'sys'))
         effects.append((f"{t('sk_sort_cd')} {skill.cooldown}", 'cost'))
+        # 口径说明：预览只含确定性部分，随机事件/反制不计入（不假装精确）
+        effects.append((t(pv['caveat']), 'lock'))
+        # 各国预估用 preview_skill 的真实增量（阶段1，与结算同源）
+        gmap = pv.get('growth_by_country', {})
         ests = []
         for code in self.drop_targets[:3]:
             cs = self._country_state(code)
             if cs:
                 before = cs.downloads_m
-                ests.append((code, before, before * skill.downloads_mult))
+                ests.append((code, before, before + gmap.get(code, 0.0)))
         warn = ''
-        if skill.suspicion_delta > 0:
-            after = p.suspicion + skill.suspicion_delta * len(self.drop_targets)
-            warn = (f"⚠ {t('stats_suspicion')} {p.suspicion:.0f}% → {after:.0f}%")
+        if not pv['ok']:
+            warn = f"⚠ {self._preview_reason_text(pv)}"
+        elif pv['suspicion_delta'] > 0.05:
+            warn = (f"⚠ {t('stats_suspicion')} {pv['suspicion_before']:.0f}%"
+                    f" → {pv['suspicion_after']:.0f}%")
+            warn += (f" · {t('sk_pv_over')}" if pv['crisis_crossed']
+                     else f" · {t('sk_pv_to_crisis').format(n=f'{pv['suspicion_to_crisis']:.0f}')}")
         self._drop_preview.update(
             self.drop_skill, self._skill_name(self.drop_skill),
             self.drop_targets, skill.cost, p.compute, effects, ests, warn)

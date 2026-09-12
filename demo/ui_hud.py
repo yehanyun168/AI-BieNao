@@ -135,6 +135,7 @@ class HudBox(FloatLayout):
         super().__init__(**kwargs)
         self.anchor = anchor
         self._top_inset = 0        # 'tl'/'tr' 锚点额外下沉量（投放模式让图层 HUD 避开右上提示）
+        self._bot_inset = 0        # 'bc' 锚点额外上抬量（P1-2 预览条避开左下角图例）
         self._content_w = 0
         self._content_h = 0
         with self.canvas.before:
@@ -171,6 +172,8 @@ class HudBox(FloatLayout):
             self.pos = (px + pw - w, py + ph - h - self._top_inset)
         elif self.anchor == 'bl':
             self.pos = (px, py)
+        elif self.anchor == 'bc':                   # 底边居中（P1-2 技能预览条）
+            self.pos = (px + (pw - w) / 2.0, py + self._bot_inset)
         else:                                   # br
             self.pos = (px + pw - w, py)
 
@@ -627,6 +630,21 @@ class HudMixin:
         self.reason_hud.pos = (self.reason_hud.x, self.reason_hud.y + 26)
         self.reason_hud.opacity = 0
         stage.add_widget(self.reason_hud)
+
+        # P1-2 技能预览条（底边居中，图例之上）：
+        # 鼠标悬停技能卡时显示「现在投出去会怎样」—— 纯展示，不改点击手感。
+        # 默认 opacity=0，不悬停时屏幕上完全不存在，不影响任何既有布局。
+        self.skill_pv_hud = HudBox(anchor='bc')
+        self.skill_pv_hud._bot_inset = 34
+        self.skill_pv_row = BoxLayout(orientation='horizontal', spacing=4,
+                                      size_hint=(None, None), height=20)
+        self.skill_pv_chips = [PxChip('', tone='plain') for _ in range(5)]
+        for _c in self.skill_pv_chips:
+            self.skill_pv_row.add_widget(_c)
+        self.skill_pv_hud.add_widget(self.skill_pv_row)
+        self.skill_pv_hud.content_size(660, 20)
+        self.skill_pv_hud.opacity = 0
+        stage.add_widget(self.skill_pv_hud)
         return holder
 
     # ---- 底部技能带（设计稿 .skillbar）----
