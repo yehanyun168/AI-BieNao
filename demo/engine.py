@@ -449,7 +449,6 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         k: v - 1 for k, v in player.skill_cooldowns.items() if v > 1
     }
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
-
     # === 阶段6.5: v2 事件库（37 条选择型事件）===
     if v2_events.EVENTS and random.random() < TUNE['event_prob_v2']:
         v2_ctx = {
@@ -457,6 +456,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
             'suspicion': player.suspicion,
             'tech': player.tech,
             'countries': {c.config.code: c for c in player_countries},
+            'seen_events': player.v2_seen,
         }
         picked = v2_events.pick_event(v2_ctx, player.v2_cooldowns)
         if picked is not None:
