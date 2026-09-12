@@ -4,6 +4,7 @@ ui_popups.py - PopupsMixin（拆分自 main.py）
 弹窗族（设计稿 S07/S08/S09）：事件选择 / 危机三选一 / 结局面板 / 成就 / 帮助
 加 _notify 顶部轻提示（被多个 mixin 复用，运行时经 self 解析）。
 """
+from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
@@ -316,6 +317,24 @@ class PopupsMixin:
     # ========================================================
     # 顶部轻弹条（design/ardot_ui S06 ⚠ 预警样式，非阻塞）
     # ========================================================
+    @staticmethod
+    def _topbar_inset(widget) -> float:
+        """P1-11：toast 应避让的距离（= 顶栏真实下缘，GameUI 坐标）。
+
+        顶栏 holder 由 HudMixin 建在 _root_box（竖排 BoxLayout）顶部，
+        高度注册进 _scalables、被 _apply_scale 改写为 TOP_H*scale，root
+        另有内边距 —— 所以不能用裸 TOP_H。优先读 holder 的真实 y（缩放、
+        padding 自动正确）；读不到时退回 TOP_H × scale（TOP_H 经实例
+        读取、与 main.GameUI.TOP_H 同源，分层宪法 L9 不可 import L10）。
+        """
+        fallback = (float(getattr(widget, 'TOP_H', 64))
+                    * float(getattr(widget, 'scale', 1.0)))
+        rb = getattr(widget, '_root_box', None)
+        bar = rb.children[-1] if rb is not None and rb.children else None
+        if bar is not None and bar.parent is not None:
+            return max(fallback, float(widget.top) - float(bar.y))
+        return fallback
+
     def show_top_toast(self, text: str, tone: str = 'sys',
                        dur: float = 2.6, detail: str = '') -> None:
         """顶部弹条：sys=青 / cost=琥珀 / dn=红，自动消退。
@@ -334,9 +353,19 @@ class PopupsMixin:
         if old is not None and old.parent is not None:
             self.remove_widget(old)
         chip = self._build_top_toast(text, tone, detail)
-        chip.pos_hint = {'center_x': 0.5, 'top': 1.0}
+        self._cap_toast_width(chip)
+        # P1-11 避让顶栏：inset = 顶栏真实下缘（随 F12 缩放自动正确）。
+        inset = self._topbar_inset(self)
+        chip.pos_hint = {'center_x': 0.5,
+                         'top': 1.0 - inset / max(float(self.height), 1.0)}
         chip.opacity = 0
         self.add_widget(chip)
+        # P1-6 修复：PxChip 的真实 size 要到 add 之后的 _resize 才量出来，
+        # 而 FloatLayout 不因子级 size 变化重排 pos_hint —— 单行 toast 的
+        # pos 会停在 (0,0)、被底部技能带盖住（首帧必现）。这里按 pos_hint
+        # 同一语义显式定位，单行 / 两行（detail）行为一致。
+        chip.center_x = self.center_x
+        chip.top = self.top - inset
         self._toast = chip
         Animation(opacity=1, duration=0.15).start(chip)
         self._toast_clock = Clock.schedule_once(
@@ -361,6 +390,27 @@ class PopupsMixin:
         body.bind(width=_fit)
         _fit()
         return box
+
+    @staticmethod
+    def _cap_toast_width(chip) -> None:
+        """P1-11：toast 宽度封顶 min(窗宽 60%, 720px)，超限才截断。
+
+        先量 PxChip 已量出的自然宽度：未超限原样保留（短文案不被无谓
+        截断）；超限则解绑 texture_size→_resize 自适应（PxChip._resize
+        总按自然文字宽回填 width，不解绑会把宽度顶回溢出值），再锁定
+        width=cap、text_size 收窄 + shorten 省略号。两行版（detail）对
+        行内每枚芯片分别封顶，外层 box 宽由既有 _fit 绑定自动收敛。
+        """
+        cap = min(float(Window.width) * 0.6, 720.0)
+        if isinstance(chip, U.PxChip):
+            if chip.width > cap:
+                chip.unbind(texture_size=chip._resize)
+                chip.width = cap
+                chip.shorten = True
+                chip.text_size = (cap - chip.PAD_X * 2, chip.height)
+            return
+        for sub in list(chip.children):
+            PopupsMixin._cap_toast_width(sub)
 
     def _hide_top_toast(self, chip) -> None:
         if chip.parent is None:

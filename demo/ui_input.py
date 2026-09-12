@@ -12,7 +12,10 @@ import commissions as C
 import save_manager
 from balance import TUNE
 from tech_tree import SLOT_MAP
-from data import SKILLS, SKILL_ORDER, SUSPICION_CRISIS
+from data import SKILLS, SKILL_ORDER
+# ⚠️ P1-10 快照治理：SUSPICION_CRISIS 是 data 的 PEP 562 动态代理常量，
+#    不能 from-import（一次性快照），改 data.SUSPICION_CRISIS 属性访问。
+import data
 import achievements as achievements_mod
 import ui_v4 as U
 import ui_v4_screens as S
@@ -286,8 +289,10 @@ class InputMixin:
         ui_fx.count_up(label, prev, new_value,
                        fmt=lambda v: (self._stat_text(key, mcolor, v, unit, digits)
                                       + suffix))
-        # 数值有实际变化才脉冲一次（确认感）
-        ui_fx.pulse(label, scale_alpha=0.55, duration=0.12)
+        # 数值有实际变化才脉冲一次（确认感）。
+        # P2-6 光敏安全：原 duration=0.12 → 单脉冲 0.24s ≈ 4.2Hz，超 WCAG
+        # 2.3.1 红线（3 次/秒）；去掉覆盖后走 DUR_PULSE(0.22) ≈ 2.3Hz。
+        ui_fx.pulse(label, scale_alpha=0.55)
 
     def _refresh_spark_deltas(self) -> None:
         """算好每根顶栏火花线的「近 N 周期变化量」，缓存进 _stat_suffix。
@@ -361,7 +366,7 @@ class InputMixin:
                            p.total_downloads_m / 1000.0,
                            unit=t('unit_b'), digits=2)
         self._animate_stat(self.stats_suspicion, 'stats_suspicion',
-                           'bad' if p.suspicion >= SUSPICION_CRISIS else
+                           'bad' if p.suspicion >= data.SUSPICION_CRISIS else
                            ('warn' if p.suspicion >= 50 else 'susp_low'),
                            float(p.suspicion), unit='%', digits=0)
         # 国家数用整数直写（走 _stat_text 以保持与其它统计同构）

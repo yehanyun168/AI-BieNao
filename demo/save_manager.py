@@ -15,6 +15,12 @@ P0-2 读档容错约定：
     任何坏档（乱码 / 缺键 / 类型错 / 版本不符 / 文件不存在）都**不抛异常**，
     一律返回失败 + 明确原因码，并把原因追加到 demo/crash.log。
     需要区分原因的上层请用 load_ex()；只要真假的老调用方继续用 load()。
+
+P1-9 写入 / 版本迁移约定：
+    save() 走原子写（.tmp → fsync → os.replace），写盘中断不再损毁主档；
+    load() 读出 version 后先过 _migrate() 迁移骨架再做字段校验，
+    当前 version=1 的档行为完全不变。将来改存档结构：SAVE_VERSION += 1，
+    按 _migrate() 里的模板补一级迁移即可，老档不会全废。
 """
 import json
 import os
@@ -106,7 +112,14 @@ def load_fail_text(reason: str) -> str:
 
 
 def save(path: str = None) -> str:
-    """存档，返回实际写入的路径"""
+    """存档，返回实际写入的路径
+
+    P1-9 原子写：先写 ``path + '.tmp'``，flush + os.fsync 强制落盘，
+    再 ``os.replace(tmp, path)`` 原子替换（同目录替换，Windows 上也是
+    原子操作）。写盘中断（断电 / 崩溃 / 杀进程）最多留下一个残缺
+    ``.tmp``，主档要么是上一个完整版本、要么是新的完整版本，永不半截。
+    对外签名与失败语义不变：写失败仍向调用方抛异常，且原档不会被碰坏。
+    """
     import engine
 
     _ensure_dir()
@@ -159,8 +172,21 @@ def save(path: str = None) -> str:
         ],
     }
 
-    with open(path, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    # —— P1-9 原子写：tmp → fsync → replace ——
+    tmp = path + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())      # 强制落盘，防断电丢页缓存
+        os.replace(tmp, path)         # 同目录替换，Windows 上也是原子的
+    except BaseException:
+        # tmp 写 / 换失败：删掉残缺 tmp、原档不动，异常照旧抛给调用方
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return path
 
 
@@ -234,6 +260,49 @@ def _apply_save(data: dict) -> None:
                                           c.config.block_budget)
 
 
+def _migrate(data: dict, from_version: int) -> dict:
+    """版本迁移骨架（P1-9）：把 ``from_version`` 的存档升级到 SAVE_VERSION。
+
+    load 流程：读出 version → _migrate() → 字段校验。约定：
+      - ``from_version == SAVE_VERSION``：原样返回（当前唯一在用路径，
+        零拷贝零开销，version=1 老档行为与 P0-2 完全一致）；
+      - ``from_version <  SAVE_VERSION``：应沿迁移链逐级升级（1→2→…→N）。
+        **目前没有历史版本**（SAVE_VERSION 从 1 起步），此分支暂无实现 ——
+        明确抛 NotImplementedError，绝不静默放行或编造假迁移；
+      - ``from_version >  SAVE_VERSION``：未来版本，不归迁移管（旧程序读
+        新档是"降级"），调用方按 LOAD_BAD_VERSION 拒绝。
+
+    TODO(P1-10+，下次改存档结构时照此填，勿另起炉灶)：
+        1. SAVE_VERSION += 1；
+        2. 写一级**纯函数**迁移并登记（键 = 源版本号）：
+               def _v1_to_v2(d: dict) -> dict:
+                   # 只增字段 / 调结构，不丢玩家数据；缺键给默认值
+                   d['new_field'] = d.get('new_field', <默认值>)
+                   d['version'] = 2
+                   return d
+               _MIGRATIONS = {1: _v1_to_v2}
+        3. 打开下方 while 循环（已写好，去掉注释即可）；
+        4. 在 test_edge_cases.py 补一条"构造 v1 老档 → load 成功且字段补齐"。
+    """
+    if from_version == SAVE_VERSION:
+        return data
+    if from_version > SAVE_VERSION:
+        # 防御兜底：正常情况下调用方已拦下未来版本
+        raise ValueError(f'save from future version {from_version}')
+    # —— 逐级升级（骨架）：暂无历史版本，先明确拒绝 ——
+    # TODO(P1-10+): 接入 _MIGRATIONS 后启用下面循环：
+    #   v = from_version
+    #   while v < SAVE_VERSION:
+    #       step = _MIGRATIONS.get(v)
+    #       if step is None:
+    #           raise ValueError(f'no migration path: v{v} -> v{SAVE_VERSION}')
+    #       data = step(data)
+    #       v += 1
+    #   return data
+    raise NotImplementedError(
+        f'no migration path: v{from_version} -> v{SAVE_VERSION}')
+
+
 def load_ex(path: str = None) -> Tuple[bool, str]:
     """读档，返回 ``(ok, reason)``。
 
@@ -269,10 +338,23 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
                        TypeError(f'root is {type(data).__name__}, want dict'))
         return False, LOAD_BAD_SCHEMA
 
-    # 3) 版本：不符 → 明确区分，不再静默 False
-    if data.get('version') != SAVE_VERSION:
-        _log_load_fail(LOAD_BAD_VERSION, path)
-        return False, LOAD_BAD_VERSION
+    # 3) 版本：分流 → 迁移骨架（P1-9）。硬约束：version=1 的档行为与
+    #    P0-2 完全一致 —— 只有"确实是更老的历史版本"才进 _migrate()，
+    #    缺失 / 非整数 / 未来版本一律 LOAD_BAD_VERSION（与原
+    #    `version != SAVE_VERSION → 拒绝` 逐 case 等价）。
+    v = data.get('version')
+    if v != SAVE_VERSION:
+        is_older = (isinstance(v, int) and not isinstance(v, bool)
+                    and 1 <= v < SAVE_VERSION)
+        if not is_older:
+            _log_load_fail(LOAD_BAD_VERSION, path)
+            return False, LOAD_BAD_VERSION
+        try:
+            data = _migrate(data, v)
+        except NotImplementedError as e:
+            # 迁移链尚未铺到该历史版本：明确报版本不支持，不静默、不崩
+            _log_load_fail(LOAD_BAD_VERSION, path, e)
+            return False, LOAD_BAD_VERSION
 
     # 4) 字段搬运：缺 player 键 / 类型不对 / 委托反序列化炸 → 坏档
     try:

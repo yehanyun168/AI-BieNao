@@ -20,7 +20,7 @@ from data import SKILLS
 import ui_v4 as U
 from ui_v4 import PxChip, mk_label
 from ui_shared import COLORS
-from ui_hud import HudBox
+from ui_hud import HudBox, LayerHud
 from ui_modal import make_button, make_modal, modal_header
 from ui_v4 import hline
 from i18n import t, get_lang, get_country_name
@@ -93,6 +93,9 @@ class CommissionBar(HudBox):
 
     def __init__(self, on_open=None, **kwargs):
         super().__init__(anchor='tl', **kwargs)
+        # P1-6：整体下沉到左上区域页签（高 32）之下，二者同锚点不同行，
+        # 委托条不再盖住页签（间隙 8）。
+        self._top_inset = 40
         self._on_open = on_open or (lambda com: None)
         self._hidden = False
         self.chips = []           # 全部芯片（含被折叠的），只用于量宽
@@ -150,8 +153,12 @@ class CommissionBar(HudBox):
     def _layout_hud(self, *_args) -> None:
         if self._hidden:
             self.size = (0, 0)
+            # P1-6：0 尺寸面板不裁剪子级，row 里残留的旧芯片仍会按绝对
+            # 坐标画出来（残影）——隐藏时连 row 一起透明。
+            self.row.opacity = 0
             self._redraw()
             return
+        self.row.opacity = 1
         # 安全网：可用宽变了（窗口 resize / 换父容器）就重量一次，
         # 兜住 Window 事件没打到、或父容器比 Window 事件先变的场景。
         if (self.parent is not None and self.chips and not self._measuring):
@@ -220,6 +227,13 @@ class CommissionBar(HudBox):
         cap = win - BAR_EDGE_MARGIN - left
         if par is not None and float(par.width) > 1:
             cap = min(cap, float(par.width) - HUD_INSET - BAR_TAIL)
+        # P1-6：避让右上 LayerHud（同层常驻 HUD）——宽委托条此前会从
+        # 它身上压过去。要求面板右缘距 LayerHud 左缘至少 12px。
+        if par is not None:
+            for sib in par.children:
+                if isinstance(sib, LayerHud) and sib.x > self.x:
+                    cap = min(cap, float(sib.x) - 12.0 - float(par.x)
+                              - HUD_INSET - BAR_TAIL)
         return int(max(cap, BAR_MIN_W))
 
     def _ensure_plus(self, n: int) -> PxChip:

@@ -121,6 +121,15 @@ TUNE: Dict[str, float] = {
     'block_decay': 0.7,
     # 阻止强度低于此值视为已失效
     'block_expire_epsilon': 0.01,
+    # 阻止强度上限（怀疑度远超阈值时的封顶值）
+    # 2026-09-11 P1-10：原为 engine.py 函数体内伪常量 0.8，提为具名键（值不变）。
+    'block_intensity_cap': 0.8,
+    # 阻止强度斜率：怀疑度每超出阈值 100%（excess=1）增加的阻止强度
+    # 2026-09-11 P1-10：原为 engine.py 函数体内伪常量 3.0，提为具名键（值不变）。
+    'block_intensity_slope': 3.0,
+    # 每周期阻止预算消耗 = 阻止强度 × 此乘数
+    # 2026-09-11 P1-10：原为 engine.py 函数体内伪常量 2.0，提为具名键（值不变）。
+    'block_budget_cost_mult': 2.0,
 
     # ---------------- 地缘扩张 ----------------
     # 已解锁邻国渗透率之和达到此值 → 解锁新国家
@@ -145,6 +154,9 @@ TUNE: Dict[str, float] = {
     'start_downloads_secondary': 30.0,
 
     # ---------------- 事件触发概率 ----------------
+    # 通用事件（data.EVENTS）：每周期触发概率
+    # 2026-09-11 P1-10：原为 engine.py 函数体内伪常量 0.5，提为具名键（值不变）。
+    'event_prob_global': 0.5,
     # 国家事件：阈值达标后每周期触发概率
     'event_prob_country': 0.35,
     # v2 事件库：每周期触发概率
@@ -260,10 +272,13 @@ _REQUIRED = {
     'suspicion_crisis', 'crisis_download_decay', 'crisis_clear_ratio',
     'sus_pressure_threshold', 'sus_pressure_per_tick',
     'sus_log_threshold',
-    'block_decay', 'block_expire_epsilon', 'unlock_penetration_threshold',
+    'block_decay', 'block_expire_epsilon',
+    'block_intensity_cap', 'block_intensity_slope', 'block_budget_cost_mult',
+    'unlock_penetration_threshold',
     'unlock_seed_downloads', 'penetration_saturated', 'base_tick_seconds',
     'initial_compute', 'potential_users_m', 'start_downloads_primary',
-    'start_downloads_secondary', 'event_prob_country', 'event_prob_v2',
+    'start_downloads_secondary',
+    'event_prob_global', 'event_prob_country', 'event_prob_v2',
     # —— P0-3 动态委托 ——
     'commission_start_tick', 'commission_interval', 'commission_max_active',
     'commission_offer_ttl', 'commission_margin', 'commission_margin_spread',
@@ -297,6 +312,15 @@ def validate() -> list:
         errs.append("crisis_clear_ratio 必须在 (0, 1]")
     if not (0 < TUNE['unlock_penetration_threshold'] < 1):
         errs.append("unlock_penetration_threshold 必须在 (0, 1)")
+    # —— P1-10 阻止强度 / 预算 / 通用事件概率 ——
+    if not (0 < TUNE['block_intensity_cap'] <= 1):
+        errs.append("block_intensity_cap 必须在 (0, 1]")
+    if TUNE['block_intensity_slope'] <= 0:
+        errs.append("block_intensity_slope 必须为正")
+    if TUNE['block_budget_cost_mult'] < 0:
+        errs.append("block_budget_cost_mult 不能为负")
+    if not (0 < TUNE['event_prob_global'] < 1):
+        errs.append("event_prob_global 必须在 (0, 1)")
     if TUNE['base_tick_seconds'] <= 0:
         errs.append("base_tick_seconds 必须为正")
     for i, o in enumerate(CRISIS_OPTIONS):

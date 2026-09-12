@@ -14,7 +14,7 @@ from kivy.uix.widget import Widget
 from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
-from pixel_ui import (hex_rgba, add_pixel_border)
+from pixel_ui import add_pixel_border   # P2-5：hex_rgba 已随 '#0d1117' 收口移除
 import i18n
 from i18n import (t, get_lang, LANG_ZH, LANG_EN)
 import engine
@@ -34,6 +34,13 @@ from world_map import WorldMap
 # 色盲辅助形状符号（设计稿 ○●▲✖）：四态不单靠颜色区分
 STATE_SHAPE = {'on': U.SYM['a11y_on'], 'sel': U.SYM['a11y_sel'],
                'blk': U.SYM['a11y_blk'], 'lk': U.SYM['a11y_lk']}
+
+# P1-5：图层色阶图例（heat/block/compute 各显示 4 档）的形状编码。
+# 沿用四态的 LegendChip.set_shape 机制，不新造机制；形状按「空 → 满」
+# 递进表达档位：○(0%) → ◇(25%) → ◆(50%) → ●(100%)，
+# 色阶相邻档在绿色盲下 ΔE 只有 7~22（tools/check_map_palette.py 有实测），
+# 没有形状兜底时 CVD 玩家只能靠猜。四个字形都在 MicrosoftYaHei 安全字符表内。
+SCALE_SHAPE = ('○', '◇', '◆', '●')
 
 
 # ============================================================
@@ -176,6 +183,15 @@ class HudBox(FloatLayout):
             self.pos = (px + (pw - w) / 2.0, py + self._bot_inset)
         else:                                   # br
             self.pos = (px + pw - w, py)
+        # P1-6 修复：FloatLayout 只布局带 pos_hint 的子级——无 pos_hint 的
+        # 直接子级 pos 会永远停在 (0,0)，而本项目 canvas 无坐标变换（绝对
+        # 坐标渲染），内容因此画到窗口左下角、被底部技能带盖死。区域页签 /
+        # 委托芯片条 / 技能预览条 / 投放三件套的内容行从未在设计位置渲染过
+        # （09-11 前的全部基线截图可证）。这里统一钉到面板内容区左上，
+        # 与 LegendBar._sync_box / LayerHud._sync 的手动同步同一口径。
+        for _ch in self.children:
+            if not _ch.pos_hint:
+                _ch.pos = (self.x + self.PAD, self.y + self.PAD)
 
     def _redraw(self, *_args) -> None:
         x, y = self.pos
@@ -275,11 +291,16 @@ class LegendBar(HudBox):
                 self._apply_chip(key)
 
     def apply_a11y(self) -> None:
-        """色盲辅助开关变化：重画四态形状符号 + 文字前缀（图层模式不生效）。"""
-        if self._mode != 'states':
-            return
-        for key in self.items:
-            self._apply_chip(key)
+        """色盲辅助开关变化：重画形状符号 + 文字前缀。
+
+        P1-5：四态与色阶两种模式都生效（原来色阶模式直接 return，
+        开着色阶切无障碍开关时档位形状不刷新）。
+        """
+        if self._mode == 'states':
+            for key in self.items:
+                self._apply_chip(key)
+        else:
+            self._apply_scale_chips()
 
     def _apply_chip(self, key: str) -> None:
         chip = self.items[key]
@@ -288,19 +309,34 @@ class LegendBar(HudBox):
         prefix = (glyph + ' ') if glyph else ''
         chip.set_text(prefix + self._base.get(key, ''))
 
+    def _apply_scale_chips(self) -> None:
+        """色阶模式：档位色块 + SCALE_SHAPE 形状 + 文字前缀（P1-5）。
+
+        set_colors 也放在这里：apply_a11y 重放时一并恢复，保证
+        四态 → 色阶来回切换后色块/形状/文字三者始终一致。
+        """
+        keys = list(self.items.keys())
+        items = getattr(self, '_custom', [])
+        for i, (fill, edge, text) in enumerate(items):
+            chip = self.items[keys[i]]
+            chip.set_colors(fill, edge)
+            glyph = (SCALE_SHAPE[i]
+                     if (ST.A11Y_SHAPES and i < len(SCALE_SHAPE)) else '')
+            chip.set_shape(glyph)
+            chip.set_text(((glyph + ' ') if glyph else '') + text)
+
     def set_scale(self, scale_items) -> None:
         """图层模式下换成自定义色阶图例。scale_items: ``[(fill, edge, text), …]``"""
         self._mode = 'scale'
         for chip in self.items.values():
             chip.opacity = 0
-        self._custom = getattr(self, '_custom', [])
-        # 复用前 4 个 chip 显示自定义档位
+        # P1-5：档位存进 _custom 供 apply_a11y 重放（原实现只初始化空表
+        # 从不写入，导致开关切换后无法恢复形状）。
+        self._custom = list(scale_items[:4])
         keys = list(self.items.keys())
-        for i, (fill, edge, text) in enumerate(scale_items[:4]):
-            chip = self.items[keys[i]]
-            chip.opacity = 1
-            chip.set_colors(fill, edge)
-            chip.set_text(text)
+        for i in range(len(self._custom)):
+            self.items[keys[i]].opacity = 1
+        self._apply_scale_chips()
 
 
 class LayerHud(HudBox):
@@ -509,7 +545,11 @@ class HudMixin:
             bar.add_widget(lbl)
             return lbl
 
-        col = BoxLayout(orientation='vertical', spacing=2,
+        # ⚠️ 列高守恒（P2-2）：TOP_H(64) = 标签行 50 + 火花线 14。原
+        # spacing=2 使实际需求 50+2+14=66px 超出列高 2px，垂直 BoxLayout
+        # 会把溢出转嫁给子控件（火花线被压扁/标签基线上移）。火花线 14px
+        # 是玩家反馈 #2 特意加高的（可读性优先），故去掉间距而不是砍高度。
+        col = BoxLayout(orientation='vertical', spacing=0,
                         size_hint=(None, None), height=self.TOP_H)
         lbl.size_hint = (1, None)
         lbl.height = self.TOP_H - 14
@@ -544,7 +584,7 @@ class HudMixin:
     # ---- 地图舞台（设计稿 .mapstage）----
     def _make_map_stage(self) -> Widget:
         stage = FloatLayout()
-        holder = Panel(bg=hex_rgba('#0d1117'), border_color=COLORS['border_2'])
+        holder = Panel(bg=COLORS['bg'], border_color=COLORS['border_2'])
         stage.size_hint = (1, 1)
         stage.pos_hint = {'x': 0, 'y': 0}
         holder.add_widget(stage)
@@ -814,11 +854,13 @@ class HudMixin:
                 f"{t('layer_heat_min')} {low.config.code} {low.penetration_rate*100:.2f}% · "
                 f"{t('layer_heat_avg')} {avg:.2f}%") if top and low else ''
         else:
+            # P2-5 收口：图例四档原先重复硬编码 BLOCK_SCALE 的取值，
+            # 现按索引引用同一常量（值不变，只改来源）—— 红阶改色只动一处。
             self.legend_hud.set_scale([
-                ('#232a30', '#232a30', '0%'),
-                ('#6e2f2f', '#6e2f2f', '40%'),
-                ('#9c3535', '#9c3535', '70%'),
-                ('#ef4444', '#ef4444', '100%'),
+                (BLOCK_SCALE[0], BLOCK_SCALE[0], '0%'),
+                (BLOCK_SCALE[2], BLOCK_SCALE[2], '40%'),
+                (BLOCK_SCALE[3], BLOCK_SCALE[3], '70%'),
+                (BLOCK_SCALE[4], BLOCK_SCALE[4], '100%'),
             ])
 
     @staticmethod

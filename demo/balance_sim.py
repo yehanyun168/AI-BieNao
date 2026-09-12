@@ -8,10 +8,18 @@ balance_sim.py - 数值平衡模拟器（调参工具，不参与游戏运行）
     python balance_sim.py                # 默认跑 20 个种子，每局最多 200 周期
     python balance_sim.py --seeds 50     # 跑 50 局
     python balance_sim.py --ticks 300    # 每局最多 300 周期
+    python balance_sim.py --strategy compliance   # 用「合规专精」人格跑（P1-4）
 
 自动玩家策略（模拟一个「中等水平玩家」）：
   1. 优先解锁 T0，再沿第一个可选分支升级
   2. 怀疑度 > 60 且「潜伏」可用时释放
+
+自动玩家人格（P1-4 新增 --strategy）：
+  default    上述「中等水平玩家」，行为与历史版本逐位一致
+  compliance 合规专精：开局沿前置链尽早买「抗封禁 T0」（不等危机）、
+             全程不练脏技能（按 data.SKILLS.suspicion_delta > 0 判定）、
+             怀疑度进入危机警戒区（距危机线 15 点）后暂停技能投放、
+             深度伪装提前一档释放。其余决策（委托、常规科技）复用默认逻辑。
 
 ⚠️ 这不是 AI 最优策略 —— 它故意保持平庸，用来暴露数值问题：
    如果自动玩家 80% 都在第 30 周期前「被关停」，说明怀疑度还是太紧。
@@ -27,12 +35,19 @@ from collections import Counter
 
 sys.path.insert(0, __file__.rsplit('\\', 1)[0].rsplit('/', 1)[0])
 
+import data  # P1-10：SUSPICION_CRISIS 走 data 的 PEP 562 动态代理
 import engine
 import tech_tree
 
 
-def auto_play(tick_report_hook=None):
-    """自动玩家的每周期决策"""
+def auto_play(tick_report_hook=None, strategy: str = 'default'):
+    """自动玩家的每周期决策
+
+    strategy:
+        'default'    —— 「中等水平玩家」，行为与历史版本逐位一致。
+        'compliance' —— 合规专精人格（P1-4）：主动买抗封禁 T0、全程不练
+                        脏技能、接近危机线时保守。其余决策复用默认逻辑。
+    """
     p = engine.player
 
     # 0. 委托：全部接受（P0-3；自动玩家策略是「来者不拒」）
@@ -44,7 +59,14 @@ def auto_play(tick_report_hook=None):
     #    危机应答（P0-3）：政府反制引发危机后，中等玩家的本能是先补
     #    「抗封禁」T0（成本 50，前置 capability）——被反制了才点防御，
     #    下一 tick 回到常规队列。无危机时维持深度优先不变。
-    if p.crisis_triggered and not p.tech.t0_unlocked.get('resistance'):
+    #    P1-4 compliance：合规之王要求「全程无危机 + 抗封禁 T0」，事后
+    #    补买在结构上自相矛盾（买了 T0 危机已发生）——专精人格在无危机
+    #    时也优先抢买。受前置链（localization→…→capability）约束，
+    #    实际效果 = capability T0 一解锁立刻点抗封禁 T0。
+    #    默认策略下 strategy=='compliance' 恒为 False，短路求值与原式
+    #    等价，逐位回归不受影响。
+    if ((strategy == 'compliance' or p.crisis_triggered)
+            and not p.tech.t0_unlocked.get('resistance')):
         res_slot = tech_tree.SLOT_MAP['resistance']
         if (p.tech.can_unlock_t0('resistance')
                 and p.compute >= res_slot.t0_cost):
@@ -71,7 +93,9 @@ def auto_play(tick_report_hook=None):
                 break
 
     # 2. 救命技能
-    if p.suspicion > 60:
+    #    P1-4 compliance：专精人格对怀疑增速更敏感，提前一档放深度伪装
+    #    （该技能零怀疑代价且压低增速 50%，早放只赚不亏）。
+    if p.suspicion > (55 if strategy == 'compliance' else 60):
         engine.use_skill('stealth')
     #    ⚠️ R14 教训：bypass「无怀疑代价」是错觉——引擎怀疑公式含偷算力
     #    因子，+40% 当期偷算力 = 怀疑增速均摊 +40%，全局提前爆表
@@ -90,15 +114,28 @@ def auto_play(tick_report_hook=None):
                     and com.skill_id in p.unlocked_skills
                     and com.skill_id not in p.skill_cooldowns):
                 sk = engine.SKILLS.get(com.skill_id)
-                if (p.suspicion > 40 and sk is not None
+                if strategy == 'compliance':
+                    # 合规专精（P1-4）：脏技能全程不练 —— 按
+                    # data.SKILLS.suspicion_delta > 0 字段判定，不硬编码
+                    # 技能名；怀疑度进入危机警戒区（距危机线 < 15 点）
+                    # 后连干净技能也暂停投放，等待自然衰减 / 深度伪装
+                    # 把怀疑压回安全区（「少投放、多等衰减」）。
+                    if sk is None or sk.suspicion_delta > 0:
+                        continue
+                    if p.suspicion >= data.SUSPICION_CRISIS - 15:
+                        continue
+                elif (p.suspicion > 40 and sk is not None
                         and sk.suspicion_delta > 0):
                     continue
                 if engine.use_skill(com.skill_id):
                     break
 
 
-def simulate(seed: int, max_ticks: int = 200) -> dict:
-    """跑一局，返回统计结果"""
+def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default') -> dict:
+    """跑一局，返回统计结果
+
+    strategy 透传给 auto_play（'default' / 'compliance'，P1-4）。
+    """
     random.seed(seed)
     engine.init_game()
     p = engine.player
@@ -107,7 +144,7 @@ def simulate(seed: int, max_ticks: int = 200) -> dict:
     cp_strikes = 0
     for _ in range(max_ticks):
         report = engine.tick_one_round()
-        auto_play()
+        auto_play(strategy=strategy)
         cp_strikes += sum(1 for e in (report.get('counterplay') or [])
                           if e['phase'] == 'strike')
 
@@ -158,9 +195,14 @@ def main():
     ap.add_argument('--seeds', type=int, default=20, help='模拟局数（默认 20）')
     ap.add_argument('--ticks', type=int, default=200, help='每局最多周期数（默认 200）')
     ap.add_argument('--verbose', action='store_true', help='打印每局明细')
+    ap.add_argument('--strategy', choices=['default', 'compliance'],
+                    default='default',
+                    help='自动玩家人格：default=中等水平（原版）；'
+                         'compliance=合规专精（P1-4）')
     args = ap.parse_args()
 
-    results = [simulate(s, args.ticks) for s in range(1, args.seeds + 1)]
+    results = [simulate(s, args.ticks, args.strategy)
+               for s in range(1, args.seeds + 1)]
 
     if args.verbose:
         for r in results:
@@ -178,7 +220,9 @@ def main():
     fails = [r['commissions_failed'] for r in results]
     cps = [r['counterplay'] for r in results]
 
-    print(f" === {len(results)} 局模拟汇总 ===")
+    # 策略标注只在非 default 时打印，default 输出与历史版本逐字符一致
+    _tag = f"（策略：{args.strategy}）" if args.strategy != 'default' else ""
+    print(f" === {len(results)} 局模拟汇总{_tag} ===")
     print(" 结局分布：")
     for name, n in dist.most_common():
         print(f"   {name:<12} {n:>3} 局 ({n/len(results)*100:>5.1f}%)")

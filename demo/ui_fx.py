@@ -31,7 +31,9 @@ from pixel_ui import hex_rgba
 
 
 # 动效时长统一在这里收口（减弱模式下一律走 _disabled 分支）
-DUR_PULSE = 0.16
+# P2-6 光敏安全（WCAG 2.3.1：闪烁 ≤3 次/秒）：单脉冲 = 降 + 回两程，
+# 旧值 0.16s → 单脉冲 0.32s ≈ 3.1Hz 贴红线；0.22s → 0.44s ≈ 2.3Hz，留足余量。
+DUR_PULSE = 0.22
 DUR_COUNT = 0.45
 DUR_SHAKE = 0.22
 
@@ -100,9 +102,13 @@ def pulse(widget: Widget, color=None, scale_alpha: float = 0.35,
     anim.start(widget)
 
 
-def shake(widget: Widget, dx: float = 4.0, rounds: int = 2,
+def shake(widget: Widget, dx: float = 4.0, rounds: int = 1,
           duration: float = DUR_SHAKE) -> None:
     """左右抖动：用于「操作被拒绝」（算力不足 / 技能冷却中）。
+
+    P2-6 光敏安全：rounds 2→1。rounds=2 时每段 0.055s、方向反转约
+    15 次/秒，属高频抖动；rounds=1 单次抖动 4 段 × 0.11s（总 0.44s，
+    约 7 次反转/秒），拒绝感仍在且明显温和。
 
     ⚠️ 改 pos 会与 FloatLayout 的 pos_hint 打架（下一帧布局会拉回去），
     所以这里抖动的是 ``x`` 相对量并**显式恢复原值**，且只用于
@@ -164,6 +170,36 @@ def count_up(label: Label, from_value: float, to_value: float,
 # ============================================================
 # 组合动效（业务语义）
 # ============================================================
+# P2-5 同屏信标并发上限：纯表现层参数（只影响"光环动画同时最多几个"），
+# 不参与任何玩法数值运算，因此**不进 balance.TUNE** —— 表现层参数进
+# 数值调参表会让平衡同学误以为是可调玩法变量，放模块常量并在此注明。
+# 20 国同时触发时旧实现会叠 20 个动画 Widget（每帧都在改 size/pos/opacity），
+# 上限 6 个：超出时挤掉最旧的（反馈永远是最新的，且并发有界）。
+BEACON_MAX_LIVE = 6
+_beacons = []          # 活跃信标登记 [(ring, host, anim)，完成/被挤掉即摘除]
+
+
+def _beacon_forget(ring, host, anim) -> None:
+    """信标自然播完时从登记表摘除（配合 on_complete）。"""
+    try:
+        _beacons.remove((ring, host, anim))
+    except ValueError:
+        pass
+
+
+def _beacon_kill(entry) -> None:
+    """强制终止一个信标：取消动画并从宿主摘除（cancel 不触发 on_complete）。"""
+    ring, host, anim = entry
+    try:
+        anim.cancel(ring)
+    except Exception:
+        pass
+    try:
+        host.remove_widget(ring)
+    except Exception:
+        pass
+
+
 def beacon(target: Widget, code: str,
            container: Optional[Widget] = None) -> None:
     """在地图上给某国打一个脉冲光环。
@@ -196,6 +232,7 @@ def beacon(target: Widget, code: str,
     host.add_widget(ring)
 
     def _clean(*_a):
+        _beacon_forget(ring, host, anim)
         try:
             host.remove_widget(ring)
         except Exception:
@@ -204,6 +241,11 @@ def beacon(target: Widget, code: str,
     anim = (Animation(size=(56, 56), pos=(center[0] - 28, center[1] - 28),
                       opacity=0.0, duration=0.6, t='out_quad'))
     anim.bind(on_complete=_clean)
+    # P2-5 并发上限：登记新信标后，把最旧的挤掉（cancel + 摘除）
+    entry = (ring, host, anim)
+    _beacons.append(entry)
+    while len(_beacons) > BEACON_MAX_LIVE:
+        _beacon_kill(_beacons.pop(0))
     anim.start(ring)
 
 

@@ -10,7 +10,8 @@ verify_tables.py - 数据驱动结构校验（CI / 启动自检）
   [3] 条件表结构合法（算子名、嵌套形式）
   [4] 平衡参数没有散落在 engine.py 函数体里
   [5] 表与表之间的引用一致（技能顺序 ↔ 技能表、邻国拓扑对称可达）
-  [6] 分层依赖正确（低层不 import 高层）
+  [6] 分层依赖正确（低层不 import 高层；运行时模块全量登记，
+      未定级也未豁免的新模块直接报错 —— P1-8）
 
 用法::
 
@@ -336,21 +337,48 @@ else:
 # ============================================================
 section("[6] 分层依赖方向正确")
 
+# —— 分层表（P1-8 扩容：22 → 31，运行时模块全量登记）——
+# 层级含义：
+#   0   纯逻辑零依赖（条件求值器 / 平衡参数表 / 文案表）
+#   1   基础层（静态数据表、基础渲染组件、资源与音频服务）
+#   2   领域规则表（玩法子系统纯数据 + 求值包装）
+#   3   引擎核心（tick 循环 / 状态机；不得触碰任何 UI 渲染组件）
+#   4   引擎之上的服务与 v4 组件库
+#   5-9 UI 组件 / Mixin 分层（被依赖多者靠上）
+#   10  组装层（把 Mixin 与控制器拼成 App）
+# 定级依据：对 demo/*.py 全量 import 扫描，「被依赖越多越底层」。
 LAYERS = {
+    # L0 纯逻辑：零项目依赖
     'conditions.py':      0,
     'balance.py':         0,
+    'i18n.py':            0,   # P1-8：文案表，零项目依赖；engine(L3) 引用属合法
+                               #       逻辑依赖（此前不在白名单导致违规漏报，现按定级放行）
+    # L1 基础层
+    'pixel_assets.py':    1,   # P1-8：自动生成素材（零 import），仅提供游程数据
     'pixel_ui.py':        1,
+    'sfx.py':             1,   # P1-8：音频服务（仅 kivy、失败安全），被
+                               #       ui_drop/ui_pages/ui_popups/ui_session/main 使用
+    'world_map.py':       1,   # P1-8：地图渲染 + 地理常量，仅依赖 pixel_assets/pixel_ui；
+                               #       data(L1) 同级复用其 COUNTRY_STYLES/COUNTRY_CENTERS
     'data.py':            1,
     'tech_tree.py':       1,
     'country_events.py':  1,
     'v2_events.py':       1,
+    # L2 领域规则表
+    'flag_draw.py':       2,   # P1-8：国旗渲染组件（依赖 pixel_assets/pixel_ui），供 ui_v4_screens 使用
     'commissions.py':     2,
     'endings.py':         2,
     'achievements.py':    2,
+    # L3 引擎核心
     'engine.py':          3,
+    # L4 引擎之上的服务 / v4 组件库
+    'save_manager.py':    4,   # P1-8：序列化整局需读 commissions(L2)/engine(L3) 状态
+                               #       （函数内延迟 import 解循环），不是基础层，置其上
     'ui_v4.py':           4,
+    # L5-9 UI 组件 / Mixin
     'ui_v4_screens.py':   5,
     'ui_shared.py':       6,
+    'ui_fx.py':           7,   # P1-8：动效层（依赖 ui_shared/pixel_ui），被 ui_drop/ui_input 延迟调用
     'ui_modal.py':        7,
     'ui_hud.py':          8,
     'ui_pages.py':        9,
@@ -358,8 +386,29 @@ LAYERS = {
     'ui_popups.py':       9,
     'ui_session.py':      9,
     'ui_input.py':        9,
+    'ui_commissions.py':  9,   # P1-8：委托面板 Mixin（依赖 ui_hud/ui_modal），与 ui_input 同级互引合法
+    # L10 组装层
     'main.py':           10,
+    'tutorial.py':       10,  # P1-8：引导控制器（依赖 ui_modal/save_manager/engine）；
+                              #       TYPE_CHECKING 引用 main.GameUI 属静态类型标注而非
+                              #       运行时依赖，故与 main 同为组装层
 }
+
+# —— 显式豁免清单（不进 LAYERS 也不算未纳管；逐项注明理由，不做无声放行）——
+EXEMPT_MODULES = {
+    'perf.py':         'P1-3 性能探针，刻意保持零项目依赖（见其 docstring），由 main/工具按需 import',
+    'balance_sim.py':  '平衡模拟 CLI 工具（argparse 驱动），非运行时模块',
+    'perf_stress.py':  '压测工具脚本，非运行时模块',
+}
+# 前缀豁免：测试脚本 / 校验脚本 / 截图工具 / 下划线开头的临时探针（如 _probe_clock.py）
+# —— 测试与工具类文件本就不该进 LAYERS，它们属于开发期基础设施。
+EXEMPT_PREFIXES = ('test_', 'verify_', 'make_screenshots', '_')
+
+# 死键：LAYERS 里登记但文件已不存在（改名/删除后忘了同步登记表）
+dead_layers = [fn for fn in LAYERS
+               if not os.path.exists(os.path.join(HERE, fn))]
+check('LAYERS 登记的模块全部存在（无死键）', not dead_layers,
+      f"缺失：{dead_layers}" if dead_layers else f"{len(LAYERS)} 个登记项")
 
 violations = []
 for fn, lv in LAYERS.items():
@@ -378,12 +427,36 @@ check('无「低层 import 高层」的反向依赖', not violations,
 for v in violations:
     print(f"         · {v}")
 
-# engine.py 不该 import 任何 UI 模块
-ui_mods = {'ui_v4', 'ui_v4_screens', 'world_map', 'flag_draw', 'tutorial'}
+# engine.py 专项规则（P1-8，替代旧的 5 模块硬编码白名单）：
+# 纯逻辑核心只允许依赖「逻辑层」= L≤3 且不在 UI 渲染禁止集。
+# i18n 已定级 L0 属逻辑层 —— engine 用它无需开洞；world_map/flag_draw
+# 层级虽低（L1/L2）但属 UI 渲染组件，显式列入禁止集。
+ENGINE_UI_FORBIDDEN = {
+    'pixel_ui',    # UI 渲染基础组件（层级低但属 UI，引擎不得引用）
+    'world_map',   # 地图渲染组件
+    'flag_draw',   # 国旗渲染组件
+}
+_engine_allowed = ({fn[:-3] for fn, lv in LAYERS.items() if lv <= 3}
+                   - ENGINE_UI_FORBIDDEN)
 engine_src = io.open(os.path.join(HERE, 'engine.py'), encoding='utf-8').read()
-bad_ui = [m for m in ui_mods
-          if re.search(rf'^\s*(?:from|import)\s+{m}\b', engine_src, re.M)]
-check('engine.py 不依赖任何 UI 模块', not bad_ui, f"违规：{bad_ui}" if bad_ui else '')
+bad_engine = sorted({m.group(1) for m in
+                     re.finditer(r'^\s*(?:from|import)\s+([A-Za-z_][\w]*)',
+                                 engine_src, re.M)
+                     if f"{m.group(1)}.py" in LAYERS
+                     and m.group(1) not in _engine_allowed})
+check('engine.py 仅依赖逻辑层（L≤3 且非 UI 渲染组件）', not bad_engine,
+      f"违规：{bad_engine}" if bad_engine else 'i18n 为 L0 文案表，合法依赖')
+
+# P1-8 新增：未纳管模块断言 —— demo/*.py 凡不在 LAYERS 又不在豁免清单的，
+# 一律报错。目的：新增模块必须显式定级或显式豁免，不允许再"裸奔"
+# （游离于分层检查之外，反向依赖无人报警）。
+untracked = [f for f in sorted(os.listdir(HERE))
+             if f.endswith('.py') and f not in LAYERS
+             and f not in EXEMPT_MODULES
+             and not f.startswith(EXEMPT_PREFIXES)]
+check('demo/*.py 全部已定级或显式豁免（无未纳管模块）', not untracked,
+      f"未纳管：{untracked}" if untracked else
+      f"{len(LAYERS)} 定级 + {len(EXEMPT_MODULES)} 工具豁免 + 前缀规则{EXEMPT_PREFIXES}")
 
 
 # ============================================================

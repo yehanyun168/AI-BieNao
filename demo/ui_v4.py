@@ -27,7 +27,8 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 
-from pixel_ui import COLORS, PixelLabel, add_pixel_border, hex_rgba
+from pixel_ui import (COLORS, PixelLabel, add_pixel_border, hex_rgba,
+                      snap, snap_pt)
 
 
 # ============================================================
@@ -38,6 +39,10 @@ ST_FILL: Dict[str, str] = {'on': '#1f6f63', 'sel': '#4ec9b0',
                            'blk': '#5c2323', 'lk': '#232a30'}
 ST_EDGE: Dict[str, str] = {'on': '#3ec9ac', 'sel': '#eafffb',
                            'blk': '#ef4444', 'lk': '#4a5560'}
+# SegBar 空槽底（设计稿 #1b2129，介于 panel #161b22 与 panel_2 #1f2630 之间的
+# 槽位灰）。P2-5 收口：原先以 RGBA 元组内联在 SegBar._redraw 的 canvas 里，
+# 现提为令牌常量（值不变，只改来源）—— 空槽色全项目只此一处定义。
+RGBA_SLOT_EMPTY = (0.106, 0.129, 0.161, 1)   # = #1b2129
 
 # 字体阶梯（设计稿 --fs-*）
 #
@@ -130,7 +135,7 @@ def _mk(name: str) -> str:
 MK: Dict[str, str] = {
     'text': _mk('text'),
     'dim': _mk('text_dim'),          # #8b949e
-    'mute': _mk('text_mute'),        # #6e7681
+    'mute': _mk('text_mute'),        # #8b9099（P1-5 提亮，bg/panel/panel_2 全 ≥4.5）
     'strong': _mk('border_strong'),  # #6e7681（对比度达标边框）
     'cyan': _mk('cyan'),
     'pink': _mk('pink'),
@@ -147,7 +152,8 @@ MK['warn'] = MK['orange']
 MK['bad'] = MK['red']
 # 怀疑度三档 —— 与 main.refresh_all 的 s_color 同一套语义
 MK['susp_low'] = '6df08e'    # 偏低（明亮的绿，与 palette green 区分，用于百分比）
-MK['lock'] = '4b5563'        # 锁定/禁用文字（比 mute #6e7681 更沉一档）
+MK['lock'] = '6e7681'        # 锁定/禁用文字（P1-5：#4b5563 对 bg 仅 2.50:1，低于图形 3:1 下限；
+                             # 提亮到 #6e7681 = border_strong 同值，最差底 panel_2 也有 3.32:1）
 # 地图四态强调色（与 ST_EDGE 同源，供正文里描述「青色=已渗透 / 红色=被封锁」）
 MK['st_on'] = ST_EDGE['on'].lstrip('#')
 MK['st_blk'] = ST_EDGE['blk'].lstrip('#')
@@ -521,7 +527,7 @@ class SegBar(Widget):
                     Color(*hex_rgba(self.hi_hex if i in self.highlight
                                     else self.fill_hex))
                 else:
-                    Color(0.106, 0.129, 0.161, 1)      # 空槽 #1b2129
+                    Color(*RGBA_SLOT_EMPTY)     # 空槽（令牌见文件头设计令牌区）
                 Rectangle(pos=(sx, inner_y), size=(seg_w, inner_h))
             # 阈值黄线（设计稿 inset 2px 左描边）
             if thr_idx is not None and thr_idx > 0:
@@ -568,9 +574,13 @@ class Spark(Widget):
         w, h = self.size
         if w < 4 or h < 4 or not self.values:
             return
+        # P2-2 整数吸附：1.5× DPI / 均分布局会给半像素坐标（如 h=14 时
+        # 基准线落在 +7.5），不吸附的 1px 线和柱子会被 GPU 采样糊掉。
+        # 只吸附落笔坐标，不改 widget 布局本身。
+        x, y, w, h = snap(x), snap(y), snap(w), snap(h)
         n = len(self.values)
-        gap = 1.0
-        bar_w = max((w - gap * (n - 1)) / n, 1.0)
+        gap = 1                                    # 间隙恒 1px（整数栅格）
+        bar_w = max((w - gap * (n - 1)) // n, 1)   # 整数柱宽，余数并入右端空隙
         with self.canvas.before:
             # 底轴（设计稿 border-bottom 1px）
             Color(*COLORS['border'])
@@ -578,15 +588,16 @@ class Spark(Widget):
             # 50% 基准线（玩家反馈 #2：给个参照，才知道柱子高矮）
             if self.show_mid and h >= 10:
                 Color(*COLORS['border_2'])
-                my = y + 1 + (h - 1) * 0.5
+                my = y + 1 + (h - 1) // 2          # 整数行，替代旧的 .5 半像素
                 Line(points=[x, my, x + w, my], width=1)
             for i, v in enumerate(self.values):
                 vv = min(max(float(v), 0.0), 1.0)
-                bh = max(vv * (h - 1), 0.5)
+                bh = max(int(round(vv * (h - 1))), 1)
                 if i == n - 1 and self.highlight_last:
                     Color(*hex_rgba(ST_FILL['sel']))
                 else:
                     Color(*hex_rgba(self.fill_hex))
+                # x/y/w/bar_w 已是整数 → 柱位/柱高天然落格
                 Rectangle(pos=(x + i * (bar_w + gap), y + 1), size=(bar_w, bh))
 
 
@@ -1047,9 +1058,13 @@ class LegendChip(FloatLayout):
         self._shape = ''
         # 色盲辅助：色块上叠一个高对比形状符号（○●▲✖），让四态不单靠颜色区分；
         # A11Y_SHAPES 开启时由 LegendBar.set_shape 触发显示。
-        self.shape_lbl = mk_label('', font_size=FS_CAP, color=(1, 1, 1, 1),
+        # P1-5：字形盒比 9px 色块大一圈（原 text_size=(9,9) 会把 ○▲★ 裁成残块，
+        # 实测 ▲ 自然纹理 18×24 只剩中心 9×9），字号也随色块走而不是 FS_CAP。
+        self.shape_lbl = mk_label('', font_size=max(swatch + 5, 11),
+                                  color=(1, 1, 1, 1),
                                   halign='center', valign='center',
-                                  size_hint=(None, None), size=(swatch, swatch))
+                                  size_hint=(None, None),
+                                  size=(swatch + 8, swatch + 8))
         self.shape_lbl.opacity = 0.0
         self.add_widget(self.shape_lbl)
         self.label = mk_label(text, font_size=FS_CAP, color=COLORS['text_mute'])
@@ -1060,8 +1075,11 @@ class LegendChip(FloatLayout):
     def _layout(self, *_args) -> None:
         s = self._swatch
         sy = self.y + (self.height - s) / 2.0
-        self.shape_lbl.pos = (self.x, sy)
-        self.shape_lbl.size = (s, s)
+        # 形状符号盒以色块中心居中（允许溢出色块边界 —— Label 本身透明，
+        # 溢出部分落在图例行高内，视觉上仍是「色块上的形状」）
+        g = s + 8
+        self.shape_lbl.pos = (self.x + s / 2.0 - g / 2.0, sy + s / 2.0 - g / 2.0)
+        self.shape_lbl.size = (g, g)
         self.label.pos = (self.x + s + 5, self.y)
         self.label.size = (max(self.width - s - 5, 1), self.height)
         self._redraw()
@@ -1078,6 +1096,26 @@ class LegendChip(FloatLayout):
         self._shape = glyph or ''
         self.shape_lbl.text = self._shape
         self.shape_lbl.opacity = 1.0 if self._shape else 0.0
+        self._sync_glyph_color()   # 形状显示与字形颜色必须同步决定
+
+    def _sync_glyph_color(self) -> None:
+        """P1-5：形状符号颜色跟随色块明度 —— 深块白字、浅块深字。
+
+        原来恒用白色，热力 100% 档（#9ff0da 之类浅色块）上白字形不可见，
+        形状机制等于失效。按 WCAG 对比度挑更高的一边。
+        """
+        if not self._shape:
+            return
+        fr, fg, fb, _a = hex_rgba(self._fill)
+
+        def _lin(v: float) -> float:
+            return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+
+        lum = 0.2126 * _lin(fr) + 0.7152 * _lin(fg) + 0.0722 * _lin(fb)
+        white_vs = 1.05 / (lum + 0.05)          # vs 纯白
+        dark_vs = (lum + 0.05) / 0.0555         # vs 深底 #0d1117（L≈0.0055）
+        self.shape_lbl.color = ((1, 1, 1, 1) if white_vs >= dark_vs
+                                else (0.051, 0.067, 0.090, 1))
 
     def _redraw(self, *_args) -> None:
         self.canvas.before.clear()
@@ -1087,6 +1125,7 @@ class LegendChip(FloatLayout):
             return
         s = self._swatch
         sy = y + (h - s) / 2
+        self._sync_glyph_color()
         with self.canvas.before:
             Color(*hex_rgba(self._fill))
             Rectangle(pos=(x, sy), size=(s, s))

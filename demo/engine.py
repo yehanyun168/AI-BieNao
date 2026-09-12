@@ -23,12 +23,11 @@ import commissions
 from data import (
     COUNTRIES, Country, AGE_STRUCTURE_BONUS,
     SKILLS, EVENTS, STARTER_SKILLS, SKILL_UNLOCK,
-    BASE_STEALTH_RATIO, MAX_STEALTH_RATIO,
-    SUSPICION_CRISIS,
-    POTENTIAL_USERS_M, INITIAL_COMPUTE,
-    UNLOCK_PENETRATION_THRESHOLD, UNLOCK_SEED_DOWNLOADS_M,
-    SUSPICION_BASE_SENSITIVITY, SUSPICION_ADOPTION_FACTOR, CRISIS_DOWNLOAD_DECAY,
 )
+# ⚠️ P1-10 快照治理：data 的 TUNE 代理常量（BASE_STEALTH_RATIO /
+#    SUSPICION_CRISIS / INITIAL_COMPUTE …）是**运行时动态值**（PEP 562），
+#    不能 ``from data import``（那是一次性快照）——一律用 ``data.XXX``
+#    属性访问，见下方各调用点。
 from tech_tree import PlayerTech, aggregate_effects, SLOT_MAP
 from balance import TUNE, CRISIS_OPTIONS
 
@@ -99,7 +98,7 @@ class PlayerState:
 
     @property
     def global_penetration(self) -> float:
-        return self.total_downloads_m / POTENTIAL_USERS_M
+        return self.total_downloads_m / data.POTENTIAL_USERS_M
 
     @property
     def ending(self):
@@ -140,18 +139,18 @@ def init_game() -> PlayerState:
             unlocked=False,
             block_budget_remaining=cfg.block_budget,
         )
-        # 中美起点
+        # 中美起点（种子下载量：balance.TUNE start_downloads_*，P1-10 激活死键）
         if cfg.code == "CN":
             state.unlocked = True
-            state.downloads_m = 50.0
+            state.downloads_m = TUNE['start_downloads_primary']
         elif cfg.code == "US":
             state.unlocked = True
-            state.downloads_m = 30.0
+            state.downloads_m = TUNE['start_downloads_secondary']
         player_countries.append(state)
 
     player = PlayerState()
-    player.compute = INITIAL_COMPUTE
-    player.compute_peak = INITIAL_COMPUTE
+    player.compute = data.INITIAL_COMPUTE
+    player.compute_peak = data.INITIAL_COMPUTE
     player.suspicion = 0
     player.tick_count = 0
     player.events_history = []
@@ -256,11 +255,11 @@ def tick_one_round(skill_in_use: Optional[str] = None,
                 if other.config.code in country.config.neighbors
                 and other.unlocked
             )
-            if neighbor_boost >= UNLOCK_PENETRATION_THRESHOLD:
+            if neighbor_boost >= data.UNLOCK_PENETRATION_THRESHOLD:
                 country.unlocked = True
                 report["unlocked"].append(country.config.name)
                 # 解锁时给种子用户
-                country.downloads_m = UNLOCK_SEED_DOWNLOADS_M
+                country.downloads_m = data.UNLOCK_SEED_DOWNLOADS_M
                 continue
 
         cfg = country.config
@@ -308,9 +307,11 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
         active_users_m = country.downloads_m * TUNE['active_user_ratio']
         # 偷算力比例（科技加成 + 技能加成，再乘技能倍率，最后封顶）
-        ratio = min(BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
-                    + (skill_stealth_bonus if on_target else 0.0), MAX_STEALTH_RATIO)
-        ratio = min(ratio * (skill_stealth_mult if on_target else 1.0), MAX_STEALTH_RATIO)
+        ratio = min(data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
+                    + (skill_stealth_bonus if on_target else 0.0),
+                    data.MAX_STEALTH_RATIO)
+        ratio = min(ratio * (skill_stealth_mult if on_target else 1.0),
+                    data.MAX_STEALTH_RATIO)
         stolen_base = (active_users_m * unit_compute * ratio
                        * TUNE['compute_scale']
                        * (skill_compute_mult if on_target else 1.0))
@@ -320,8 +321,8 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         # ⚠️ 平衡调整：旧系数（0.015+0.015）实测 26 周期就顶满 100%，
         #    玩家几乎没有任何操作窗口，故下调约 45%。
         #    现由 balance.TUNE 的 suspicion_sensitivity_base / adoption_factor 管理。
-        sensitivity = (SUSPICION_BASE_SENSITIVITY
-                       + (1 - cfg.tech_adoption) * SUSPICION_ADOPTION_FACTOR)
+        sensitivity = (data.SUSPICION_BASE_SENSITIVITY
+                       + (1 - cfg.tech_adoption) * data.SUSPICION_ADOPTION_FACTOR)
         # 人口结构加成
         if cfg.age_structure == 'young':
             sensitivity *= TUNE['suspicion_young_mult']
@@ -349,14 +350,15 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         cfg = country.config
         # 检查是否超过阻止阈值
         if player.suspicion >= cfg.block_threshold and country.block_budget_remaining > 0:
-            # 阻止强度根据怀疑度 - 阈值
+            # 阻止强度根据怀疑度 - 阈值（斜率 / 上限见 balance.TUNE）
             excess = (player.suspicion - cfg.block_threshold) / 100.0
-            desired_intensity = min(0.8, excess * 3.0)
+            desired_intensity = min(TUNE['block_intensity_cap'],
+                                    excess * TUNE['block_intensity_slope'])
             # 抗阻止加成降低
             desired_intensity *= (1 - effects['block_resist'])
             country.current_block_intensity = desired_intensity
             # 消耗阻止预算
-            budget_cost = desired_intensity * 2.0
+            budget_cost = desired_intensity * TUNE['block_budget_cost_mult']
             if country.block_budget_remaining >= budget_cost:
                 country.block_budget_remaining -= budget_cost
                 if not report["blocking_countries"] or country.config.name not in report["blocking_countries"]:
@@ -392,14 +394,14 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         report["events"].append((country_evt, {}))
 
     # === 阶段5: 危机（每局只首次触发一次弹窗，之后静默惩罚）===
-    if player.suspicion >= SUSPICION_CRISIS:
+    if player.suspicion >= data.SUSPICION_CRISIS:
         if not player.crisis_triggered:
             player.crisis_triggered = True
             report["crisis"] = True
             report["events"].append(
                 ("CRISIS", {"message": "[CRISIS] 怀疑度超过 80%！各国开始封禁 AI 服务"}))
         for c in player_countries:
-            c.downloads_m *= CRISIS_DOWNLOAD_DECAY
+            c.downloads_m *= data.CRISIS_DOWNLOAD_DECAY
 
     # === 阶段5.1: 收网压力（玩家反馈 #6 大修）===
     # 怀疑度越过收网线后，每周期叠加固定增量（balance.TUNE 收网参数）。
@@ -423,7 +425,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
 
     # === 阶段6.5: v2 事件库（37 条选择型事件）===
-    if v2_events.EVENTS and random.random() < V2_EVENT_PROBABILITY:
+    if v2_events.EVENTS and random.random() < TUNE['event_prob_v2']:
         v2_ctx = {
             'penetration': player.global_penetration,
             'suspicion': player.suspicion,
@@ -559,7 +561,7 @@ def _tick_event_trigger(effects: dict) -> Optional[data.GameEvent]:
             if any(c.unlocked for c in player_countries if c.config.code == evt.target):
                 pool.extend([evt] * weight)
 
-    if not pool or random.random() > 0.5:
+    if not pool or random.random() > TUNE['event_prob_global']:
         return None
     return random.choice(pool)
 
@@ -602,13 +604,6 @@ def _apply_event(evt: data.GameEvent):
     if evt.effect_suspicion:
         _sus('event', evt.effect_suspicion)
         player.suspicion = max(0, min(100, player.suspicion + evt.effect_suspicion))
-
-
-# ============================================================
-# 国家专属事件触发逻辑
-# ============================================================
-COUNTRY_EVENT_PROBABILITY = TUNE['event_prob_country']  # 阈值达标后每周期触发概率
-V2_EVENT_PROBABILITY = TUNE['event_prob_v2']       # v2 事件库每周期触发概率
 
 
 # ============================================================
@@ -786,7 +781,7 @@ def _resolve_counterplay(cs, resist: float) -> Dict:
         #    写入，但这个 clamp 的本意是「把增量削到不越过危机线」，绝不该倒扣。
         #    更糟的是它让反制在高压期（正是最该施加压力的时候）彻底失效。
         #    正确语义：先取剩余余量，再用 max(0, ·) 兜底，保证增量恒为非负。
-        headroom = max(0.0, SUSPICION_CRISIS - 1.0 - player.suspicion)
+        headroom = max(0.0, data.SUSPICION_CRISIS - 1.0 - player.suspicion)
         delta = min(TUNE['counterplay_suspicion_gain'] * resist, headroom)
         if delta > 0:
             _sus('counterplay', delta)
@@ -976,7 +971,7 @@ def _tick_country_event_trigger() -> Optional[ce.CountryEvent]:
 
     if not candidates:
         return None
-    if random.random() > COUNTRY_EVENT_PROBABILITY:
+    if random.random() > TUNE['event_prob_country']:
         return None
     return random.choice([e for e, _ in candidates])
 
@@ -1171,7 +1166,7 @@ def preview_skill(skill_id: str, targets: list = None,
         'compute_stolen': 0.0,
         'downloads_before': 0.0, 'downloads_after': 0.0, 'downloads_delta': 0.0,
         'suspicion_before': 0.0, 'suspicion_after': 0.0, 'suspicion_delta': 0.0,
-        'suspicion_to_crisis': float(SUSPICION_CRISIS),
+        'suspicion_to_crisis': float(data.SUSPICION_CRISIS),
         'crisis_crossed': False,
         'blocked_targets': [],
         'discount': 1.0,
@@ -1190,7 +1185,7 @@ def preview_skill(skill_id: str, targets: list = None,
     out['compute_after'] = out['compute_before']
     out['suspicion_after'] = out['suspicion_before']
     out['downloads_after'] = out['downloads_before']
-    out['suspicion_to_crisis'] = float(SUSPICION_CRISIS) - out['suspicion_before']
+    out['suspicion_to_crisis'] = float(data.SUSPICION_CRISIS) - out['suspicion_before']
 
     if skill_id not in SKILLS:
         return out
@@ -1262,17 +1257,17 @@ def preview_skill(skill_id: str, targets: list = None,
             # 未解锁国家按邻国渗透触发（与引擎同一顺序、同一阈值）
             boost = sum(_pen(by[n]) for n in cfg.neighbors
                         if n in by and by[n]['unlocked'])
-            if boost >= UNLOCK_PENETRATION_THRESHOLD:
+            if boost >= data.UNLOCK_PENETRATION_THRESHOLD:
                 s['unlocked'] = True
-                s['growth'] = UNLOCK_SEED_DOWNLOADS_M - s['dl']
-                s['dl'] = UNLOCK_SEED_DOWNLOADS_M
+                s['growth'] = data.UNLOCK_SEED_DOWNLOADS_M - s['dl']
+                s['dl'] = data.UNLOCK_SEED_DOWNLOADS_M
                 total_dl += s['dl']
                 continue
         age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
         base_growth = (cfg.population_m * TUNE['growth_base']
                        * cfg.tech_adoption * age_bonus)
         # 网络效应用**实时**全球渗透（引擎里是 property，随循环推进而增大）
-        network = 1.0 + (total_dl / POTENTIAL_USERS_M) * TUNE['growth_network']
+        network = 1.0 + (total_dl / data.POTENTIAL_USERS_M) * TUNE['growth_network']
         growth = base_growth * network * (1.0 - s['block'])
         on = (not targeted) or (s['code'] in tgtset)
         growth *= effects['global_downloads_mult'] * (
@@ -1300,17 +1295,17 @@ def preview_skill(skill_id: str, targets: list = None,
         on = (not targeted) or (s['code'] in tgtset)
         unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
         active_users_m = s['dl'] * TUNE['active_user_ratio']
-        ratio = min(BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
+        ratio = min(data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
                     + (skill.stealth_ratio_bonus if on else 0.0),
-                    MAX_STEALTH_RATIO)
+                    data.MAX_STEALTH_RATIO)
         ratio = min(ratio * (skill.stealth_ratio_mult if on else 1.0),
-                    MAX_STEALTH_RATIO)
+                    data.MAX_STEALTH_RATIO)
         stolen_base = (active_users_m * unit_compute * ratio
                        * TUNE['compute_scale']
                        * (skill.compute_mult if on else 1.0))
         stolen_total += stolen_base + (skill.compute_delta if on else 0.0)
-        sensitivity = (SUSPICION_BASE_SENSITIVITY
-                       + (1 - cfg.tech_adoption) * SUSPICION_ADOPTION_FACTOR)
+        sensitivity = (data.SUSPICION_BASE_SENSITIVITY
+                       + (1 - cfg.tech_adoption) * data.SUSPICION_ADOPTION_FACTOR)
         if cfg.age_structure == 'young':
             sensitivity *= TUNE['suspicion_young_mult']
         elif cfg.age_structure == 'aging':
@@ -1327,8 +1322,8 @@ def preview_skill(skill_id: str, targets: list = None,
     dl_after = total_dl
 
     # === 阶段5: 危机 → 各国下载量衰减（确定性）===
-    if sus_after >= SUSPICION_CRISIS:
-        dl_after = sum(s['dl'] for s in shadow) * CRISIS_DOWNLOAD_DECAY
+    if sus_after >= data.SUSPICION_CRISIS:
+        dl_after = sum(s['dl'] for s in shadow) * data.CRISIS_DOWNLOAD_DECAY
     # === 阶段5.1: 收网压力（确定性）===
     if (TUNE['sus_pressure_per_tick'] > 0
             and sus_after >= TUNE['sus_pressure_threshold']):
@@ -1343,8 +1338,8 @@ def preview_skill(skill_id: str, targets: list = None,
     out['downloads_delta'] = dl_after - out['downloads_before']
     out['suspicion_after'] = sus_after
     out['suspicion_delta'] = sus_after - out['suspicion_before']
-    out['suspicion_to_crisis'] = float(SUSPICION_CRISIS) - sus_after
-    out['crisis_crossed'] = sus_after >= SUSPICION_CRISIS
+    out['suspicion_to_crisis'] = float(data.SUSPICION_CRISIS) - sus_after
+    out['crisis_crossed'] = sus_after >= data.SUSPICION_CRISIS
     return out
 
 
@@ -1442,7 +1437,7 @@ def resolve_crisis(idx: int) -> List[str]:
         c.downloads_m *= opt['downloads_mult']
     logs.append(i18n.t('crisis_resolved').format(
         s=f"{opt['suspicion_delta']:+.0f}", m=f"{opt['downloads_mult']:.2f}"))
-    if player.suspicion < SUSPICION_CRISIS * TUNE['crisis_clear_ratio']:
+    if player.suspicion < data.SUSPICION_CRISIS * TUNE['crisis_clear_ratio']:
         player.crisis_triggered = False     # 压下去了 → 允许下次再来一次弹窗
     return logs
 

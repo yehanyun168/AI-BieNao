@@ -315,42 +315,49 @@ EVENTS: List[GameEvent] = [
 
 
 # ============================================================
-# 常量
+# 常量（运行时代理 → balance.TUNE，PEP 562）
 # ============================================================
-# ⚠️ 2026-09-10 数据驱动重构：全部平衡数值改由 balance.TUNE 提供
-#    （单一来源）。这里保留同名常量只为兼容旧调用方，**不要在这里改数值** ——
-#    要调平衡请改 balance.py 的 TUNE 表。
+# ⚠️ 2026-09-11 P1-10 快照治理：以下 12 个名字不再是导入期快照。
+#    旧实现 ``XXX = _TUNE['key']`` 在 import 时把值拷死 —— 运行时改 TUNE
+#    完全不生效（实测改 suspicion_sensitivity_base 后本模块常量纹丝不动），
+#    P2-3 难度档将无法靠改表实现。现改为模块级 ``__getattr__`` 动态代理：
+#    每次 ``data.XXX`` 属性访问都实时读 balance.TUNE（同名、同类型、
+#    同默认值，未命中代理表的属性照常抛 AttributeError）。
+#
+#    ⚠️ 唯一注意：``from data import XXX`` 是导入那一刻的一次性取值，
+#    动态代理对它无效 —— 跨模块一律用 ``data.XXX`` 属性访问
+#    （engine.py / ui_input.py / balance_sim.py 已按此修改）。
+#    数值来源仍是 balance.TUNE（唯一来源）；要调平衡请改 balance.py。
 from balance import TUNE as _TUNE  # noqa: E402
 
-BASE_STEALTH_RATIO = _TUNE['stealth_ratio_base']
-MAX_STEALTH_RATIO = _TUNE['stealth_ratio_max']
-SUSPICION_CRISIS = _TUNE['suspicion_crisis']
-SUSPICION_BASE_SENSITIVITY = _TUNE['suspicion_sensitivity_base']
-SUSPICION_ADOPTION_FACTOR = _TUNE['suspicion_adoption_factor']
-CRISIS_DOWNLOAD_DECAY = _TUNE['crisis_download_decay']
-INITIAL_COMPUTE = _TUNE['initial_compute']
-POTENTIAL_USERS_M = _TUNE['potential_users_m']
+# 兼容常量名 → TUNE 键（一一对应，值语义与旧快照完全相同）
+_TUNE_PROXY = {
+    'BASE_STEALTH_RATIO': 'stealth_ratio_base',
+    'MAX_STEALTH_RATIO': 'stealth_ratio_max',
+    'SUSPICION_CRISIS': 'suspicion_crisis',
+    'SUSPICION_BASE_SENSITIVITY': 'suspicion_sensitivity_base',
+    'SUSPICION_ADOPTION_FACTOR': 'suspicion_adoption_factor',
+    'CRISIS_DOWNLOAD_DECAY': 'crisis_download_decay',
+    'INITIAL_COMPUTE': 'initial_compute',
+    'POTENTIAL_USERS_M': 'potential_users_m',
+    # 节奏：一个周期对应的真实秒数（v0.5 起由 balance.TUNE 统一管理）
+    'BASE_TICK_SECONDS': 'base_tick_seconds',
+    # 兼容旧名 —— 旧代码按「秒」理解 TICK_INTERVAL
+    'TICK_INTERVAL': 'base_tick_seconds',
+    # 邻国解锁阈值：已解锁邻国渗透率之和达到此值才会解锁新国家
+    #   （0.10，balance_sim.py --seeds 40 实测标定；标定史详见 balance.py）
+    'UNLOCK_PENETRATION_THRESHOLD': 'unlock_penetration_threshold',
+    # 解锁时赠送的种子用户（百万）
+    'UNLOCK_SEED_DOWNLOADS_M': 'unlock_seed_downloads',
+}
 
-# 节奏：一个周期对应的真实秒数（v0.5 起由 balance.TUNE 统一管理）
-BASE_TICK_SECONDS = _TUNE['base_tick_seconds']
-# 兼容旧名 —— 旧代码按「秒」理解 TICK_INTERVAL
-TICK_INTERVAL = _TUNE['base_tick_seconds']
 
-# ------------------------------------------------------------
-# 邻国解锁阈值：已解锁邻国渗透率之和达到此值才会解锁新国家
-#   ⚠️ 旧值 0.20（12 国版）实测无法达成：中国渗透率长期停在 3% 左右，
-#      邻国只有 1-2 个，导致 150 周期仍只有 2/12 国解锁，扩张被软锁死。
-#   2026-09-10 拆回 20 国后邻国拓扑变密（每国 1-5 个邻国），实测：
-#      0.05 → 33 周期就 20/20，地缘扩张完全失去意义
-#      0.08 → 平均 19.6/20（40 局里 31 局满图），仍偏松
-#      0.10 → 平均 19.0/20（40 局里 24 局满图），结局分布也最均衡 ← 采用
-#      0.12 → 平均 17.4/20，节奏偏慢
-#   取 0.10（balance_sim.py --seeds 40 实测标定）。
-#   ⚠️ 数值现由 balance.TUNE['unlock_penetration_threshold'] 提供。
-# ------------------------------------------------------------
-UNLOCK_PENETRATION_THRESHOLD = _TUNE['unlock_penetration_threshold']
-# 解锁时赠送的种子用户（百万）
-UNLOCK_SEED_DOWNLOADS_M = _TUNE['unlock_seed_downloads']
+def __getattr__(name: str):
+    """PEP 562 模块级动态属性：TUNE 代理键实时读取 balance.TUNE。"""
+    key = _TUNE_PROXY.get(name)
+    if key is None:
+        raise AttributeError(f"module 'data' has no attribute {name!r}")
+    return _TUNE[key]
 
 
 # ============================================================

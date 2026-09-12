@@ -25,7 +25,7 @@ from kivy.uix.button import Button
 from kivy.uix.widget import Widget
 
 from pixel_ui import COLORS, PixelPanel, hex_rgba, add_pixel_border
-from ui_v4 import mk_label, FS_H3, FS_BODY, FS_CAP, MK
+from ui_v4 import mk_label, FS_H3, FS_BODY, FS_CAP, MK, ST_FILL
 from ui_modal import auto_h_label    # 自增高正文（text_size=(w,None)，绝不裁切）
 import engine
 import save_manager
@@ -311,7 +311,8 @@ class TutorialController:
                      width=120 if tone == 'plain' else 132)
         btn.background_normal = ''
         btn.background_color = (COLORS.get('panel_light', COLORS['panel'])
-                                if tone == 'plain' else hex_rgba('#1f6f63'))
+                                if tone == 'plain'
+                                else hex_rgba(ST_FILL['on']))   # P2-5 收口：'on' 态填充令牌
         btn.color = (COLORS['text_mute'] if tone == 'plain' else COLORS['cyan'])
         add_pixel_border(btn, color=(COLORS['border_2']
                                      if tone == 'plain' else _HILITE))

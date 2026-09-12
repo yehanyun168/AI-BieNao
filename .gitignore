@@ -22,6 +22,7 @@ crash.log
 
 # ===== 生成截图 / 一次性调试产物 =====
 _v4shots/
+_v4shots_backup_*/
 _crops/
 demo/_probe*.py
 demo/_probe*.txt

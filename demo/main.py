@@ -357,7 +357,7 @@ import i18n
 from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
 import world_map
 from world_map import WorldMap
-from pixel_ui import (hex_rgba, add_pixel_border)   # 只留本文件实际使用的符号
+from pixel_ui import add_pixel_border   # P2-5：hex_rgba 已随 '#0d1117' 收口移除
 
 import engine
 import save_manager
@@ -720,7 +720,8 @@ class MainMenu(FloatLayout):
         root.add_widget(left)
 
         # ---- 右：只读像素地图剪影 ----
-        right = Panel(bg=hex_rgba('#0d1117'), border_color=COLORS['border_2'])
+        # P2-5 收口：'#0d1117' 与 COLORS['bg'] 同值，改引用令牌（只改来源）
+        right = Panel(bg=COLORS['bg'], border_color=COLORS['border_2'])
         right.size_hint_x = 1.0 - self.LEFT_W
         self.sil_map = WorldMap()
         self.sil_map.size_hint = (1, 1)

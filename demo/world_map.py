@@ -40,7 +40,7 @@ from kivy.graphics import (
 )
 
 import pixel_assets as PA
-from pixel_ui import PixelLabel, hex_rgba
+from pixel_ui import PixelLabel, hex_rgba, snap, snap_pt
 
 
 # ============================================================
@@ -251,8 +251,10 @@ class WorldMap(FloatLayout):
         return self.x + (W - w) / 2.0, self.y + (H - h) / 2.0, w, h
 
     def _layout(self, *args):
-        self._sea_rect.pos = (self.x, self.y)
-        self._sea_rect.size = (self.width, self.height)
+        # P2-2：海面矩形与 1px 经纬线落笔前吸附到整数像素 —— 内接矩形在
+        # 非 2:1 面板里会算出 .5 半像素，1px Line 会被采样成 2px 糊边。
+        self._sea_rect.pos = snap_pt((self.x, self.y))
+        self._sea_rect.size = snap_pt((self.width, self.height))
 
         ox, oy, mw, mh = self._map_rect()
         cw = mw / float(self.GRID_W)
@@ -264,11 +266,11 @@ class WorldMap(FloatLayout):
                 ln.points = []
                 continue
             if axis == 'v':
-                x = ox + g * cw
-                ln.points = [x, oy, x, oy + mh]
+                x = snap(ox + g * cw)
+                ln.points = [x, snap(oy), x, snap(oy + mh)]
             else:
-                y = oy + mh - g * ch
-                ln.points = [ox, y, ox + mw, y]
+                y = snap(oy + mh - g * ch)
+                ln.points = [snap(ox), y, snap(ox + mw), y]
 
         self._translate.xy = (ox, oy + mh)
         self._scale.xyz = (cw, -ch, 1.0)
@@ -282,9 +284,11 @@ class WorldMap(FloatLayout):
         for code, lbl in self.country_labels.items():
             lx, ly = PA.LABELS[code]
             ax, ay = PA.ANCHORS[code]
-            x0, x1 = g2x(lx - self.CHIP_W / 2), g2x(lx + self.CHIP_W / 2)
-            y0, y1 = g2y(ly + self.CHIP_H / 2), g2y(ly - self.CHIP_H / 2)
-            stroke_px = max(1.0, self.CHIP_STROKE * ch)
+            # P2-2：标签框四边先吸附成整数，后续 chip/inner/mark/信标/引导线
+            # 全部由这四个整数派生 —— 整套 overlay 落在整数像素上。
+            x0, x1 = snap(g2x(lx - self.CHIP_W / 2)), snap(g2x(lx + self.CHIP_W / 2))
+            y0, y1 = snap(g2y(ly + self.CHIP_H / 2)), snap(g2y(ly - self.CHIP_H / 2))
+            stroke_px = max(1, snap(self.CHIP_STROKE * ch))
 
             lbl.pos = (x0, y0)
             lbl.size = (x1 - x0, y1 - y0)
@@ -294,26 +298,26 @@ class WorldMap(FloatLayout):
              b_ring, ring, b_core, core) = self._chip_gfx[code]
             chip.pos, chip.size = (x0, y0), (x1 - x0, y1 - y0)
             inner.pos = (x0 + stroke_px, y0 + stroke_px)
-            inner.size = (max(x1 - x0 - 2 * stroke_px, 0.1),
-                          max(y1 - y0 - 2 * stroke_px, 0.1))
+            inner.size = (max(x1 - x0 - 2 * stroke_px, 1),
+                          max(y1 - y0 - 2 * stroke_px, 1))
 
             # 锚点方块 + 到标签框边缘的引导线
-            hw, hh = self.DOT * cw / 2.0, self.DOT * ch / 2.0
-            acx, acy = g2x(ax), g2y(ay)
-            mark.pos, mark.size = (acx - hw, acy - hh), (self.DOT * cw, self.DOT * ch)
+            hw, hh = snap(self.DOT * cw / 2.0), snap(self.DOT * ch / 2.0)
+            acx, acy = snap(g2x(ax)), snap(g2y(ay))
+            mark.pos, mark.size = (acx - hw, acy - hh), (2 * hw, 2 * hh)
 
             # 信标：锚点上的状态色方块 + 外圈方环（设计稿 S06）
             bs = self.BEACON
-            bhw, bhh = bs * cw / 2.0, bs * ch / 2.0
-            core.pos, core.size = (acx - bhw, acy - bhh), (bs * cw, bs * ch)
+            bhw, bhh = snap(bs * cw / 2.0), snap(bs * ch / 2.0)
+            core.pos, core.size = (acx - bhw, acy - bhh), (2 * bhw, 2 * bhh)
             rs = bs + self.BEACON_RING * 2.0
-            rhw, rhh = rs * cw / 2.0, rs * ch / 2.0
-            ring.pos, ring.size = (acx - rhw, acy - rhh), (rs * cw, rs * ch)
+            rhw, rhh = snap(rs * cw / 2.0), snap(rs * ch / 2.0)
+            ring.pos, ring.size = (acx - rhw, acy - rhh), (2 * rhw, 2 * rhh)
 
             # 引导线终点 = 锚点→框心连线与外框的交点（不侵入框内）
             cxp, cyp = (x0 + x1) / 2.0, (y0 + y1) / 2.0
-            ex, ey = self._edge_hit(acx, acy, x0, y0, x1, y1, cxp, cyp)
-            line.points = [acx, acy, ex, ey]
+            ex, ey = self._edge_hit(g2x(ax), g2y(ay), x0, y0, x1, y1, cxp, cyp)
+            line.points = [acx, acy, snap(ex), snap(ey)]
 
     @staticmethod
     def _edge_hit(ax, ay, x0, y0, x1, y1, cx, cy):
