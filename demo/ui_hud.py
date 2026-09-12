@@ -93,10 +93,9 @@ LAYER_KEYS = ['unlock', 'heat', 'block', 'compute']
 LAYER_LABEL_KEY = {'unlock': 'layer_unlock', 'heat': 'layer_heat',
                    'block': 'layer_block', 'compute': 'layer_compute'}
 
-# 渗透率热力图 8 档（设计稿 S13 的青紫渐变，单一来源）
-HEAT_SCALE = ['#1f2740', '#243a52', '#22505b', '#1f6f63',
-              '#2a9d7f', '#3ec9ac', '#5fe0c2', '#9ff0da']
-# 阻止强度 5 档红阶
+# T10 渗透热力图：8 档整国涂色已下线（太粗，看不出涨跌），改由 world_map
+# 的同心方环光晕承担；这里只留 4 档图例色（与光晕同源）。
+HEAT_LEGEND = ['#243a52', '#22505b', '#1f6f63', '#dcdcaa']
 BLOCK_SCALE = ['#232a30', '#4a2a2a', '#6e2f2f', '#9c3535', '#ef4444']
 # 算力密度 5 档黄阶
 COMPUTE_SCALE = ['#232a30', '#3a3626', '#5c5230', '#8a7a3a', '#dcdcaa']
@@ -802,17 +801,19 @@ class HudMixin:
         self._apply_layer()
 
     def _layer_fills(self):
-        """把图层规则换算成 ``{code: (fill, edge, text)}``；解锁状态返回 None（四态）"""
-        if self.active_layer == 'unlock':
+        """图层着色的粗色阶覆盖 ``{code: (fill, edge, text)}``；返回 None = 四态。
+
+        T10 起 heat 图层不再用 8 档色阶涂整国（12.5% 一跳，看不出涨跌），
+        改由 map_widget 的同心环光晕（set_heat）承担 —— 底色退回四态，
+        让陆地纹理与海岸线保持可见。
+        """
+        if self.active_layer in ('unlock', 'heat'):
             return None
         fills = {}
         max_dl = max((c.downloads_m for c in engine.player_countries), default=1.0) or 1.0
         for c in engine.player_countries:
             code = c.config.code
-            if self.active_layer == 'heat':
-                idx = min(int(c.penetration_rate / 0.125), len(HEAT_SCALE) - 1)
-                fills[code] = (HEAT_SCALE[idx], HEAT_SCALE[idx], '#e6edf3')
-            elif self.active_layer == 'block':
+            if self.active_layer == 'block':
                 bi = c.current_block_intensity
                 idx = 0 if bi <= 0.01 else min(int(bi / 0.2) + 1, len(BLOCK_SCALE) - 1)
                 fills[code] = (BLOCK_SCALE[idx], BLOCK_SCALE[idx], '#e6edf3')
@@ -825,7 +826,23 @@ class HudMixin:
 
     def _apply_layer(self) -> None:
         self.map_widget.set_layer_fills(self._layer_fills())
+        self.map_widget.set_heat(self._heat_data())
         self._sync_legend()
+
+    def _heat_data(self):
+        """T10 热力层数据 ``{code: (penetration 0~1, blocked)}``。
+
+        仅 heat 图层返回数据，其余返回 ``{}``（世界地图据此隐藏光晕）。
+        blocked = 净封锁强度 > 0：被反制的国家直接变红，「我压住了谁」与
+        「谁还在涨」在同一个视图里可读。
+        """
+        if self.active_layer != 'heat':
+            return {}
+        out = {}
+        for c in engine.player_countries:
+            bi = getattr(c, 'current_block_intensity', 0.0) or 0.0
+            out[c.config.code] = (c.penetration_rate, bi > 0.01)
+        return out
 
     def _sync_legend(self) -> None:
         if self.active_layer == 'unlock':
@@ -843,11 +860,13 @@ class HudMixin:
             low = min(engine.player_countries,
                       key=lambda c: c.penetration_rate, default=None)
             avg = (sum(pcts) / len(pcts) * 100) if pcts else 0.0
+            # T10：图例改用「环数/颜色」语义 —— 与地图上的光晕一一对应，
+            # 而不是 8 档色阶（那套已随热力图改造下线）。
             self.legend_hud.set_scale([
-                (HEAT_SCALE[0], HEAT_SCALE[0], '0%'),
-                (HEAT_SCALE[2], HEAT_SCALE[2], '25%'),
-                (HEAT_SCALE[4], HEAT_SCALE[4], '50%'),
-                (HEAT_SCALE[7], HEAT_SCALE[7], '100%'),
+                (HEAT_LEGEND[0], HEAT_LEGEND[0], t('heat_leg_low')),
+                (HEAT_LEGEND[1], HEAT_LEGEND[1], t('heat_leg_mid')),
+                (HEAT_LEGEND[2], HEAT_LEGEND[2], t('heat_leg_high')),
+                (HEAT_LEGEND[3], HEAT_LEGEND[3], t('heat_leg_full')),
             ])
             self.lbl_grey.text = (
                 f"{t('layer_heat_max')} {top.config.code} {top.penetration_rate*100:.2f}% · "

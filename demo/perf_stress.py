@@ -62,6 +62,7 @@ import ui_shared as ST                         # noqa: E402
 IDLE_S = 6.0
 TICK_S = 8.0
 STRESS_S = 10.0
+HEAT_S = 8.0              # C2 段：热力层叠加时长（T10）
 TICK_FORCE = 2.0          # B 段强制推进间隔
 STRESS_FORCE = 1.5        # C 段强制推进间隔
 
@@ -177,7 +178,32 @@ def _phase_stress(_dt):
     _log('[C] 高压：20 国全解锁 + 抽屉开 + ×4 速 + 动效全开 + 每 %.1fs 推进 '
          '(%.0fs)' % (STRESS_FORCE, STRESS_S))
     perf.set_scene('C-stress 高压(x4·抽屉)')
-    Clock.schedule_once(_phase_end, STRESS_S)
+    Clock.schedule_once(_phase_heat, STRESS_S)
+
+
+# ============================================================
+# C2 段：T10 热力层叠加（相同高压条件下切到 heat 图层）
+# ------------------------------------------------------------
+# 目的：把「热力层自身的渲染成本」单独量出来 —— 与 C 段条件完全一致，
+# 唯一变量是 active_layer。若 C2 相比 C 帧时明显恶化，说明同心环
+# 数量需要下调（HEAT_MAX_RINGS）或改成分帧更新。
+# ============================================================
+def _phase_heat(_dt):
+    g = _state['game']
+    if g is not None:
+        try:
+            # 全部拉到中高渗透度，构造最坏情况（每国 4~7 环全亮）
+            for i, c in enumerate(engine.player_countries):
+                c.downloads_m = c.config.population_m * min(
+                    0.95, 0.30 + (i % 7) * 0.10)
+            g.set_layer('heat')
+            g.refresh_all()
+        except Exception as e:
+            _log(f'⚠️ 切热力层失败（C2 段场景不完整）：{e!r}')
+    _log('[C2] 热力层叠加：同 C 条件 + active_layer=heat（20 国中高渗透）(%.0fs)'
+         % HEAT_S)
+    perf.set_scene('C2-heat 热力层(x4·抽屉)')
+    Clock.schedule_once(_phase_end, HEAT_S)
 
 
 # ============================================================

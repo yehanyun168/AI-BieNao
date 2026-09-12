@@ -433,6 +433,35 @@ for _needle in ('import bgm', 'bgm.load_all()', 'on_music=self._set_music_idx',
 print("   ✅ 18) T09 背景音乐（calm/tense 两态 WAV / 70% 阈值映射 / "
       "设置页开关 ×2 语 / main 接线四连）")
 
+# ---- 19) T10 地图渗透热力层：同心环几何 + 图例语义 + 图层互斥 ----
+import world_map as _wm
+import ui_hud as _hud
+
+# 环预算常量存在且自洽（最内环 > 信标半宽，避免与信标重叠）
+assert _wm.WorldMap.HEAT_MAX_RINGS >= 4, "热力环数太少，梯度会看不出差别"
+assert _wm.WorldMap.HEAT_BASE_R > _wm.WorldMap.BEACON / 2.0, \
+    "最内环半径须大于信标半宽，否则环会压住信标"
+assert _wm.WorldMap.HEAT_STEP_R > 0, "环间距须为正"
+
+# 图例 4 档色与实际光晕取色同源（改色只动一处）
+assert len(_hud.HEAT_LEGEND) == 4, f"图例应为 4 档: {_hud.HEAT_LEGEND}"
+# 旧的 8 档整国涂色色阶应已下线（避免双份热力口径）
+assert not hasattr(_hud, 'HEAT_SCALE'), "HEAT_SCALE 应已下线，热力统一走光晕"
+
+# 图层定义与取数函数齐备
+assert 'heat' in _hud.LAYER_KEYS, f"LAYER_KEYS 缺 heat: {_hud.LAYER_KEYS}"
+assert hasattr(_hud.HudMixin, '_heat_data'), "HudMixin 缺 _heat_data"
+assert hasattr(_wm.WorldMap, 'set_heat'), "WorldMap 缺 set_heat"
+assert hasattr(_wm.WorldMap, '_layout_heat'), "WorldMap 缺 _layout_heat"
+
+# i18n 图例 4 键 zh/en 对称
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    _miss = [k for k in ('heat_leg_low', 'heat_leg_mid', 'heat_leg_high',
+                         'heat_leg_full') if k not in i18n_mod.TRANSLATIONS[_lang]]
+    assert not _miss, f"i18n[{_lang}] 缺热力图例键: {_miss}"
+print("   ✅ 19) T10 渗透热力层（同心环几何自洽 / 4 档图例同源 / "
+      "8 档旧色阶已下线 / 图层互斥 / i18n ×4 键）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

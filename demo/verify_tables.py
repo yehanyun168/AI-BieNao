@@ -563,9 +563,11 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
     'engine.py':         1689,    # 2026-09-11 再登记（原 1542）：玩家反馈#7 新增 preview_next_cycle 下周期预测 + 委托自动结算/结局透传等纯逻辑
     'main.py':           1319,    # 2026-09-12 再登记（原 1314）：T09 BGM 接线
                                   #    （import bgm + GameUI 内 load_all + on_music 回调）
-    'i18n.py':           1187,    # 2026-09-12 再登记（原 1185）：T09 新增
-                                  #    set_music / set_music_hint 两键×2 语
-    'ui_hud.py':          874,    # HUD Mixin 拆分属独立重构工作
+    'i18n.py':           1191,    # 2026-09-12 再登记（原 1185）：T09 新增
+                                  #    set_music 两键×2 语；T10 新增 heat_leg_* 四键×2 语
+    'ui_hud.py':          893,    # 2026-09-12 再登记（原 874）：T10 热力层接线
+                                  #    （_heat_data 取数 + 图例改环语义 + HEAT_LEGEND）
+                                  #    —— Mixin 拆分仍属独立重构工作
 }
 
 line_violations = []

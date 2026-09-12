@@ -102,6 +102,10 @@ class WorldMap(FloatLayout):
     # 外圈再套一圈同色方环 = 「这个国家现在的状态」一眼可见。
     BEACON = 2.6                     # 信标方块边长（格）
     BEACON_RING = 0.42               # 信标外环宽度（格）
+    # T10 渗透热力光晕：锚点为心的同心方环，环越密 = 渗透越深
+    HEAT_MAX_RINGS = 7               # 单国最多环数（= 满渗透时的密度）
+    HEAT_BASE_R = 2.4                # 最内环半径（格），略大于信标避免重叠
+    HEAT_STEP_R = 2.1                # 相邻环间距（格）
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -137,13 +141,16 @@ class WorldMap(FloatLayout):
         before = self.canvas.before
         self._static = InstructionGroup()     # 海面 + 经纬网（绝对坐标）
         self._geo = InstructionGroup()        # 陆地/海岸/国界（受网格矩阵控制）
+        self._heat = InstructionGroup()       # T10 渗透热力光晕（受网格矩阵控制）
         self._overlay = InstructionGroup()    # 引导线 + 标签框（绝对坐标）
         before.add(self._static)
         before.add(self._geo)
+        before.add(self._heat)
         before.add(self._overlay)
 
         self._build_static()
         self._build_geo()
+        self._build_heat()
         self._build_overlay()
         self._build_labels()
 
@@ -193,6 +200,103 @@ class WorldMap(FloatLayout):
             self._colors[code] = (fill, edge)
 
         self._geo.add(PopMatrix())
+
+    def _build_heat(self):
+        """T10 渗透热力光晕层：每个国家锚点一圈同心方环，环数 ∝ 渗透度。
+
+        为什么是「同心方环」而不是真·渐变贴图：
+          - Kivy canvas 没有原生的径向渐变指令，画贴图要给每个国家造一张
+            纹理（20 张 × 每帧重绘），在 AMD 610M 这类核显上会直接拖垮帧率
+            （T07 已实测 C 压力下 26→13fps）；
+          - 同心环是纯 Rectangle/Line，零纹理、零 shader，步进由 rings 数控制，
+            渲染成本与国数线性相关，可控；
+          - 视觉上「环越密 = 渗透越深」比色块强得多，符合 T10「让进程
+            看得见」的目标，也贴合像素风（方环而非圆环）。
+        ⚠️ 环坐标在 _layout_heat 里就直接算成屏幕绝对坐标（不套网格矩阵），
+        避免「先缩放再叠加」两套坐标系互相污染 —— 与标签 overlay 同策略。
+        """
+        self._heat_rings = {}   # code -> [(Color, Line), ...]
+        for code in PA.OWNER_CODES:
+            items = []
+            for _ in range(self.HEAT_MAX_RINGS):
+                col = Color(1, 1, 1, 0)
+                self._heat.add(col)
+                ln = Line(width=1.0, close=True)
+                self._heat.add(ln)
+                items.append((col, ln))
+            self._heat_rings[code] = items
+        self._heat_values = {}      # code -> (penetration 0~1, blocked bool)
+
+    def set_heat(self, values):
+        """T10 热力数据入口（``{code: (penetration 0~1, blocked)}``）。
+
+        传空 dict / None 则隐藏整个热力层（非 heat 图层时调用）。
+
+        ⚠️ 幂等：数据不变直接 return —— 热力层每 tick 都会被刷新，
+        不加这道判断会让 canvas 每帧重算 20 国 × N 环的坐标。
+        """
+        new = dict(values or {})
+        if new == self._heat_values:
+            return
+        self._heat_values = new
+        self._layout_heat()
+
+    def _layout_heat(self):
+        """把渗透度换算成同心方环的几何（与 _layout 共用网格换算）。"""
+        cw = getattr(self, '_cw', 0) or 0
+        ch = getattr(self, '_ch', 0) or 0
+        if cw <= 0 or ch <= 0:
+            return
+        ox = getattr(self, '_ox', 0)
+        oy = getattr(self, '_oy', 0)
+
+        def g2x(gx):
+            return ox + gx * cw
+
+        def g2y(gy):
+            return oy + (self.GRID_H - gy) * ch
+
+        for code, items in self._heat_rings.items():
+            data = self._heat_values.get(code)
+            if not data:
+                for col, ln in items:
+                    col.a = 0.0
+                    ln.points = []
+                continue
+            pen, blocked = data
+            pen = max(0.0, min(1.0, float(pen)))
+            if pen <= 0.02:
+                for col, ln in items:
+                    col.a = 0.0
+                    ln.points = []
+                continue
+            ax, ay = PA.ANCHORS[code]
+            cx, cy = g2x(ax), g2y(ay)
+            # 环数 ∝ 渗透度；最低 1 环，保证「有一点渗透」也可见
+            n = max(1, int(round(pen * self.HEAT_MAX_RINGS)))
+            base_r = self.HEAT_BASE_R
+            step_r = self.HEAT_STEP_R
+            # 封锁国用红色系（复用 BLOCK 语义），正常国用青→黄推进色
+            if blocked:
+                rgb = (0.94, 0.27, 0.27)
+            elif pen >= 0.8:
+                rgb = (0.86, 0.86, 0.45)      # 高渗透：黄（快到饱和）
+            elif pen >= 0.45:
+                rgb = (0.13, 0.65, 0.55)      # 中渗透：青绿
+            else:
+                rgb = (0.14, 0.29, 0.44)      # 低渗透：暗蓝
+            for i, (col, ln) in enumerate(items):
+                if i >= n:
+                    col.a = 0.0
+                    ln.points = []
+                    continue
+                r = (base_r + i * step_r) * cw
+                rx, ry = r, r * (cw / ch if ch else 1.0)
+                col.rgba = (rgb[0], rgb[1], rgb[2],
+                            max(0.10, 0.42 - 0.035 * i) if not blocked
+                            else max(0.14, 0.50 - 0.04 * i))
+                ln.points = [cx - rx, cy - ry, cx + rx, cy - ry,
+                             cx + rx, cy + ry, cx - rx, cy + ry]
 
     def _build_overlay(self):
         for code in PA.OWNER_CODES:
@@ -274,6 +378,10 @@ class WorldMap(FloatLayout):
 
         self._translate.xy = (ox, oy + mh)
         self._scale.xyz = (cw, -ch, 1.0)
+
+        # T10：缓存网格换算参数，供热力层在「只换数据不换尺寸」时复用
+        self._cw, self._ch, self._ox, self._oy = cw, ch, ox, oy
+        self._layout_heat()
 
         self._layout_labels(ox, oy, mw, mh, cw, ch)
 
