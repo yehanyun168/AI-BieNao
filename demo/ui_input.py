@@ -303,12 +303,21 @@ class InputMixin:
 
         ⚠️ 本函数**不写 label.text**：文本统一由 _animate_stat 负责，
         避免与滚动动效互相覆盖（两边写同一个 Label 会闪）。
+
+        玩家反馈 #7（确认怀疑度增长时机 + 下周期预测）：在趋势箭头之后，
+        再追加一个「下个周期预测变化量」段（青色 ``下+Δ``）。预测由
+        ``engine.preview_next_cycle`` 给出（与 tick 阶段 1/2/5/5.1 同源、
+        确定性部分；随机事件按设计不计入）。单位与 refresh_all 显示同构：
+        算力=原始算力、下载=亿/B（/1000）、怀疑度=百分点。对局已结束则
+        显示「—」（没有下一周期可言）。
         """
         p = engine.player
         if p is None:
             return
         if not hasattr(self, '_stat_suffix'):
             self._stat_suffix = {}
+        # 一次性预测下一周期（确定性基线，不含技能效果）
+        pv = engine.preview_next_cycle()
         # spark_key → (i18n 标签键, 后缀单位, 小数位)
         specs = {
             'compute':   ('stats_compute',   '',  0),
@@ -328,6 +337,18 @@ class InputMixin:
             else:
                 arrow, mcol, dtext = '↓', U.MK['red'], f"{abs(delta):.{digits}f}{unit}"
             suffix = f"  [color={mcol}]{arrow}{dtext}[/color]"
+            # 玩家反馈 #7：追加「下个周期预测变化量」（青色，与历史趋势箭头区分）
+            if getattr(p, 'game_over', False):
+                suffix += f"  [color={U.MK['dim']}]—[/color]"
+            else:
+                if sk == 'compute':
+                    pdtxt = f"{pv['compute_delta']:.0f}"
+                elif sk == 'downloads':
+                    # pv 给的是百万(M)，显示用亿/B（/1000），与 refresh_all 同构
+                    pdtxt = f"{pv['downloads_delta'] / 1000.0:.2f}{t('unit_b')}"
+                else:  # suspicion：增量很小，保留 1 位小数才看得出增长
+                    pdtxt = f"{pv['suspicion_delta']:.1f}%"
+                suffix += f"  [color={U.MK['cyan']}]下+{pdtxt}[/color]"
             # 只写缓存：真正的 label.text 由紧随其后的 _animate_stat 写入
             # （它会带上这个后缀）。这样两边永不互相覆盖，滚动动效也不会
             # 把箭头抹掉。
