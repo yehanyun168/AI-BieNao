@@ -398,6 +398,7 @@ LAYERS = {
 EXEMPT_MODULES = {
     'perf.py':         'P1-3 性能探针，刻意保持零项目依赖（见其 docstring），由 main/工具按需 import',
     'balance_sim.py':  '平衡模拟 CLI 工具（argparse 驱动），非运行时模块',
+    'thresholds.py':   '自动试玩阈值表（balance_sim 工具配套，非运行时模块）',
     'perf_stress.py':  '压测工具脚本，非运行时模块',
 }
 # 前缀豁免：测试脚本 / 校验脚本 / 截图工具 / 下划线开头的临时探针（如 _probe_clock.py）

@@ -20,6 +20,9 @@ demo/saves/
 *.log
 crash.log
 
+# ===== 自动试玩巡检报告（M0；基线 JSON tools/data/playtest_baseline.json 入库，报告不入）=====
+tools/data/playtest_reports/
+
 # ===== 生成截图 / 一次性调试产物 =====
 _v4shots/
 _v4shots_backup_*/

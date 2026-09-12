@@ -14,12 +14,20 @@ balance_sim.py - 数值平衡模拟器（调参工具，不参与游戏运行）
   1. 优先解锁 T0，再沿第一个可选分支升级
   2. 怀疑度 > 60 且「潜伏」可用时释放
 
-自动玩家人格（P1-4 新增 --strategy）：
+自动玩家人格（P1-4 新增 --strategy；M0 新增 afk）：
   default    上述「中等水平玩家」，行为与历史版本逐位一致
   compliance 合规专精：开局沿前置链尽早买「抗封禁 T0」（不等危机）、
              全程不练脏技能（按 data.SKILLS.suspicion_delta > 0 判定）、
              怀疑度进入危机警戒区（距危机线 15 点）后暂停技能投放、
              深度伪装提前一档释放。其余决策（委托、常规科技）复用默认逻辑。
+  afk        零操作基线（M0）：不接单 / 不点科技 / 不放技能 / 不应答危机，
+             暴露「躺平即死」收网路径，为必输预测提供回测样本。
+
+自动试玩巡检（M0 新增）：
+  每 tick 做只读不变量巡检（阈值表 thresholds.py：NaN/Inf、怀疑度单周期
+  净增上下限、五指标硬卡死/软停滞），并做必输预测（只标记不终止，结局
+  出来后回测命中率）。巡检零 RNG / 零引擎调用，不影响逐位回归。
+  --matrix 跑「策略 × 难度 × 种子」全矩阵基线，写基线 JSON + md 报告。
 
 ⚠️ 这不是 AI 最优策略 —— 它故意保持平庸，用来暴露数值问题：
    如果自动玩家 80% 都在第 30 周期前「被关停」，说明怀疑度还是太紧。
@@ -29,9 +37,12 @@ import os
 os.environ.setdefault('KIVY_NO_ARGS', '1')
 
 import argparse
+import json
+import math
 import random
 import sys
-from collections import Counter
+from collections import Counter, deque
+from datetime import datetime
 
 sys.path.insert(0, __file__.rsplit('\\', 1)[0].rsplit('/', 1)[0])
 
@@ -39,6 +50,7 @@ import data  # P1-10：SUSPICION_CRISIS 走 data 的 PEP 562 动态代理
 import balance  # P2-3：难度预设（TUNE 乘法，apply_difficulty 在 main 应用一次）
 import engine
 import tech_tree
+import thresholds  # M0：自动试玩异常判定阈值表（工具配套，非运行时模块）
 
 
 def auto_play(tick_report_hook=None, strategy: str = 'default'):
@@ -48,8 +60,15 @@ def auto_play(tick_report_hook=None, strategy: str = 'default'):
         'default'    —— 「中等水平玩家」，行为与历史版本逐位一致。
         'compliance' —— 合规专精人格（P1-4）：主动买抗封禁 T0、全程不练
                         脏技能、接近危机线时保守。其余决策复用默认逻辑。
+        'afk'        —— 零操作基线（M0）：不接单/不点科技/不放技能/
+                        不应答危机，暴露「躺平即死」收网路径。
     """
     p = engine.player
+
+    # M0 afk：零操作基线 —— 没有任何决策点，顶部早退即可，无需策略对象
+    #（策略对象重构随 M1 rush/greedy 一起做并带逐位验证）。
+    if strategy == 'afk':
+        return
 
     # 0. 委托：全部接受（P0-3；自动玩家策略是「来者不拒」）
     for com in list(p.commissions):
@@ -132,50 +151,115 @@ def auto_play(tick_report_hook=None, strategy: str = 'default'):
                     break
 
 
-def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default') -> dict:
-    """跑一局，返回统计结果
+# ===================== M0 自动试玩巡检（只读，零 RNG / 零引擎调用） =====================
+# 巡检只读 player / TUNE 属性并做纯计算，不改变任何游戏状态 —— default /
+# compliance 的逐位回归不受影响（哈希只取 REGRESSION_FIELDS 原字段子集）。
 
-    strategy 透传给 auto_play（'default' / 'compliance'，P1-4）。
+# 矩阵维度（--matrix 用）
+MATRIX_STRATEGIES = ('default', 'compliance', 'afk')
+MATRIX_DIFFICULTIES = ('easy', 'normal', 'hard')
+# 该策略是否有危机应答能力：决定怀疑度负向下限用哪条
+#（default 仅危机后补 T0、compliance 全程无危机、afk 零操作 → 均无应答；
+#  M1 rush/greedy 有主动危机应答 → True，启用 SUS_DELTA_MIN_CRISIS=-40）
+STRATEGY_CRISIS_CAPABLE = {'default': False, 'compliance': False, 'afk': False}
+
+# 逐位回归哈希字段子集（与历史版本完全一致的原字段；M0 附加字段不参与）
+REGRESSION_FIELDS = ('seed', 'ending', 'ending_name', 'ticks', 'penetration',
+                     'downloads_m', 'suspicion', 'compute_peak', 'unlocked',
+                     'total_countries', 'crisis', 'commissions_done',
+                     'commissions_failed', 'counterplay')
+
+# 怀疑度上限（收网线 92 起 +0.5/tick 至 100 关停；TUNE 无该字段，引擎硬编码）
+SUS_DEATH_LINE = 100.0
+
+# 怀疑度单周期净增（delta）直方图分桶 —— 服务阈值实测校准（P99/P99.9）。
+# 桶边界与 thresholds 阈值语义对应；非有限值单独计数。
+DELTA_BINS = ('nan_inf', '<-40', '-40~-10', '-10~0', '0~10', '10~20',
+              '20~45', '45~90', '90~150', '>150')
+
+
+def _delta_bucket(delta: float) -> str:
+    """把一个怀疑度单周期净增映射进直方图桶。"""
+    if not math.isfinite(delta):
+        return 'nan_inf'
+    if delta < -40:
+        return '<-40'
+    if delta < -10:
+        return '-40~-10'
+    if delta < 0:
+        return '-10~0'
+    if delta < 10:
+        return '0~10'
+    if delta < 20:
+        return '10~20'
+    if delta < 45:
+        return '20~45'
+    if delta < 90:
+        return '45~90'
+    if delta < 150:
+        return '90~150'
+    return '>150'
+
+
+def _observe_tick(p, prev_metrics) -> dict:
+    """每 tick 末抓只读快照。
+
+    metrics 五元组：渗透率 / 算力峰值 / 科技分支等级和 / 解锁国数 /
+    委托完成+失败（TUNE 阈值表「五指标」口径）。
+    stuck = 与上一 tick 相比五项 delta 全 0（首 tick 恒 False）。
     """
-    random.seed(seed)
-    engine.init_game()
-    p = engine.player
+    metrics = (
+        p.global_penetration,
+        p.compute_peak,
+        sum(p.tech.branch_levels.values()),
+        sum(1 for c in engine.player_countries if c.unlocked),
+        p.commissions_done + p.commissions_failed,
+    )
+    stuck = prev_metrics is not None and all(
+        m == pm for m, pm in zip(metrics, prev_metrics))
+    return {'sus': p.suspicion, 'metrics': metrics, 'stuck': stuck}
 
-    unlock_timeline = []
-    cp_strikes = 0
-    for _ in range(max_ticks):
-        report = engine.tick_one_round()
-        auto_play(strategy=strategy)
-        cp_strikes += sum(1 for e in (report.get('counterplay') or [])
-                          if e['phase'] == 'strike')
 
-        for name in report["unlocked"]:
-            unlock_timeline.append((p.tick_count, name))
+def _doom_crisis_check(hist: deque, p) -> bool:
+    """危机死局外推（必输预测 · 只标记不终止）。
 
-        if report["ending"]:
-            return {
-                'seed': seed,
-                'ending': report["ending"].id,
-                'ending_name': report["ending"].title_zh,
-                'ticks': p.tick_count,
-                'penetration': p.global_penetration,
-                'downloads_m': p.total_downloads_m,
-                'suspicion': p.suspicion,
-                'compute_peak': p.compute_peak,
-                'unlocked': sum(1 for c in engine.player_countries if c.unlocked),
-                'total_countries': len(engine.player_countries),
-                'unlock_timeline': unlock_timeline,
-                'crisis': p.crisis_triggered,
-                'commissions_done': p.commissions_done,
-                'commissions_failed': p.commissions_failed,
-                'counterplay': cp_strikes,
-            }
+    条件：已触发危机 & 未买抗封禁 T0 & 渗透 < DOOM_PEN_TARGET，且近
+    DOOM_WINDOW tick 外推「到 20% 渗透所需 tick > 到 100 怀疑所需 tick
+    × DOOM_CRISIS_RATIO」→ 等不到保底门槛就会被怀疑压死。
+    hist: deque(maxlen=DOOM_WINDOW+1)，元素 (penetration, suspicion)。
+    """
+    if len(hist) < 2:
+        return False
+    if not (p.crisis_triggered
+            and not p.tech.t0_unlocked.get('resistance')
+            and p.global_penetration < thresholds.DOOM_PEN_TARGET):
+        return False
+    pen0, sus0 = hist[0]
+    dt = len(hist) - 1
+    sus_slope = (p.suspicion - sus0) / dt
+    if sus_slope <= 0:
+        return False  # 怀疑不涨，压不死
+    ticks_to_death = (SUS_DEATH_LINE - p.suspicion) / sus_slope
+    pen_slope = (p.global_penetration - pen0) / dt
+    if pen_slope <= 0:
+        ticks_to_pen = float('inf')
+    else:
+        ticks_to_pen = ((thresholds.DOOM_PEN_TARGET - p.global_penetration)
+                        / pen_slope)
+    return ticks_to_pen > ticks_to_death * thresholds.DOOM_CRISIS_RATIO
 
-    # 跑满未出结局
+
+def _result(seed, p, ending, unlock_timeline, cp_strikes, insp) -> dict:
+    """构造单局结果 dict（M0：合并原两处重复 return 块 + 追加巡检字段）。
+
+    REGRESSION_FIELDS 内字段与历史版本逐位一致；追加字段仅供
+    --matrix 报告与回测使用。
+    """
+    predicted = insp['doomed_pressure'] or insp['doomed_crisis']
     return {
         'seed': seed,
-        'ending': 'none',
-        'ending_name': '（未结束）',
+        'ending': ending.id if ending else 'none',
+        'ending_name': ending.title_zh if ending else '（未结束）',
         'ticks': p.tick_count,
         'penetration': p.global_penetration,
         'downloads_m': p.total_downloads_m,
@@ -188,7 +272,250 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default') -> dict
         'commissions_done': p.commissions_done,
         'commissions_failed': p.commissions_failed,
         'counterplay': cp_strikes,
+        # —— M0 巡检附加（哈希回归不取）——
+        'anomalies': insp['anomalies'],
+        'delta_hist': insp['delta_hist'],
+        'doomed_pressure_tick': insp['doomed_pressure_tick'],
+        'doomed_crisis_tick': insp['doomed_crisis_tick'],
+        # 回测：预测了必输 → 结局是否真为 shutdown；预测落空（跑满未出
+        # 结局）→ False；未预测 → None
+        'doomed_correct': ((ending is not None and ending.id == 'shutdown')
+                           if predicted else None),
     }
+
+
+def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
+             inspect: bool = True) -> dict:
+    """跑一局，返回统计结果
+
+    strategy 透传给 auto_play（'default' / 'compliance' / 'afk'）。
+    inspect（M0）：每 tick 做只读不变量巡检 + 必输预测，
+    零 RNG / 零引擎调用，不影响逐位回归。
+    """
+    random.seed(seed)
+    engine.init_game()
+    p = engine.player
+
+    unlock_timeline = []
+    cp_strikes = 0
+    # —— M0 巡检状态 ——
+    prev = None          # 上 tick 快照 {'sus', 'metrics'}
+    stuck_run = 0        # 五指标 delta 全 0 连续计数
+    static_run = 0       # 离散三指标（科技/解锁/委托）delta 全 0 连续计数
+    doom_hist = deque(maxlen=thresholds.DOOM_WINDOW + 1)  # 外推窗口 (pen, sus)
+    insp = {
+        'anomalies': {'bug_count': 0, 'review_count': 0,
+                      'by_type': {}, 'samples': {}},
+        'delta_hist': {b: 0 for b in DELTA_BINS},
+        'doomed_pressure': False, 'doomed_pressure_tick': None,
+        'doomed_crisis': False, 'doomed_crisis_tick': None,
+    }
+
+    def _record(level: str, type_name: str, detail: str):
+        """聚合记录一条异常（每类型存首条样例 + 计数，不逐条膨胀）。"""
+        a = insp['anomalies']
+        a['by_type'][type_name] = a['by_type'].get(type_name, 0) + 1
+        a[f'{level}_count'] += 1
+        a['samples'].setdefault(type_name, f'tick {p.tick_count}: {detail}')
+
+    for _ in range(max_ticks):
+        report = engine.tick_one_round()
+        auto_play(strategy=strategy)
+        cp_strikes += sum(1 for e in (report.get('counterplay') or [])
+                          if e['phase'] == 'strike')
+
+        for name in report["unlocked"]:
+            unlock_timeline.append((p.tick_count, name))
+
+        if report["ending"]:
+            return _result(seed, p, report["ending"], unlock_timeline,
+                           cp_strikes, insp)
+
+        # —— M0 只读巡检（结局帧不到这里；零 RNG / 零引擎调用）——
+        if inspect:
+            doom_hist.append((p.global_penetration, p.suspicion))
+            obs = _observe_tick(p, prev['metrics'] if prev else None)
+            if prev is not None:
+                delta = obs['sus'] - prev['sus']
+                insp['delta_hist'][_delta_bucket(delta)] += 1
+                if not (math.isfinite(obs['sus']) and math.isfinite(delta)):
+                    _record('bug', 'sus_nan_inf',
+                            f'sus={obs["sus"]} delta={delta}')
+                elif delta > thresholds.SUS_DELTA_HARD_MAX:
+                    _record('bug', 'sus_delta_hard',
+                            f'sus 净增 {delta:.1f} > 硬上限 '
+                            f'{thresholds.SUS_DELTA_HARD_MAX}')
+                elif delta > thresholds.SUS_DELTA_REVIEW_MAX:
+                    _record('review', 'sus_delta_review',
+                            f'sus 净增 {delta:.1f} > 复核线 '
+                            f'{thresholds.SUS_DELTA_REVIEW_MAX}（刷脏+泄露叠加等合法极端）')
+                sus_min = (thresholds.SUS_DELTA_MIN_CRISIS
+                           if STRATEGY_CRISIS_CAPABLE.get(strategy)
+                           else thresholds.SUS_DELTA_MIN_NO_CRISIS)
+                if math.isfinite(delta) and delta < sus_min:
+                    _record('review', 'sus_delta_low',
+                            f'sus 净变化 {delta:.1f} < 下限 {sus_min} '
+                            f'（{strategy} 无危机应答，合法负值仅 -4/-2）')
+                # 五指标硬卡死（bug 级）/ 软停滞（只记录）
+                stuck_run = stuck_run + 1 if obs['stuck'] else 0
+                if stuck_run >= thresholds.STUCK_TICKS:
+                    _record('bug', 'hard_stuck',
+                            f'连续 {stuck_run} tick 五指标 delta 全 0 且未出结局')
+                    stuck_run = 0  # 避免每 tick 重复报
+                m, pm = obs['metrics'], prev['metrics']
+                static_run = (static_run + 1
+                              if (m[2] == pm[2] and m[3] == pm[3]
+                                  and m[4] == pm[4]) else 0)
+                if static_run >= thresholds.SOFT_STALL_TICKS:
+                    _record('review', 'soft_stall',
+                            f'连续 {static_run} tick 科技/解锁/委托无动作'
+                            f'（afk 策略天然预期）')
+                    static_run = 0
+                # 必输预测①：收网压线（怀疑 ≥ sus_pressure_threshold）
+                if (not insp['doomed_pressure']
+                        and p.suspicion >= balance.TUNE['sus_pressure_threshold']):
+                    insp['doomed_pressure'] = True
+                    insp['doomed_pressure_tick'] = p.tick_count
+                # 必输预测②：危机死局外推
+                if not insp['doomed_crisis'] and _doom_crisis_check(doom_hist, p):
+                    insp['doomed_crisis'] = True
+                    insp['doomed_crisis_tick'] = p.tick_count
+            prev = obs
+
+    # 跑满未出结局
+    return _result(seed, p, None, unlock_timeline, cp_strikes, insp)
+
+
+def run_matrix(args) -> None:
+    """M0 自动试玩全矩阵跑批：策略 × 难度 × 种子 → 基线 JSON + md 报告。
+
+    输出：
+      tools/data/playtest_baseline.json —— 基线（提交入库，后续版本对比漂移用）
+      tools/data/playtest_reports/playtest_<时间戳>.md —— 巡检报告（gitignore）
+    """
+    stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    here = os.path.dirname(os.path.abspath(__file__))
+    data_dir = os.path.normpath(os.path.join(here, '..', 'tools', 'data'))
+    reports_dir = os.path.join(data_dir, 'playtest_reports')
+    os.makedirs(reports_dir, exist_ok=True)
+
+    combos = {}
+    for difficulty in MATRIX_DIFFICULTIES:
+        # 难度可安全反复切档：apply_difficulty 先重置回 _TUNE_BASE 再乘系数；
+        # normal 空预设 = 重置回基准（hard/easy 跑完必须显式归位）。
+        balance.apply_difficulty(difficulty)
+        for strategy in MATRIX_STRATEGIES:
+            results = [simulate(s, args.ticks, strategy)
+                       for s in range(1, args.seeds + 1)]
+            dist = Counter(r['ending_name'] for r in results)
+            anomaly_types = Counter()
+            for r in results:
+                anomaly_types.update(r['anomalies']['by_type'])
+            doomed = [r for r in results
+                      if r['doomed_pressure_tick'] is not None
+                      or r['doomed_crisis_tick'] is not None]
+            hits = sum(1 for r in doomed if r['doomed_correct'])
+            delta_hist = {b: 0 for b in DELTA_BINS}
+            for r in results:
+                for b, n in r['delta_hist'].items():
+                    delta_hist[b] += n
+            combos[f'{strategy}_{difficulty}'] = {
+                'summary': {
+                    'ending_dist': dict(dist),
+                    'avg_ticks': sum(r['ticks'] for r in results) / len(results),
+                    'avg_penetration': (sum(r['penetration'] for r in results)
+                                        / len(results)),
+                    'avg_suspicion': (sum(r['suspicion'] for r in results)
+                                      / len(results)),
+                    'avg_unlocked': (sum(r['unlocked'] for r in results)
+                                     / len(results)),
+                    'bug_count': sum(r['anomalies']['bug_count']
+                                     for r in results),
+                    'review_count': sum(r['anomalies']['review_count']
+                                        for r in results),
+                    'anomaly_types': dict(anomaly_types),
+                    'delta_hist': delta_hist,
+                    'doom_predicted': len(doomed),
+                    'doom_hit': hits,
+                },
+                # 明细只留回归字段 + 巡检字段；unlock_timeline 不入 JSON
+                #（逐位回归哈希不含它，需要时可按种子重跑）。
+                'results': [
+                    {**{k: r[k] for k in REGRESSION_FIELDS},
+                     **{k: r[k] for k in ('anomalies', 'delta_hist',
+                                          'doomed_pressure_tick',
+                                          'doomed_crisis_tick',
+                                          'doomed_correct')}}
+                    for r in results
+                ],
+            }
+
+    total_bug = sum(c['summary']['bug_count'] for c in combos.values())
+    lines = [
+        '# 自动试玩基线报告（M0）', '',
+        f'- 生成时间：{stamp}',
+        f'- 参数：每组合 {args.seeds} 局 × 最长 {args.ticks} tick，'
+        f'矩阵 = {len(MATRIX_STRATEGIES)} 策略 × {len(MATRIX_DIFFICULTIES)} 难度',
+        '- 阈值表：thresholds v1（解析推导，基线后待实测 P99 校准）', '',
+    ]
+    for key, c in combos.items():
+        s = c['summary']
+        lines.append(f'## {key}')
+        lines.append('')
+        lines.append('| 结局 | 局数 | 占比 |')
+        lines.append('|---|---|---|')
+        for name, n in sorted(s['ending_dist'].items(), key=lambda kv: -kv[1]):
+            lines.append(f'| {name} | {n} | {n / args.seeds * 100:.1f}% |')
+        lines.append('')
+        lines.append(
+            f"- 平均局长 {s['avg_ticks']:.1f} tick，平均渗透 "
+            f"{s['avg_penetration'] * 100:.2f}%，平均怀疑 "
+            f"{s['avg_suspicion']:.1f}，平均解锁 {s['avg_unlocked']:.1f} 国")
+        _types = (f"（类型：{', '.join(sorted(s['anomaly_types']))}）"
+                  if s['anomaly_types'] else '')
+        lines.append(f"- 异常：bug {s['bug_count']} / "
+                     f"review {s['review_count']}{_types}")
+        _nz = ' '.join(f'{b}={s["delta_hist"][b]}'
+                       for b in DELTA_BINS if s['delta_hist'].get(b))
+        lines.append(f'- 怀疑净增直方图：{_nz}')
+        lines.append(
+            f"- 必输预测回测：预测 {s['doom_predicted']} 局，"
+            f"命中 shutdown {s['doom_hit']} 局"
+            + (f"，命中率 {s['doom_hit'] / s['doom_predicted'] * 100:.1f}%"
+               if s['doom_predicted'] else '（无预测样本）'))
+        lines.append('')
+    lines += ['## 全局汇总', '',
+              f'- 组合数 {len(combos)}，总局数 {len(combos) * args.seeds}',
+              f'- **bug 级异常总数：{total_bug}（验收线 = 0）**', '']
+
+    report_path = os.path.join(reports_dir, f'playtest_{stamp}.md')
+    with open(report_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines) + '\n')
+
+    baseline = {
+        'meta': {
+            'generated_at': stamp,
+            'seeds_per_combo': args.seeds,
+            'max_ticks': args.ticks,
+            'strategies': list(MATRIX_STRATEGIES),
+            'difficulties': list(MATRIX_DIFFICULTIES),
+            'thresholds': 'v1 (analytical)',
+        },
+        'combos': combos,
+    }
+    baseline_path = os.path.join(data_dir, 'playtest_baseline.json')
+    with open(baseline_path, 'w', encoding='utf-8') as f:
+        json.dump(baseline, f, ensure_ascii=False, indent=1)
+
+    print(f' === M0 矩阵基线：{len(combos)} 组合 × {args.seeds} 局 ===')
+    for key, c in combos.items():
+        s = c['summary']
+        top = max(s['ending_dist'].items(), key=lambda kv: kv[1])
+        print(f' {key:<20} 主结局 {top[0]:<14} {top[1]:>3}/{args.seeds}'
+              f' | bug {s["bug_count"]} | doom 命中 '
+              f'{s["doom_hit"]}/{s["doom_predicted"]}')
+    print(f' 基线 JSON：{baseline_path}')
+    print(f' md 报告：{report_path}')
 
 
 def main():
@@ -196,15 +523,23 @@ def main():
     ap.add_argument('--seeds', type=int, default=20, help='模拟局数（默认 20）')
     ap.add_argument('--ticks', type=int, default=200, help='每局最多周期数（默认 200）')
     ap.add_argument('--verbose', action='store_true', help='打印每局明细')
-    ap.add_argument('--strategy', choices=['default', 'compliance'],
+    ap.add_argument('--strategy', choices=['default', 'compliance', 'afk'],
                     default='default',
                     help='自动玩家人格：default=中等水平（原版）；'
-                         'compliance=合规专精（P1-4）')
+                         'compliance=合规专精（P1-4）；afk=零操作基线（M0）')
     ap.add_argument('--difficulty', choices=['easy', 'normal', 'hard'],
                     default='normal',
                     help='难度预设（P2-3）：easy/normal/hard，默认 normal。'
                          'normal 不做任何 TUNE 改动，默认输出与历史版本逐字符一致')
+    ap.add_argument('--matrix', action='store_true',
+                    help='M0 自动试玩基线：策略×难度全矩阵跑批'
+                         '（--seeds 为每组合局数，--strategy/--difficulty 忽略），'
+                         '写 tools/data/playtest_baseline.json + md 报告')
     args = ap.parse_args()
+
+    if args.matrix:
+        run_matrix(args)
+        return
 
     # P2-3：难度预设只在此应用一次（TUNE 是全局的，simulate 里的
     # init_game() 无 difficulty 参数 = 不动 TUNE；normal 完全跳过 apply，
