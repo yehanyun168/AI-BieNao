@@ -699,8 +699,9 @@ class HudMixin:
         self.skill_cards = {}
         for i, sid in enumerate(SKILL_ORDER):
             skill = SKILLS[sid]
+            # 键位提示统一走 _key_hint（与技能页/键盘处理同源）。
             card = SkillBarCard(
-                sid, key_hint=str(i + 1),
+                sid, key_hint=self._key_hint(sid),
                 name=self._skill_name(sid), effect=self._skill_desc(sid),
                 cost=skill.cost, on_click=self.on_skill_card_click)
             self._register(card)
@@ -749,6 +750,11 @@ class HudMixin:
         'hit_maker': {'zh': '爆款制造', 'en': 'Hit Maker'},
         'bypass':    {'zh': '限流绕过', 'en': 'Bypass'},
         'take_cut':  {'zh': '算力抽成', 'en': 'Compute Cut'},
+        # T11 扩容
+        'anon_cdn':  {'zh': '匿名 CDN', 'en': 'Anon CDN'},
+        'bot_farm':  {'zh': '水军刷榜', 'en': 'Bot Farm'},
+        'open_bait': {'zh': '开源诱惑', 'en': 'Open Bait'},
+        'arbitrage': {'zh': '算力套利', 'en': 'Arbitrage'},
     }
     SKILL_DESC = {
         'push_song': {'zh': '下载量 +10%', 'en': 'DL +10%'},
@@ -757,9 +763,16 @@ class HudMixin:
         'hit_maker': {'zh': '下载量 +50% · 怀疑 +5%', 'en': 'DL +50% · susp +5%'},
         'bypass':    {'zh': '本周期偷算力 +40%', 'en': 'Steal +40% this tick'},
         'take_cut':  {'zh': '偷算力比 +8% · 怀疑 +6%', 'en': 'Steal +8% · susp +6%'},
+        # T11 扩容
+        'anon_cdn':  {'zh': '怀疑增速 ×0.55 · 持续 3 周期', 'en': 'Susp ×0.55 · 3 ticks'},
+        'bot_farm':  {'zh': '下载量 +35% · 怀疑 +6%', 'en': 'DL +35% · susp +6%'},
+        'open_bait': {'zh': '算力 +150 · 怀疑 +8%', 'en': 'Compute +150 · susp +8%'},
+        'arbitrage': {'zh': '偷算力 +60% · 怀疑增速 ×1.6', 'en': 'Steal +60% · susp ×1.6'},
     }
     SKILL_ICON = {'push_song': '⇈', 'algo_top': '⌁', 'stealth': '◐',
-                  'hit_maker': '✹', 'bypass': '⇄', 'take_cut': '％'}
+                  'hit_maker': '✹', 'bypass': '⇄', 'take_cut': '％',
+                  'anon_cdn': '◇', 'bot_farm': '✦', 'open_bait': '❖',
+                  'arbitrage': '◆'}
 
 
 

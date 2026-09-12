@@ -557,16 +557,18 @@ section("[8] 单文件行数 ≤ 800（P2-1 守卫）")
 FILE_LINE_LIMIT = 800
 LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 实测）
     'pixel_assets.py':   2353,    # 2026-09-12 再登记（原 2352）：台湾归属修正，gen_pixel_map.py 并入 6 格致游程换行 +1；自动生成的游程素材数据，重构 = 换生成器
-    'ui_v4_screens.py':  2226,    # 2026-09-12 再登记（原 2225）：T09 设置页新增
-                                  #    音乐开关行（_seg 局部函数统一 5 个开关构造）
+    'ui_v4_screens.py':  2238,    # 2026-09-13 再登记（原 2226）：T11 技能页网格
+                                  #    改动态行数（6 卡固定 3×2 → 10 卡自动补到 4 行）
     'ui_v4.py':          1965,    # v4 组件库拆分属独立重构工作
     'engine.py':         1689,    # 2026-09-11 再登记（原 1542）：玩家反馈#7 新增 preview_next_cycle 下周期预测 + 委托自动结算/结局透传等纯逻辑
     'main.py':           1319,    # 2026-09-12 再登记（原 1314）：T09 BGM 接线
                                   #    （import bgm + GameUI 内 load_all + on_music 回调）
-    'i18n.py':           1191,    # 2026-09-12 再登记（原 1185）：T09 新增
-                                  #    set_music 两键×2 语；T10 新增 heat_leg_* 四键×2 语
-    'ui_hud.py':          893,    # 2026-09-12 再登记（原 874）：T10 热力层接线
-                                  #    （_heat_data 取数 + 图例改环语义 + HEAT_LEGEND）
+    'i18n.py':           1201,    # 2026-09-13 再登记（原 1191）：T11 技能扩容 6→10
+                                  #    新增 sk_detail_{anon_cdn,bot_farm,open_bait,arbitrage}
+                                  #    ×2 语共 8 行文案
+    'ui_hud.py':          907,    # 2026-09-13 再登记（原 893）：T11 技能扩容 6→10
+                                  #    （SKILL_I18N/SKILL_DESC/SKILL_ICON 各 +4 条 + 键位
+                                  #     hint 从 str(i+1) 改为第 10 个用 '0' 兜底）
                                   #    —— Mixin 拆分仍属独立重构工作
 }
 

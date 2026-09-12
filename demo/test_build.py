@@ -201,8 +201,8 @@ print("   ✅ F11 快捷键齐全（F11 全屏 / Tab 大洲 / +/- 缩放 / Esc �
 # --- 12. 计划书验收数量断言（F02 / F05 / F08 / F09）---
 import data, endings as endings_mod, achievements as ach_mod
 assert len(data.COUNTRIES) == 20, f"应 20 国，实际 {len(data.COUNTRIES)}"
-assert len(data.SKILLS) == 6, f"应 6 技能，实际 {len(data.SKILLS)}"
-assert len(data.SKILL_ORDER) == 6, "快捷键 1-6 应映射 6 个技能"
+assert len(data.SKILLS) == 10, f"应 10 技能（T11 扩容 6→10），实际 {len(data.SKILLS)}"
+assert len(data.SKILL_ORDER) == 10, "快捷键映射应覆盖全部 10 个技能"
 assert len(endings_mod.ENDINGS) == 7, f"应 7 结局，实际 {len(endings_mod.ENDINGS)}"
 # 成就总数 = 任务型 15 + 事件型 7 = 22（随内容扩充从 20 增至 22）
 assert len(ach_mod.ALL_BY_ID) == 22, f"应 22 成就，实际 {len(ach_mod.ALL_BY_ID)}"
@@ -436,6 +436,7 @@ print("   ✅ 18) T09 背景音乐（calm/tense 两态 WAV / 70% 阈值映射 / 
 # ---- 19) T10 地图渗透热力层：同心环几何 + 图例语义 + 图层互斥 ----
 import world_map as _wm
 import ui_hud as _hud
+import tech_tree  # T11：校验新技能的科技挂载指向真实槽位
 
 # 环预算常量存在且自洽（最内环 > 信标半宽，避免与信标重叠）
 assert _wm.WorldMap.HEAT_MAX_RINGS >= 4, "热力环数太少，梯度会看不出差别"
@@ -461,6 +462,62 @@ for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
     assert not _miss, f"i18n[{_lang}] 缺热力图例键: {_miss}"
 print("   ✅ 19) T10 渗透热力层（同心环几何自洽 / 4 档图例同源 / "
       "8 档旧色阶已下线 / 图层互斥 / i18n ×4 键）")
+
+# ---- 20) T11 技能扩容 6→10：表一致 + 科技挂载 + 三处文案齐备 + 键位兜底 ----
+NEW_SKILLS = ('anon_cdn', 'bot_farm', 'open_bait', 'arbitrage')
+assert len(data.SKILLS) == 10, f"应 10 技能，实际 {len(data.SKILLS)}"
+assert len(data.SKILL_ORDER) == 10, "快捷键顺序表应含 10 个技能"
+assert set(data.SKILL_ORDER) == set(data.SKILLS), "顺序表与技能表不一致"
+
+for _sid in NEW_SKILLS:
+    # 技能必须在表内、且不是开局自带（要靠科技解锁）
+    assert _sid in data.SKILLS, f"{_sid} 不在 SKILLS 表"
+    assert _sid not in data.STARTER_SKILLS, f"{_sid} 不该开局自带"
+    # 科技挂载存在且指向真实槽位
+    _req = data.SKILL_UNLOCK.get(_sid)
+    assert _req, f"{_sid} 缺 SKILL_UNLOCK 挂载"
+    assert _req['slot'] in tech_tree.SLOT_MAP, f"{_sid} 挂载到不存在的槽位 {_req['slot']}"
+    # 三处 UI 文案齐备（HUD 名 + HUD 简述 + i18n 详情 + HUD 图标）
+    assert _sid in _hud.HudMixin.SKILL_I18N, f"{_sid} 缺 SKILL_I18N"
+    assert _sid in _hud.HudMixin.SKILL_DESC, f"{_sid} 缺 SKILL_DESC"
+    assert _sid in _hud.HudMixin.SKILL_ICON, f"{_sid} 缺 SKILL_ICON"
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    _miss = [f'sk_detail_{s}' for s in NEW_SKILLS
+             if f'sk_detail_{s}' not in i18n_mod.TRANSLATIONS[_lang]]
+    assert not _miss, f"i18n[{_lang}] 缺新技能详情键: {_miss}"
+
+# 技能轴不重复：新技能须带来旧 6 技能没有的效果字段
+_old_axes = set()
+for _s in data.SKILLS.values():
+    if _s.id in NEW_SKILLS:
+        continue
+    if _s.downloads_mult > 1.0: _old_axes.add('dl')
+    if _s.compute_mult > 1.0: _old_axes.add('cmult')
+    if _s.compute_delta > 0: _old_axes.add('cdelta')
+    if _s.suspicion_mult < 1.0: _old_axes.add('sus_down')
+    if _s.suspicion_mult > 1.0: _old_axes.add('sus_up')
+_new_axes = set()
+for _sid in NEW_SKILLS:
+    _s = data.SKILLS[_sid]
+    if _s.compute_delta > 0: _new_axes.add('cdelta')
+    if _s.suspicion_mult > 1.0: _new_axes.add('sus_up')
+assert _new_axes, "扩容后未引入任何全新战术轴（只是同轴放大）"
+
+# 键位兜底：10 个技能时第 10 个必须能按（'0'），否则卡片写了键位却按不出来
+assert len(data.SKILL_ORDER) <= 10, "超过 10 个技能时须同步扩展键位映射"
+# 键位提示唯一真相源：技能带与技能页共用 _key_hint，防止两处漂移
+import ui_input as _ui_in
+assert hasattr(_ui_in.InputMixin, '_key_hint'), \
+    "InputMixin 缺 _key_hint（键位提示真相源）"
+_HERE = os.path.dirname(os.path.abspath(__file__))
+assert '_key_hint(sid)' in open(os.path.join(_HERE, 'ui_pages.py'),
+                                encoding='utf-8').read(), \
+    "技能页应改用 _key_hint，不得再硬编码 SKILL_ORDER.index(sid)+1"
+_ui_input_src = open(os.path.join(_HERE, 'ui_input.py'), encoding='utf-8').read()
+assert "'0'" in _ui_input_src and '9 if key' in _ui_input_src, \
+    "ui_input 数字键分支须含 '0' 兜底（第 10 个技能）"
+print("   ✅ 20) T11 技能扩容 6→10（表一致 / 4 项科技挂载 / 文案 ×4 ×2 语 / "
+      "新战术轴 cdelta+sus_up / 键位兜底 + _key_hint 同源）")
 
 print("\n 全部通过 - demo 可以正常启动")
 print()

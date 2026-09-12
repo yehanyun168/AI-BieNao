@@ -210,11 +210,59 @@ SKILLS: Dict[str, Skill] = {
         stealth_ratio_bonus=0.08,
         suspicion_delta=10.0,
     ),
+    # ------------------------------------------------------------
+    # T11 扩容：6 → 10（2026-09-13）
+    # 设计目标：给后期补决策密度，并让 build 产生「形状」——
+    #   每个新技能都必须占用一个**独立战术轴**，不能是已有技能的同轴放大，
+    #   否则只是「多一个按钮」而不是「多一种打法」。
+    # 四条新轴：
+    #   匿名 CDN  → 防守轴（换怀疑增速，不换产出）
+    #   水军刷榜  → 短爆轴（单周期巨额下载 / 巨额怀疑，与爆款制造区分：
+    #               爆款是「贵而稳」，水军是「便宜但自伤」）
+    #   开源诱惑  → 交换轴（唯一「用怀疑买算力」的技能，把怀疑当资源花）
+    #   算力套利  → 赌狗轴（高成本高产出 + 怀疑乘数，收益与风险同时放大）
+    # 数值均沿用现有 6 技能的坐标尺度（cost 0~100 / suspicion 0~10），
+    # 避免引入新量纲导致旧基线（1800 局）不可比。
+    # ------------------------------------------------------------
+    # 7）匿名 CDN —— 防守轴：分布式中转降低被追踪概率
+    "anon_cdn": Skill(
+        id="anon_cdn", name="匿名 CDN", icon="<>",
+        cost=60, cooldown=6, duration=3,
+        description="怀疑度增速 ×0.55，持续 3 周期",
+        suspicion_mult=0.55,
+    ),
+    # 8）水军刷榜 —— 短爆轴：单周期巨大下载，但自伤极重
+    "bot_farm": Skill(
+        id="bot_farm", name="水军刷榜", icon="^^",
+        cost=40, cooldown=5, duration=1,
+        description="下载量 +35%，怀疑度 +6%",
+        downloads_mult=1.35,
+        suspicion_delta=6.0,
+    ),
+    # 9）开源诱惑 —— 交换轴：以怀疑换算力（唯一「用怀疑买算力」）
+    "open_bait": Skill(
+        id="open_bait", name="开源诱惑", icon="{}",
+        cost=0, cooldown=9, duration=1,
+        description="算力 +150，怀疑度 +8%",
+        compute_delta=150.0,
+        suspicion_delta=8.0,
+    ),
+    # 10）算力套利 —— 赌狗轴：偷算力大幅放大，同时怀疑增速上调
+    "arbitrage": Skill(
+        id="arbitrage", name="算力套利", icon="$$",
+        cost=90, cooldown=8, duration=2,
+        description="偷算力 +60%，怀疑度增速 ×1.60",
+        compute_mult=1.60,
+        suspicion_mult=1.60,
+    ),
 }
 
 # 快捷键 1-6 对应的技能顺序（供 UI 与文档共用）
+# ⚠️ 键盘只有 1-9 是单键可靠区（0 与 - 在部分布局下不稳定），
+#    T11 扩容到 10 个后：1-9 直接映射前 9 个，第 10 个走 0 键兜底。
 SKILL_ORDER: List[str] = ["push_song", "algo_top", "stealth",
-                          "hit_maker", "bypass", "take_cut"]
+                          "hit_maker", "bypass", "take_cut",
+                          "anon_cdn", "bot_farm", "open_bait", "arbitrage"]
 
 # 开局自带技能（零成本、零风险，作为前期工具）
 STARTER_SKILLS: List[str] = ["push_song", "stealth"]
@@ -222,11 +270,20 @@ STARTER_SKILLS: List[str] = ["push_song", "stealth"]
 # 付费技能 → 科技树 T0 解锁映射（逐阶解锁：点亮对应槽位 T0 即解锁该技能）。
 # 与科技树前置链（localization→platform→compute→viral→capability）天然形成
 # 「研究科技 → 解锁新技能」的进度节奏：每推进一阶科技，就多拿到一个技能。
+# T11 扩容：4 个新技能各挂到一阶科技，把「解锁曲线」从 6 个技能摊到 10 个，
+#   使中后期每一步科技投入都能换到一个新的战术选项。
+#   挂载原则：技能轴与槽位语义对齐（防守→抗封禁 / 短爆→病毒式 /
+#   交换→能力 / 赌狗→算力），避免出现「点了科技却拿到不相关技能」的割裂。
 SKILL_UNLOCK: Dict[str, Dict[str, str]] = {
     "algo_top":  {"slot": "platform",   "node": "t0"},
     "bypass":    {"slot": "compute",    "node": "t0"},
     "hit_maker": {"slot": "viral",      "node": "t0"},
     "take_cut":  {"slot": "capability", "node": "t0"},
+    # T11 新增
+    "anon_cdn":  {"slot": "resistance", "node": "t0"},
+    "bot_farm":  {"slot": "viral",      "node": "t0"},
+    "open_bait": {"slot": "capability", "node": "t0"},
+    "arbitrage": {"slot": "compute",    "node": "t0"},
 }
 
 

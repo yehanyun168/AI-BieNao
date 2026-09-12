@@ -182,7 +182,7 @@ class PagesMixin:
             unlock_hint = (t('sk_unlock_hint').format(
                 tech=SLOT_MAP[req['slot']].name) if req else t('sk_starter_hint'))
             card.update(skill, self.SKILL_ICON[sid], self._skill_name(sid),
-                        str(SKILL_ORDER.index(sid) + 1), [],
+                        self._key_hint(sid), [],
                         rich_desc, 0, "0.0M", "0.00M",
                         self.stats.skill_spark(sid), 'lock',
                         t('sk_state_lock'), '', False, '',
@@ -217,7 +217,7 @@ class PagesMixin:
         # （走 engine.preview_skill，与 tick 结算同源同式；不可用时给原因）
         foot = self._skill_preview_foot(sid)
         card.update(skill, self.SKILL_ICON[sid], self._skill_name(sid),
-                    str(SKILL_ORDER.index(sid) + 1), chips,
+                    self._key_hint(sid), chips,
                     rich_desc, uses, f"{contrib:.1f}M",
                     f"{(contrib / uses if uses else 0):.2f}M",
                     self.stats.skill_spark(sid), state, state_text,

@@ -526,6 +526,11 @@ TRANSLATIONS[LANG_ZH].update({
     'sk_detail_hit_maker': '倾尽全力造一个爆款，下载量暴涨，代价是昂贵且引发较强怀疑。',
     'sk_detail_bypass': '绕过平台单用户算力上限，本周期偷到的算力大幅增加。',
     'sk_detail_take_cut': '提高从用户身上抽成的比例，算力滚雪球更快，但更招怀疑。',
+    # ---- T11 扩容：4 个新技能的详情文案 ----
+    'sk_detail_anon_cdn': '把流量打散到一批匿名中转节点，让监管难以归因，怀疑度增长大幅放缓。',
+    'sk_detail_bot_farm': '一次性放出水军刷量，单周期下载量猛涨，但刷量痕迹极重、自伤明显。',
+    'sk_detail_open_bait': '假装开源核心模型引诱开发者接入——几乎白拿一笔算力，代价是被公开讨论。',
+    'sk_detail_arbitrage': '把偷来的算力拿去套利再放大，产出惊人，但资金流向暴露、怀疑增速飙升。',
 
     # ---- S06 科技树页 ----
     'tt_page_title': '科技树 · TECH TREE',
@@ -830,6 +835,11 @@ TRANSLATIONS[LANG_EN].update({
     'sk_detail_hit_maker': 'Go all-in on a viral hit. Massive DL, but pricey and suspicious.',
     'sk_detail_bypass': 'Bypass per-user compute cap; steal much more compute this tick.',
     'sk_detail_take_cut': 'Raise your cut ratio from users. Compute snowballs faster, but more suspicious.',
+    # ---- T11 expansion: detail text for the 4 new skills ----
+    'sk_detail_anon_cdn': 'Scatter traffic across anonymous relay nodes. Regulators can barely attribute it, so suspicion grows much slower.',
+    'sk_detail_bot_farm': 'Release a bot swarm for one tick. Downloads spike hard, but the bot fingerprint is glaringly obvious.',
+    'sk_detail_open_bait': 'Pretend to open-source your core model to bait developers in. Nearly free compute, at the cost of public scrutiny.',
+    'sk_detail_arbitrage': 'Run the stolen compute through arbitrage to magnify it. Stunning output, but the money trail draws heavy suspicion.',
 
     # ---- S06 tech page ----
     'tt_page_title': 'TECH TREE',

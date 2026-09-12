@@ -27,6 +27,18 @@ from ui_commissions import _name_of as _com_name, _goal_text as _com_goal
 # InputMixin —— GameUI 的键盘 / 主循环 / 刷新
 # ============================================================
 class InputMixin:
+    def _key_hint(self, sid: str) -> str:
+        """技能卡的键位提示（唯一真相源，供技能带与技能页共用）。
+
+        T11 扩容到 10 个后：1-9 单键，第 10 个用 '0' 兜底 —— 与
+        ``on_key_down`` 的数字键分支保持一致，避免卡片写 '10'
+        但玩家按不出来。
+        """
+        i = SKILL_ORDER.index(sid) if sid in SKILL_ORDER else -1
+        if i < 0:
+            return ''
+        return str(i + 1) if i < 9 else '0'
+
     def _skill_name(self, sid: str) -> str:
         return self.SKILL_I18N[sid].get(get_lang(), sid)
 
@@ -698,8 +710,9 @@ class InputMixin:
         if key == 'spacebar':
             self.toggle_pause()
             return True
-        if key in ('1', '2', '3', '4', '5', '6'):
-            idx = int(key) - 1
+        if key in ('1', '2', '3', '4', '5', '6', '7', '8', '9', '0'):
+            # T11 扩容：1-9 映射前 9 个技能，'0' 兜底第 10 个。
+            idx = 9 if key == '0' else int(key) - 1
             if idx < len(SKILL_ORDER):
                 self.on_skill_card_click(SKILL_ORDER[idx])
             return True

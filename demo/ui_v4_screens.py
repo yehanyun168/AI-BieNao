@@ -1441,6 +1441,10 @@ class SkillPage(U.PageScreen):
         self.add_head_widget(self.btn_only_ready)
         self.add_head_widget(self.lbl_compute)
 
+        # T11：技能扩容 6→10 后固定 3×2 网格会抛 GridLayoutException
+        #（"Too many children"）。改为 3 列 + 行数按技能总数动态计算
+        #（3 列 10 张 = 4 行），并在 ensure_cards 里补足行数 ——
+        # 以后再扩技能只需改 SKILL_ORDER，不用回来改这里。
         grid = GridLayout(cols=3, rows=2, spacing=8)
         self.cards: Dict[str, SkillPageCard] = {}
         self.body.add_widget(grid)
@@ -1455,7 +1459,15 @@ class SkillPage(U.PageScreen):
             self._on_sort(self._sort)
 
     def ensure_cards(self, skill_ids: Sequence[str]) -> None:
-        """按技能 id 列表懒建卡片（数量固定，只建一次）"""
+        """按技能 id 列表懒建卡片（数量固定，只建一次）。
+
+        T11：卡片总数超过初始 3×2 时自动补行（10 张 → 4 行），
+        避免 GridLayoutException("Too many children")。
+        """
+        # 先按最终卡片数把行数撑够（向上取整），再建卡
+        want = len(set(skill_ids) | set(self.cards))
+        if want > self._grid.cols * self._grid.rows:
+            self._grid.rows = -(-want // self._grid.cols)   # 向上取整
         for sid in skill_ids:
             if sid in self.cards:
                 continue

@@ -65,7 +65,7 @@ def main() -> int:
     check('GameUI 实例', lambda: need(rv.game is not None, 'no game'))
     g = rv.game
     check('地图存在', lambda: need(g.map_widget is not None, 'no map'))
-    check('技能卡 6 张', lambda: need(len(g.skill_cards) == 6, f'{len(g.skill_cards)}'))
+    check('技能卡 10 张', lambda: need(len(g.skill_cards) == 10, f'{len(g.skill_cards)}'))
     check('区域页签 5 个', lambda: need(len(g.region_tabs) == 5, f'{len(g.region_tabs)}'))
     check('指令栏存在', lambda: need(g.rail is not None, 'no rail'))
     check('技能带存在', lambda: need(g._skill_row is not None, 'no skillbar'))
