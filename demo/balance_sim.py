@@ -284,6 +284,46 @@ def _result(seed, p, ending, unlock_timeline, cp_strikes, insp) -> dict:
     }
 
 
+def _inspect_delta(obs: dict, prev: dict, insp: dict, strategy: str,
+                   tick: int) -> None:
+    """单 tick 怀疑度 delta 巡检（M0 只读，零 RNG / 零引擎调用）。
+
+    T02 前：这段逻辑内联在 simulate 循环里，且排在 ``report["ending"]``
+    早退之后 —— 结局帧永远走不到，于是「致死那一 tick」的最大尖峰被系统
+    性漏检（1800 局漏掉 60 次「一击致死」）。抽成函数后结局帧也会调用，
+    保证 delta_hist 覆盖整局每一个 tick。
+    """
+    delta = obs['sus'] - prev['sus']
+    insp['delta_hist'][_delta_bucket(delta)] += 1
+    if not (math.isfinite(obs['sus']) and math.isfinite(delta)):
+        _record(insp, 'bug', 'sus_nan_inf',
+                f'sus={obs["sus"]} delta={delta}', tick)
+    elif delta > thresholds.SUS_DELTA_HARD_MAX:
+        _record(insp, 'bug', 'sus_delta_hard',
+                f'sus 净增 {delta:.1f} > 硬上限 '
+                f'{thresholds.SUS_DELTA_HARD_MAX}', tick)
+    elif delta > thresholds.SUS_DELTA_REVIEW_MAX:
+        _record(insp, 'review', 'sus_delta_review',
+                f'sus 净增 {delta:.1f} > 复核线 '
+                f'{thresholds.SUS_DELTA_REVIEW_MAX}（尖峰治理后应趋近 0）', tick)
+    sus_min = (thresholds.SUS_DELTA_MIN_CRISIS
+               if STRATEGY_CRISIS_CAPABLE.get(strategy)
+               else thresholds.SUS_DELTA_MIN_NO_CRISIS)
+    if math.isfinite(delta) and delta < sus_min:
+        _record(insp, 'review', 'sus_delta_low',
+                f'sus 净变化 {delta:.1f} < 下限 {sus_min} '
+                f'（{strategy} 无危机应答，合法负值仅 -4/-2）', tick)
+
+
+def _record(insp: dict, level: str, type_name: str, detail: str,
+            tick: int) -> None:
+    """聚合记录一条异常到指定 insp（每类型存首条样例 + 计数，不逐条膨胀）。"""
+    a = insp['anomalies']
+    a['by_type'][type_name] = a['by_type'].get(type_name, 0) + 1
+    a[f'{level}_count'] += 1
+    a['samples'].setdefault(type_name, f'tick {tick}: {detail}')
+
+
 def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
              inspect: bool = True) -> dict:
     """跑一局，返回统计结果
@@ -327,35 +367,24 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
         for name in report["unlocked"]:
             unlock_timeline.append((p.tick_count, name))
 
+        # ⚠️ T02 缺陷修复：结局帧必须先巡检再返回。
+        #    旧写法在这里直接 return，导致「致死那一 tick」永远不进
+        #    delta_hist —— 而那恰恰是全局最大的尖峰（实测 1800 局中
+        #    60 次「一击致死」被系统性漏检，基线只记到 29 次而非 89 次，
+        #    差值正好等于致死 tick 数）。最严重的数值问题被工具静音了。
         if report["ending"]:
+            if inspect and prev is not None:
+                _inspect_delta(_observe_tick(p, prev['metrics']), prev,
+                               insp, strategy, p.tick_count)
             return _result(seed, p, report["ending"], unlock_timeline,
                            cp_strikes, insp)
 
-        # —— M0 只读巡检（结局帧不到这里；零 RNG / 零引擎调用）——
+        # —— M0 只读巡检（结局帧已在上方处理；零 RNG / 零引擎调用）——
         if inspect:
             doom_hist.append((p.global_penetration, p.suspicion))
             obs = _observe_tick(p, prev['metrics'] if prev else None)
             if prev is not None:
-                delta = obs['sus'] - prev['sus']
-                insp['delta_hist'][_delta_bucket(delta)] += 1
-                if not (math.isfinite(obs['sus']) and math.isfinite(delta)):
-                    _record('bug', 'sus_nan_inf',
-                            f'sus={obs["sus"]} delta={delta}')
-                elif delta > thresholds.SUS_DELTA_HARD_MAX:
-                    _record('bug', 'sus_delta_hard',
-                            f'sus 净增 {delta:.1f} > 硬上限 '
-                            f'{thresholds.SUS_DELTA_HARD_MAX}')
-                elif delta > thresholds.SUS_DELTA_REVIEW_MAX:
-                    _record('review', 'sus_delta_review',
-                            f'sus 净增 {delta:.1f} > 复核线 '
-                            f'{thresholds.SUS_DELTA_REVIEW_MAX}（刷脏+泄露叠加等合法极端）')
-                sus_min = (thresholds.SUS_DELTA_MIN_CRISIS
-                           if STRATEGY_CRISIS_CAPABLE.get(strategy)
-                           else thresholds.SUS_DELTA_MIN_NO_CRISIS)
-                if math.isfinite(delta) and delta < sus_min:
-                    _record('review', 'sus_delta_low',
-                            f'sus 净变化 {delta:.1f} < 下限 {sus_min} '
-                            f'（{strategy} 无危机应答，合法负值仅 -4/-2）')
+                _inspect_delta(obs, prev, insp, strategy, p.tick_count)
                 # 五指标硬卡死（bug 级）/ 软停滞（只记录）
                 stuck_run = stuck_run + 1 if obs['stuck'] else 0
                 if stuck_run >= thresholds.STUCK_TICKS:

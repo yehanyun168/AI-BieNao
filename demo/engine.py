@@ -31,7 +31,7 @@ from data import (
 from tech_tree import PlayerTech, aggregate_effects, SLOT_MAP
 # P2-3 难度档：init_game 经 apply_difficulty/current_difficulty 读写 TUNE 预设
 from balance import (TUNE, CRISIS_OPTIONS, DEFAULT_DIFFICULTY,
-                     apply_difficulty, current_difficulty)
+                     apply_difficulty, current_difficulty, soft_cap_suspicion)
 
 
 # ============================================================
@@ -358,6 +358,10 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         suspicion_growth += (skill_suspicion_delta if on_target else 0.0)
         total_suspicion += suspicion_growth
 
+    # T04 尖峰治理：偷算力聚合项过软饱和（膝点以下原样，以上渐近封顶）。
+    # 记账用饱和后的值 —— 玩家在 UI/日志里看到的拆解必须与真实落地的
+    # 数值一致，否则「怀疑度为什么涨」这个观测设施就失去可信度。
+    total_suspicion = soft_cap_suspicion(total_suspicion)
     player.compute += total_stolen + (skill_compute_bonus if not targeted else 0.0)
     player.compute_peak = max(player.compute_peak, player.compute)
     _sus('steal', total_suspicion)                       # 偷算力（基础）

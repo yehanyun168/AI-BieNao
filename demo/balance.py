@@ -23,6 +23,7 @@ balance.py - 平衡参数表（数据驱动的「调参单一入口」）
   ``*_decay`` 衰减系数（0.7 = 每周期衰减到 70%）
 """
 from typing import Dict
+import math
 
 
 # ============================================================
@@ -93,6 +94,17 @@ TUNE: Dict[str, float] = {
     # 警告线 / 危机线
     'suspicion_warning': 50.0,
     'suspicion_crisis': 80.0,
+    # —— T04 怀疑尖峰治理：偷算力怀疑项的「膝点 + 软饱和上限」——
+    # 根因（T02 探针实测）：单周期怀疑净增 steal 项均值 +96~111、峰值
+    #   +127，占尖峰贡献 92~93%；其中 70~82% 发生在「尖峰前怀疑度 <30」
+    #   的无预警状态、59~79% 一击致死（0→100）。原因是 total_suspicion
+    #   与下载量/算力规模无上界线性耦合，而下载量是指数增长的。
+    # 方案：分段软饱和 —— 膝点以下完全不干预（保早期 95%+ 的 tick 逐位
+    #   不变），膝点以上按 exp 渐近收敛到上限，杜绝「一 tick 打满」。
+    'suspicion_growth_knee': 18.0,   # 膝点：≤18 的常规增长原样通过
+    'suspicion_growth_cap': 24.0,    # 渐近上限：单 tick 偷算力怀疑永不超 24
+    #   上限取值依据：从安全区（怀疑 30）到关停（100）至少留出 3 个 tick
+    #   的反应窗口（(100-30)/24 ≈ 2.9，叠加 stealth 与衰减后更宽裕）。
     # 危机期间每周期下载量衰减（0.97 = -3%/周期）
     'crisis_download_decay': 0.97,
     # 压到危机线的这个比例以下才算真正解除
@@ -339,6 +351,8 @@ _REQUIRED = {
     'compute_scale', 'suspicion_sensitivity_base', 'suspicion_adoption_factor',
     'suspicion_young_mult', 'suspicion_aging_mult', 'suspicion_warning',
     'suspicion_crisis', 'crisis_download_decay', 'crisis_clear_ratio',
+    # —— T04 尖峰治理 ——
+    'suspicion_growth_knee', 'suspicion_growth_cap',
     'sus_pressure_threshold', 'sus_pressure_per_tick',
     'sus_log_threshold',
     'block_decay', 'block_expire_epsilon',
@@ -360,6 +374,30 @@ _REQUIRED = {
 }
 
 
+def soft_cap_suspicion(raw: float) -> float:
+    """T04 尖峰治理：偷算力怀疑项的「膝点 + 软饱和」（纯数值，归位 balance）。
+
+    根因（T02 探针实测，见 tools/sus_spike_probe.py）：total_suspicion 与
+    下载量/算力规模无上界线性耦合，而下载量指数增长 → 中后期单周期净增
+    +96~127（占尖峰贡献 92~93%）；其中 70~82% 发生在「尖峰前怀疑度 <30」
+    的无预警状态，59~79% 一击致死（0→100）。玩家视角就是「莫名爆表」。
+
+    分段软饱和（保早期手感、只削尾部）：
+        raw ≤ knee  → 原样返回（早期 95%+ 的 tick 逐位不变）
+        raw > knee  → knee + span·(1 - e^(-(raw-knee)/span))
+                      单调、连续、渐近收敛到 cap，永不越界
+
+    knee 处一阶连续（左右导数均为 1），拐点上没有可感知的折角。
+    引擎侧只调用本函数，不自己实现 —— 保证 TUNE 与算法同源，改一处即可。
+    """
+    knee = TUNE.get('suspicion_growth_knee', 0.0)
+    cap = TUNE.get('suspicion_growth_cap', 0.0)
+    if raw <= knee or cap <= knee:
+        return raw
+    span = cap - knee
+    return knee + span * (1.0 - math.exp(-(raw - knee) / span))
+
+
 def validate() -> list:
     """返回问题清单（空 = 合法）。供启动自检 / CI 调用。"""
     errs = []
@@ -373,6 +411,11 @@ def validate() -> list:
         errs.append("stealth_ratio_base 不能大于 stealth_ratio_max")
     if TUNE['suspicion_warning'] >= TUNE['suspicion_crisis']:
         errs.append("suspicion_warning 必须小于 suspicion_crisis")
+    # —— T04 尖峰治理：膝点必须为正且严格小于上限（否则软饱和退化）——
+    if TUNE['suspicion_growth_knee'] <= 0:
+        errs.append("suspicion_growth_knee 必须为正")
+    if TUNE['suspicion_growth_cap'] <= TUNE['suspicion_growth_knee']:
+        errs.append("suspicion_growth_cap 必须大于 suspicion_growth_knee")
     if not (TUNE['suspicion_crisis'] < TUNE['sus_pressure_threshold'] < 100):
         errs.append("sus_pressure_threshold 必须在 (suspicion_crisis, 100) 内")
     if TUNE['sus_pressure_per_tick'] < 0:
