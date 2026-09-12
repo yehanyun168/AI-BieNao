@@ -64,6 +64,7 @@ TUNE: Dict[str, float] = {
     'compute_per_user': 1.0,
     # 偷算力公式里的规模系数（把「比例」放大成可读数值）
     'compute_scale': 100.0,
+    'maintenance_per_tick': 2.0,  # 每周期维护费 = 当前周期数 × 本系数
 
     # ---------------- 怀疑度 ----------------
     # 每单位偷算力的基础敏感度
@@ -336,7 +337,8 @@ CRISIS_OPTIONS = [
 _REQUIRED = {
     'growth_base', 'growth_network', 'active_user_ratio',
     'stealth_ratio_base', 'stealth_ratio_max', 'compute_per_user',
-    'compute_scale', 'suspicion_sensitivity_base', 'suspicion_adoption_factor',
+    'compute_scale', 'maintenance_per_tick', 'suspicion_sensitivity_base',
+    'suspicion_adoption_factor',
     'suspicion_young_mult', 'suspicion_aging_mult', 'suspicion_warning',
     'suspicion_crisis', 'crisis_download_decay', 'crisis_clear_ratio',
     'sus_pressure_threshold', 'sus_pressure_per_tick',

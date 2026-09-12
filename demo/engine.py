@@ -358,17 +358,18 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         suspicion_growth += (skill_suspicion_delta if on_target else 0.0)
         total_suspicion += suspicion_growth
 
-    player.compute += total_stolen + (skill_compute_bonus if not targeted else 0.0)
+    compute_before = player.compute
+    report['maintenance_fee'] = player.tick_count * TUNE['maintenance_per_tick']
+    player.compute = max(0.0, player.compute + total_stolen + (skill_compute_bonus if not targeted else 0.0) - report['maintenance_fee'])
     player.compute_peak = max(player.compute_peak, player.compute)
     _sus('steal', total_suspicion)                       # 偷算力（基础）
     _sus('skill', (skill_suspicion_delta if not targeted else 0.0))  # 技能附带
     player.suspicion = max(0, min(100, player.suspicion + total_suspicion + (skill_suspicion_delta if not targeted else 0.0)))
     player.suspicion_peak = max(player.suspicion_peak, player.suspicion)
-    report["compute_gain"] = total_stolen
+    report["compute_gain"] = player.compute - compute_before
     report["suspicion_gain"] = total_suspicion
     # P0-3 快照计数：历史累计偷取算力（C3「算力冲刺」委托的判定基准）
     player.compute_earned_total += total_stolen
-
     # === 阶段3: 政府阻止机制 ===
     for country in player_countries:
         if not country.unlocked:
@@ -396,7 +397,6 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         else:
             # 未触发阻止 → 强度衰减
             country.current_block_intensity *= TUNE['block_decay']
-
     # === 阶段 3.5: 政府反制（P0-3，紧跟阻止结算；设计稿 §2）===
     report["counterplay"] = _tick_counterplay(effects)
 
