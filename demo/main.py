@@ -370,6 +370,7 @@ import pixel_assets as PA
 import ui_v4 as U
 import ui_v4_screens as S
 import sfx  # 音效管理器（失败安全；tools/gen_sfx.py 合成的 CC0 WAV）
+import bgm  # 背景音乐管理器（两态 calm/tense 随怀疑度切换；T09）
 from ui_v4 import (LegendChip, SaveSlotRow, SegSwitch, mk_label, fit_width)
 from tutorial import TutorialController   # P0-1 新手引导步骤机
 
@@ -452,6 +453,7 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._reschedule_tick()
         self._reschedule_countdown()
         sfx.load_all()  # 启动时加载音效（失败安全：无音频后端则全部 no-op）
+        bgm.load_all()  # 启动时加载 BGM（同上：缺文件只静音，不抛错）
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self.tutorial = TutorialController(self)   # P0-1 新手引导
@@ -939,9 +941,12 @@ class MainMenu(FloatLayout):
             self.user_scale = min(max(self.user_scale + d, 0.70), 1.60)
         self._apply_scale()
 
-    def _set_speed_idx(self, i: int) -> None:
-        """主菜单设置浮层：只更新全局速度档，进游戏时 GameUI 读取。"""
-        ST.CURRENT_SPEED_IDX = max(0, min(int(i), len(ST.SPEED_STEPS) - 1))
+    # 主菜单设置浮层回调：音效/音乐/动效/色盲/速度（进游戏时 GameUI 读取）
+    def _set_sound_idx(self, i: int) -> None:
+        sfx.set_enabled(bool(int(i)))
+
+    def _set_music_idx(self, i: int) -> None:
+        bgm.set_enabled(bool(int(i)))
 
     def _set_motion_idx(self, i: int) -> None:
         ST.REDUCE_MOTION = bool(int(i))
@@ -949,9 +954,8 @@ class MainMenu(FloatLayout):
     def _set_a11y_idx(self, i: int) -> None:
         ST.A11Y_SHAPES = bool(int(i))
 
-    def _set_sound_idx(self, i: int) -> None:
-        """主菜单设置浮层：音效开关（进游戏时 GameUI 读取 sfx.SFX_ON）。"""
-        sfx.set_enabled(bool(int(i)))
+    def _set_speed_idx(self, i: int) -> None:
+        ST.CURRENT_SPEED_IDX = max(0, min(int(i), len(ST.SPEED_STEPS) - 1))
 
     # --------------------------------------------------------
     # 浮层页（设置 / 成就 / 帮助）
@@ -980,6 +984,7 @@ class MainMenu(FloatLayout):
             on_a11y=self._set_a11y_idx,
             on_motion=self._set_motion_idx,
             on_sound=self._set_sound_idx,
+            on_music=self._set_music_idx,
             slot_actions=self._slot_actions,
             on_reset=self._reset_settings)
         page.rebuild_slots(read_slot_rows(self._sel_slot))

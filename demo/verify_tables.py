@@ -359,6 +359,8 @@ LAYERS = {
     'pixel_ui.py':        1,
     'sfx.py':             1,   # P1-8：音频服务（仅 kivy、失败安全），被
                                #       ui_drop/ui_pages/ui_popups/ui_session/main 使用
+    'bgm.py':             1,   # T09：背景音乐服务（两态循环 + 交叉淡出），
+                               #       与 sfx 同级；被 ui_input/ui_session/main 使用
     'world_map.py':       1,   # P1-8：地图渲染 + 地理常量，仅依赖 pixel_assets/pixel_ui；
                                #       data(L1) 同级复用其 COUNTRY_STYLES/COUNTRY_CENTERS
     'data.py':            1,
@@ -555,11 +557,14 @@ section("[8] 单文件行数 ≤ 800（P2-1 守卫）")
 FILE_LINE_LIMIT = 800
 LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 实测）
     'pixel_assets.py':   2353,    # 2026-09-12 再登记（原 2352）：台湾归属修正，gen_pixel_map.py 并入 6 格致游程换行 +1；自动生成的游程素材数据，重构 = 换生成器
-    'ui_v4_screens.py':  2225,    # 按屏拆分属独立重构工作
+    'ui_v4_screens.py':  2226,    # 2026-09-12 再登记（原 2225）：T09 设置页新增
+                                  #    音乐开关行（_seg 局部函数统一 5 个开关构造）
     'ui_v4.py':          1965,    # v4 组件库拆分属独立重构工作
     'engine.py':         1689,    # 2026-09-11 再登记（原 1542）：玩家反馈#7 新增 preview_next_cycle 下周期预测 + 委托自动结算/结局透传等纯逻辑
-    'main.py':           1314,    # P2-3 再登记（原 1191）：新档弹窗（难度+种子）
-    'i18n.py':           1185,    # P2-3 再登记（原 1163）：难度/新档文案 9 键×2 语
+    'main.py':           1319,    # 2026-09-12 再登记（原 1314）：T09 BGM 接线
+                                  #    （import bgm + GameUI 内 load_all + on_music 回调）
+    'i18n.py':           1187,    # 2026-09-12 再登记（原 1185）：T09 新增
+                                  #    set_music / set_music_hint 两键×2 语
     'ui_hud.py':          874,    # HUD Mixin 拆分属独立重构工作
 }
 

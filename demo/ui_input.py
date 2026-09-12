@@ -17,6 +17,7 @@ from data import SKILLS, SKILL_ORDER
 #    不能 from-import（一次性快照），改 data.SUSPICION_CRISIS 属性访问。
 import data
 import achievements as achievements_mod
+import bgm  # T09 背景音乐管理器（calm/tense 两态，随怀疑度切换）
 import ui_v4 as U
 import ui_v4_screens as S
 from ui_commissions import _name_of as _com_name, _goal_text as _com_goal
@@ -631,6 +632,11 @@ class InputMixin:
         self._log_suspicion_breakdown(report)
 
         self.refresh_all()
+        # T09 BGM：按当前怀疑度驱动 calm/tense 两态（阈值 70% 危机线）。
+        # 放在 refresh_all 之后、结尾弹窗之前 —— 危机/结局弹窗弹出时
+        # BGM 已切到 tense，声画同步。
+        bgm.update(bgm.state_for_suspicion(engine.player.suspicion,
+                                           data.SUSPICION_CRISIS))
         # 周期推进的视觉提示（玩家反馈 5）：倒计时条脉冲一次，
         # 让「新周期开始了」这件事有存在感。动效失败不影响逻辑。
         try:

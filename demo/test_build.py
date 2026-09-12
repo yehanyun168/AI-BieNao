@@ -398,6 +398,41 @@ for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
 print(f"   ✅ 17) 可视化/引导/节奏（顶栏火花×4 / 引导 {len(_steps)} 步 / "
       f"里程碑分档 / i18n ×{len(_pace_keys)} 键）")
 
+# ---- 18) T09 背景音乐：资源 / 两态映射 / 设置页开关接线 ----
+import bgm as _bgm
+import ui_v4_screens as _screens_m
+
+assert _bgm.STATES == ('calm', 'tense'), f"BGM 态定义变了: {_bgm.STATES}"
+_bgm_dir = _bgm._base_dir()
+for _st in _bgm.STATES:
+    _p = os.path.join(_bgm_dir, _st + '.wav')
+    assert os.path.exists(_p), f"BGM 资源缺失: {_p}（打包时须 add-data assets/bgm）"
+
+# 两态映射：70% 危机线为阈值（低于→calm，达到/超过→tense）
+assert _bgm.state_for_suspicion(0.0, 50.0) == 'calm'
+assert _bgm.state_for_suspicion(34.9, 50.0) == 'calm'
+assert _bgm.state_for_suspicion(35.0, 50.0) == 'tense', "70% 危机线应切 tense"
+assert _bgm.state_for_suspicion(80.0, 50.0) == 'tense'
+assert _bgm.state_for_suspicion('bad', 50.0) == 'calm', "脏输入应降级为 calm"
+
+# 设置页开关：on_music 是 SettingsPage 的合法形参，且实际构造出 sw_music
+_sp = _screens_m.SettingsPage(on_music=lambda i: None)
+assert hasattr(_sp, 'sw_music'), "设置页缺音乐开关控件"
+
+# i18n 键 zh/en 对称
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    for _k in ('set_music', 'set_music_hint'):
+        assert _k in i18n_mod.TRANSLATIONS[_lang], f"i18n[{_lang}] 缺 {_k}"
+
+# main.py 接线点存在（import bgm / load_all / on_music 回调）
+_main_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'main.py'), encoding='utf-8').read()
+for _needle in ('import bgm', 'bgm.load_all()', 'on_music=self._set_music_idx',
+                'def _set_music_idx'):
+    assert _needle in _main_src, f"main.py 缺 BGM 接线: {_needle}"
+print("   ✅ 18) T09 背景音乐（calm/tense 两态 WAV / 70% 阈值映射 / "
+      "设置页开关 ×2 语 / main 接线四连）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

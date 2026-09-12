@@ -13,6 +13,7 @@ from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
 import engine
 import save_manager
 import sfx
+import bgm
 import ui_v4 as U
 import ui_v4_screens as S
 import ui_shared as ST
@@ -286,8 +287,13 @@ class SessionMixin:
         """音效开关：0=关 / 1=开（P0-5）。"""
         sfx.set_enabled(bool(int(i)))
 
+    def _set_music_idx(self, i: int) -> None:
+        """音乐开关：0=关 / 1=开（T09）。关闭停播，开启按当前怀疑度补播。"""
+        bgm.set_enabled(bool(int(i)))
+
     def exit_to_menu(self) -> None:
         self.stop_ticking()
+        bgm.stop()   # T09：离开对局即停 BGM，避免主菜单还在放紧张曲
         if callable(self.on_exit):
             self.on_exit()
 

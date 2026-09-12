@@ -89,6 +89,7 @@ class PagesMixin:
                 on_speed=self.set_speed_idx, on_grid=self._set_grid,
                 on_a11y=self._set_a11y_idx, on_motion=self._set_motion_idx,
                 on_sound=self._set_sound_idx,
+                on_music=self._set_music_idx,
                 on_tutorial=self.tutorial.replay,
                 slot_actions=self._slot_actions,
                 on_reset=lambda: self._notify(t('set_restore')))

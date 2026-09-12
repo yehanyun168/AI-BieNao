@@ -68,6 +68,10 @@ def build(mode='onedir'):
         #    demo/sfx.py::_base_dir() 的 os.path.join(sys._MEIPASS, 'assets', 'sfx')，
         #    对不上会导致 exe 形态 8 个音效全哑且不报错。
         '--add-data', f'{DEMO_DIR}/assets/sfx;assets/sfx',
+        # ⚠️ BGM 资源：同样整目录随包（T09）。目标路径 assets/bgm 必须对齐
+        #    demo/bgm.py::_base_dir() 的 os.path.join(sys._MEIPASS, 'assets', 'bgm')，
+        #    对不上会导致 exe 形态 BGM 全哑且不报错（与 sfx 同一坑）。
+        '--add-data', f'{DEMO_DIR}/assets/bgm;assets/bgm',
         # 注意：不要用 --collect-all kivy —— 它会让 collect_submodules 扫描
         # kivy.garden 这个命名空间包并抛 ValueError。PyInstaller 自带 hook-kivy.py
         # 已会委托 Kivy 官方钩子收集资源/依赖，无需手动 collect。

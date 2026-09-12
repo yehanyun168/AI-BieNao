@@ -1988,6 +1988,7 @@ class SettingsPage(U.PageScreen):
                  on_speed: Callable = None, on_grid: Callable = None,
                  on_a11y: Callable = None, on_motion: Callable = None,
                  on_sound: Callable = None,
+                 on_music: Callable = None,
                  on_tutorial: Callable = None,
                  slot_actions: Callable = None, on_reset: Callable = None,
                  **kwargs):
@@ -2014,19 +2015,21 @@ class SettingsPage(U.PageScreen):
         self.sw_speed = SegSwitch(['×0.5', '×1', '×2', '×4'], 1,
                                   on_change=lambda i: on_speed and on_speed(i))
         left.add_widget(self._row('set_speed', self.sw_speed, ''))
-        self.sw_motion = SegSwitch([i18n.t('set_motion_full'), i18n.t('set_motion_low')],
-                                   0, on_change=lambda i: on_motion and on_motion(i))
-        left.add_widget(self._row('set_motion', self.sw_motion, i18n.t('set_motion_hint')))
-        self.sw_grid = SegSwitch([i18n.t('set_grid_off'), i18n.t('set_grid_dim'),
-                                  i18n.t('set_grid_strong')], 1,
-                                 on_change=lambda i: on_grid and on_grid(i))
-        left.add_widget(self._row('set_grid', self.sw_grid, i18n.t('set_grid_hint')))
-        self.sw_a11y = SegSwitch([i18n.t('set_off'), i18n.t('set_on')], 1,
-                                 on_change=lambda i: on_a11y and on_a11y(i))
-        left.add_widget(self._row('set_a11y', self.sw_a11y, i18n.t('set_a11y_hint')))
-        self.sw_sound = SegSwitch([i18n.t('set_off'), i18n.t('set_on')], 1,
-                                  on_change=lambda i: on_sound and on_sound(i))
-        left.add_widget(self._row('set_sound', self.sw_sound, i18n.t('set_sound_hint')))
+
+        # 统一构造「开关 + 一行 _row」：二值项（色盲/音效/音乐，T09 起含 BGM）
+        # 与多值项（动效/网格）同构，抽成一个局部函数后每项只占 1~2 行。
+        def _seg(key, opts, default, cb):
+            sw = SegSwitch(opts, default, on_change=lambda i: cb and cb(i))
+            left.add_widget(self._row(key, sw, i18n.t(key + '_hint')))
+            return sw
+        _tf = [i18n.t('set_off'), i18n.t('set_on')]      # 通用开/关
+        _mf = [i18n.t('set_motion_full'), i18n.t('set_motion_low')]
+        _gf = [i18n.t('set_grid_off'), i18n.t('set_grid_dim'), i18n.t('set_grid_strong')]
+        self.sw_motion = _seg('set_motion', _mf, 0, on_motion)
+        self.sw_grid = _seg('set_grid', _gf, 1, on_grid)
+        self.sw_a11y = _seg('set_a11y', _tf, 1, on_a11y)
+        self.sw_sound = _seg('set_sound', _tf, 1, on_sound)
+        self.sw_music = _seg('set_music', _tf, 1, on_music)
 
         # UI 缩放行
         zoom = BoxLayout(orientation='horizontal', spacing=8,
@@ -2052,12 +2055,10 @@ class SettingsPage(U.PageScreen):
                                   lambda: on_tutorial and on_tutorial(),
                                   width=200, height=44, font_size=FS_BODY))
         # 快捷键速查（Bug5：填充留白）
-        keys = KeyBox(i18n.t('set_keys'), [
-            ('Space', 'k_pause'), ('1 – 6', 'k_skill'), ('F1', 'k_help'),
-            ('Esc', 'k_esc'), ('L', 'k_lang'), ('S / R', 'k_save'),
-        ])
-        keys.size_hint_y = None
-        keys.height = 190
+        keys = KeyBox(i18n.t('set_keys'), [('Space', 'k_pause'), ('1 – 6', 'k_skill'),
+                                           ('F1', 'k_help'), ('Esc', 'k_esc'),
+                                           ('L', 'k_lang'), ('S / R', 'k_save')])
+        keys.size_hint_y, keys.height = None, 190
         left.add_widget(keys)
         # 关于游戏（Bug5：弹性卡片，吃掉面板剩余空间；奖杯像素画压阵）
         about = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],
