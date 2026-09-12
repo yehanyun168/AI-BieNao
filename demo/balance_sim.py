@@ -53,6 +53,14 @@ import tech_tree
 import thresholds  # M0：自动试玩异常判定阈值表（工具配套，非运行时模块）
 
 
+def _find_branch(slot, branch_id: str):
+    """按 id 在槽位分支里找一个 TechBranch（找不到返回 None）。"""
+    for br in slot.branches:
+        if br.branch_id == branch_id:
+            return br
+    return None
+
+
 def auto_play(tick_report_hook=None, strategy: str = 'default'):
     """自动玩家的每周期决策
 
@@ -111,6 +119,26 @@ def auto_play(tick_report_hook=None, strategy: str = 'default'):
                     break
             if upgraded:
                 break
+
+    # 1b. 合规专精（P1-4 / T05）的专项加点：法律护盾优先。
+    #     ⚠️ 这是 T05 定位到的核心机制缺陷 —— 「合规之王」要求 unlocked
+    #     legal_shield，但默认加点顺序是「槽位序 → 分支序」，而 legal_shield
+    #     是抗封禁槽位的第 2 分支。实测 200 局 compliance **零次**点进该分支
+    #     （最高等级 0）：算力全被前序槽位分支吸走，而且 183/200 局在
+    #     tick 40 前就结束了（局终渗透均值 35.8%），根本没有攒到 700 算力
+    #     去点三级 legal_shield 的时间窗。结局因此变成结构性不可达，
+    #     而不是「玩家不够努力」。
+    #     专精人格的正确行为是：抗封禁 T0 一解锁就直奔法律护盾主线，
+    #     不为其他分支分心（合规路线不靠下载量赢，靠不被封禁赢）。
+    #     默认策略下 strategy=='compliance' 恒为 False，不进入本段，
+    #     逐位回归完全不受影响。
+    if strategy == 'compliance' and p.tech.t0_unlocked.get('resistance'):
+        ls = _find_branch(tech_tree.SLOT_MAP['resistance'], 'legal_shield')
+        lv = p.tech.branch_levels.get('legal_shield', 0)
+        if (ls is not None and lv < 3
+                and p.tech.can_upgrade_branch('resistance', 'legal_shield')
+                and p.compute >= ls.costs[lv]):
+            engine.upgrade_branch('resistance', 'legal_shield')
 
     # 2. 救命技能
     #    P1-4 compliance：专精人格对怀疑增速更敏感，提前一档放深度伪装
@@ -415,13 +443,82 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
     return _result(seed, p, None, unlock_timeline, cp_strikes, insp)
 
 
+def _first_crisis_report(seeds: int = 30) -> None:
+    """T03 首局压力验收：新档（默认 TUNE，含门控与引导静默）的早期节奏。
+
+    验收线（任务清单 T03）：首危机均值 ≤30 周期；60 周期内无危机局 ≤3/30。
+    只在 default 策略上跑 —— 真人新手对应「中等玩家」而不是 afk/合规专精。
+    """
+    print(f'=== T03 首局压力验收（default 策略 × {seeds} 局 × 含 T03 开关）===')
+    print(f"unlock_per_tick_cap={balance.TUNE['unlock_per_tick_cap']}  "
+          f"tutorial_silent_ticks={balance.TUNE['tutorial_silent_ticks']}")
+    firsts = []
+    nocr = 0
+    unlock_at = {}
+    for seed in range(1, seeds + 1):
+        random.seed(seed)
+        engine.init_game()
+        p = engine.player
+        fc = None
+        for _ in range(200):
+            report = engine.tick_one_round()
+            auto_play(strategy='default')
+            for name in report['unlocked']:
+                unlock_at.setdefault(name, []).append(p.tick_count)
+            if report.get('crisis') and fc is None:
+                fc = p.tick_count
+            if report['ending']:
+                break
+        firsts.append(fc if fc else 999)
+        if fc is None or fc > 60:
+            nocr += 1
+    got = [x for x in firsts if x < 999]
+    avg = sum(got) / len(got) if got else 0
+    print(f'  首危机均值 {avg:.1f} 周期（验收 ≤30）  '
+          f'{"PASS" if avg <= 30 else "FAIL"}')
+    print(f'  60 周期内无危机 {nocr}/{seeds}（验收 ≤3）  '
+          f'{"PASS" if nocr <= 3 else "FAIL"}')
+    print(f'  有危机局 {len(got)}/{seeds}')
+    print()
+    print('  前 6 国解锁节奏（各 tick 解锁的国数）:')
+    per_tick = {}
+    for name, ticks in unlock_at.items():
+        t = ticks[0]
+        per_tick[t] = per_tick.get(t, 0) + 1
+    for t in sorted(per_tick)[:12]:
+        print(f'    tick {t:>3}: {per_tick[t]} 国')
+
+
 def run_matrix(args) -> None:
     """M0 自动试玩全矩阵跑批：策略 × 难度 × 种子 → 基线 JSON + md 报告。
 
     输出：
       tools/data/playtest_baseline.json —— 基线（提交入库，后续版本对比漂移用）
       tools/data/playtest_reports/playtest_<时间戳>.md —— 巡检报告（gitignore）
+
+    ⚠️ T03：矩阵基线必须关闭「首局压力」的两项开关（unlock_per_tick_cap /
+    tutorial_silent_ticks），否则早期解锁节奏与随机数消费顺序都会变，
+    历史 1800 局基线立刻失去可比性。
+
+    ⚠️ 关键坑：只改 balance.TUNE 是**无效**的 —— 矩阵循环内每档都会调
+    balance.apply_difficulty(difficulty)，而它会 ``TUNE.clear()`` 后从
+    _TUNE_BASE 重建，把改动冲掉（实测表现：第一档干净、后续档偷偷开着
+    门控，基线出现跨次不一致）。所以必须同时改 _TUNE_BASE，跑完再还原。
     """
+    _t03_off = {'unlock_per_tick_cap': 0, 'tutorial_silent_ticks': 0}
+    _saved_tune = {k: balance.TUNE[k] for k in _t03_off}
+    _saved_base = {k: balance._TUNE_BASE[k] for k in _t03_off}
+    balance.TUNE.update(_t03_off)
+    balance._TUNE_BASE.update(_t03_off)
+    try:
+        _run_matrix_inner(args)
+    finally:
+        balance._TUNE_BASE.update(_saved_base)
+        balance.TUNE.update(_saved_tune)
+
+
+def _run_matrix_inner(args) -> None:
+    """矩阵跑批主体（T03 开关已由 run_matrix 关闭）。"""
     stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     here = os.path.dirname(os.path.abspath(__file__))
     data_dir = os.path.normpath(os.path.join(here, '..', 'tools', 'data'))
@@ -564,7 +661,14 @@ def main():
                     help='M0 自动试玩基线：策略×难度全矩阵跑批'
                          '（--seeds 为每组合局数，--strategy/--difficulty 忽略），'
                          '写 tools/data/playtest_baseline.json + md 报告')
+    ap.add_argument('--tutorial', action='store_true',
+                    help='T03 首局压力验收：跑新档早期节奏（首危机 / 解锁门控 /'
+                         '引导期静默），输出对照验收线的 PASS/FAIL')
     args = ap.parse_args()
+
+    if args.tutorial:
+        _first_crisis_report(args.seeds)
+        return
 
     if args.matrix:
         run_matrix(args)

@@ -351,6 +351,7 @@ LAYERS = {
     # L0 纯逻辑：零项目依赖
     'conditions.py':      0,
     'balance.py':         0,
+    'onboarding.py':      0,   # T03：首局节奏开关（纯 TUNE 读取，零项目依赖）
     'i18n.py':            0,   # P1-8：文案表，零项目依赖；engine(L3) 引用属合法
                                #       逻辑依赖（此前不在白名单导致违规漏报，现按定级放行）
     # L1 基础层

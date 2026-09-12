@@ -94,17 +94,17 @@ TUNE: Dict[str, float] = {
     # 警告线 / 危机线
     'suspicion_warning': 50.0,
     'suspicion_crisis': 80.0,
-    # —— T04 怀疑尖峰治理：偷算力怀疑项的「膝点 + 软饱和上限」——
-    # 根因（T02 探针实测）：单周期怀疑净增 steal 项均值 +96~111、峰值
-    #   +127，占尖峰贡献 92~93%；其中 70~82% 发生在「尖峰前怀疑度 <30」
-    #   的无预警状态、59~79% 一击致死（0→100）。原因是 total_suspicion
-    #   与下载量/算力规模无上界线性耦合，而下载量是指数增长的。
-    # 方案：分段软饱和 —— 膝点以下完全不干预（保早期 95%+ 的 tick 逐位
-    #   不变），膝点以上按 exp 渐近收敛到上限，杜绝「一 tick 打满」。
+    # —— T04 怀疑尖峰治理：偷算力项的「膝点 + 软饱和」（根因见
+    #    soft_cap_suspicion 文档；实测 steal 项占尖峰贡献 92~93%、峰值
+    #    +127，59~79% 一击致死）——
     'suspicion_growth_knee': 18.0,   # 膝点：≤18 的常规增长原样通过
     'suspicion_growth_cap': 24.0,    # 渐近上限：单 tick 偷算力怀疑永不超 24
-    #   上限取值依据：从安全区（怀疑 30）到关停（100）至少留出 3 个 tick
-    #   的反应窗口（(100-30)/24 ≈ 2.9，叠加 stealth 与衰减后更宽裕）。
+    #   取值依据：安全区(30)→关停(100) 至少留 3 tick 反应窗口 (100-30)/24≈2.9
+    # —— T03 首局压力改造：解锁门控 + 引导期静默（根因见 onboarding.py）——
+    'unlock_per_tick_cap': 2,      # 单周期最多解锁 N 国，溢出排队下周期
+                                   # 0 = 关闭（矩阵/回归用）
+    'tutorial_silent_ticks': 6,    # tick ≤ N 关闭随机/国家事件与委托，
+                                   # 只留固定教学节奏；0 = 关闭
     # 危机期间每周期下载量衰减（0.97 = -3%/周期）
     'crisis_download_decay': 0.97,
     # 压到危机线的这个比例以下才算真正解除
@@ -353,6 +353,8 @@ _REQUIRED = {
     'suspicion_crisis', 'crisis_download_decay', 'crisis_clear_ratio',
     # —— T04 尖峰治理 ——
     'suspicion_growth_knee', 'suspicion_growth_cap',
+    # —— T03 首局压力 ——
+    'unlock_per_tick_cap', 'tutorial_silent_ticks',
     'sus_pressure_threshold', 'sus_pressure_per_tick',
     'sus_log_threshold',
     'block_decay', 'block_expire_epsilon',
@@ -416,6 +418,11 @@ def validate() -> list:
         errs.append("suspicion_growth_knee 必须为正")
     if TUNE['suspicion_growth_cap'] <= TUNE['suspicion_growth_knee']:
         errs.append("suspicion_growth_cap 必须大于 suspicion_growth_knee")
+    # —— T03 首局压力：门控与引导期必须为非负整数 ——
+    if TUNE['unlock_per_tick_cap'] < 0:
+        errs.append("unlock_per_tick_cap 不能为负（0 = 关闭门控）")
+    if TUNE['tutorial_silent_ticks'] < 0:
+        errs.append("tutorial_silent_ticks 不能为负")
     if not (TUNE['suspicion_crisis'] < TUNE['sus_pressure_threshold'] < 100):
         errs.append("sus_pressure_threshold 必须在 (suspicion_crisis, 100) 内")
     if TUNE['sus_pressure_per_tick'] < 0:

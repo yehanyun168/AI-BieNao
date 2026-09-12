@@ -19,7 +19,7 @@ import country_events as ce
 import endings as endings_mod
 import achievements as achievements_mod
 import v2_events
-import commissions
+import commissions, onboarding
 from data import (
     COUNTRIES, Country, AGE_STRUCTURE_BONUS,
     SKILLS, EVENTS, STARTER_SKILLS, SKILL_UNLOCK,
@@ -115,10 +115,8 @@ class PlayerState:
 player_countries: List[CountryState] = []
 player: PlayerState = None
 
-# 当前周期内怀疑度变化的来源拆解（玩家反馈 #5）。
-# 每个写 suspicion 的地方调 _sus(tag, delta) 记账，tick 结束放进 report。
-# 这是**纯观测**设施：不影响任何游戏数值，仅用于让 UI 能回答
-# 「这一周期怀疑度为什么涨了这么多」。
+# 当前周期内怀疑度变化的来源拆解（玩家反馈 #5）：每个写 suspicion 的地方
+# 调 _sus(tag, delta) 记账，tick 结束放进 report。**纯观测**设施。
 _suspicion_trace: Dict[str, float] = {}
 
 
@@ -272,19 +270,15 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     targeted = bool(skill_targets)
 
     # === 阶段1: 各国下载量增长 ===
+    # T03 解锁门控：判定逻辑见 onboarding（0 = 不设限，矩阵/回归用）
+    _cap, _n_unlocked = onboarding.unlock_budget(TUNE), 0
     for country in player_countries:
-        # 未解锁国家按邻国渗透触发
-        if not country.unlocked:
-            neighbor_boost = sum(
-                other.penetration_rate
-                for other in player_countries
-                if other.config.code in country.config.neighbors
-                and other.unlocked
-            )
-            if neighbor_boost >= data.UNLOCK_PENETRATION_THRESHOLD:
+        if not country.unlocked:      # 未解锁国按邻国渗透触发
+            if onboarding.try_unlock(country, player_countries, _cap, _n_unlocked,
+                                     data.UNLOCK_PENETRATION_THRESHOLD):
                 country.unlocked = True
+                _n_unlocked += 1
                 report["unlocked"].append(country.config.name)
-                # 解锁时给种子用户
                 country.downloads_m = data.UNLOCK_SEED_DOWNLOADS_M
                 continue
 
@@ -358,9 +352,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         suspicion_growth += (skill_suspicion_delta if on_target else 0.0)
         total_suspicion += suspicion_growth
 
-    # T04 尖峰治理：偷算力聚合项过软饱和（膝点以下原样，以上渐近封顶）。
-    # 记账用饱和后的值 —— 玩家在 UI/日志里看到的拆解必须与真实落地的
-    # 数值一致，否则「怀疑度为什么涨」这个观测设施就失去可信度。
+    # T04 尖峰治理：偷算力聚合项过软饱和（记账值 = 实际落地值，保观测可信）
     total_suspicion = soft_cap_suspicion(total_suspicion)
     player.compute += total_stolen + (skill_compute_bonus if not targeted else 0.0)
     player.compute_peak = max(player.compute_peak, player.compute)
@@ -454,7 +446,8 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     }
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
     # === 阶段6.5: v2 事件库（37 条选择型事件）===
-    if v2_events.EVENTS and random.random() < TUNE['event_prob_v2']:
+    if (not onboarding.in_tutorial_silence(TUNE, player.tick_count)
+            and v2_events.EVENTS and random.random() < TUNE['event_prob_v2']):
         v2_ctx = {
             'penetration': player.global_penetration,
             'suspicion': player.suspicion,
@@ -597,6 +590,8 @@ def _tick_event_trigger(effects: dict) -> Optional[data.GameEvent]:
             if any(c.unlocked for c in player_countries if c.config.code == evt.target):
                 pool.extend([evt] * weight)
 
+    if onboarding.in_tutorial_silence(TUNE, player.tick_count):
+        return None
     if not pool or random.random() > TUNE['event_prob_global']:
         return None
     return random.choice(pool)
@@ -855,7 +850,10 @@ def _tick_commissions(crisis_this_tick: bool):
     offered = done = failed = None
 
     # 1) 生成尝试（全局危机期间暂停生成新委托；设计稿 §1.1）
+    #    T03：引导期静默 —— 委托会挤占新手注意力（且带时限压力），
+    #    延后到引导结束再开始投放。
     if (not p.crisis_triggered
+            and not onboarding.in_tutorial_silence(TUNE, p.tick_count)
             and tick >= TUNE['commission_start_tick']
             and tick - p.last_commission_tick >= TUNE['commission_interval']
             and len(p.commissions) < TUNE['commission_max_active']):
@@ -1007,6 +1005,8 @@ def _tick_country_event_trigger() -> Optional[ce.CountryEvent]:
                 candidates.append((evt, country))
 
     if not candidates:
+        return None
+    if onboarding.in_tutorial_silence(TUNE, player.tick_count):
         return None
     if random.random() > TUNE['event_prob_country']:
         return None
