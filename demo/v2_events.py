@@ -264,7 +264,10 @@ def pick_event(ctx: Dict, cooldowns: Dict[str, int],
     """按权重挑一个可触发且不在冷却中的事件"""
     rng = rng or random
     pool = []
+    seen_events = set(ctx.get('seen_events', ()))
     for evt in EVENTS:
+        if evt.id in seen_events:
+            continue
         if cooldowns.get(evt.id, 0) > 0:
             continue
         if not is_eligible(evt, ctx):
