@@ -259,7 +259,7 @@ check('SKILL_ORDER 与 SKILLS 表一致',
 
 check('技能 id 与字典键一致',
       all(k == s.id for k, s in data.SKILLS.items()),
-      '6/6')
+      f"{len(data.SKILLS)}/{len(data.SKILLS)}")
 
 # 邻国引用：不能指向不存在的国家
 dangling = []
