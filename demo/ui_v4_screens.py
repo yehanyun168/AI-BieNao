@@ -100,7 +100,7 @@ class UiStats:
             self.global_unlocked.append(
                 float(sum(1 for c in countries if getattr(c, 'unlocked', False))))
         except Exception:
-            self.global_unlocked.append(0.0)
+            self.global_unlocked.append(0.0)  # 计数异常 → 记 0：曲线缺一点好过崩溃
 
     def mark_skill(self, sid: str, contrib: float = 0.0) -> None:
         """记录一次技能释放（进入投放模式并确认后调用）。"""

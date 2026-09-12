@@ -36,6 +36,7 @@ from collections import Counter
 sys.path.insert(0, __file__.rsplit('\\', 1)[0].rsplit('/', 1)[0])
 
 import data  # P1-10：SUSPICION_CRISIS 走 data 的 PEP 562 动态代理
+import balance  # P2-3：难度预设（TUNE 乘法，apply_difficulty 在 main 应用一次）
 import engine
 import tech_tree
 
@@ -199,7 +200,17 @@ def main():
                     default='default',
                     help='自动玩家人格：default=中等水平（原版）；'
                          'compliance=合规专精（P1-4）')
+    ap.add_argument('--difficulty', choices=['easy', 'normal', 'hard'],
+                    default='normal',
+                    help='难度预设（P2-3）：easy/normal/hard，默认 normal。'
+                         'normal 不做任何 TUNE 改动，默认输出与历史版本逐字符一致')
     args = ap.parse_args()
+
+    # P2-3：难度预设只在此应用一次（TUNE 是全局的，simulate 里的
+    # init_game() 无 difficulty 参数 = 不动 TUNE；normal 完全跳过 apply，
+    # 默认路径零接触，基线逐位不变）。
+    if args.difficulty != 'normal':
+        balance.apply_difficulty(args.difficulty)
 
     results = [simulate(s, args.ticks, args.strategy)
                for s in range(1, args.seeds + 1)]
@@ -220,8 +231,13 @@ def main():
     fails = [r['commissions_failed'] for r in results]
     cps = [r['counterplay'] for r in results]
 
-    # 策略标注只在非 default 时打印，default 输出与历史版本逐字符一致
-    _tag = f"（策略：{args.strategy}）" if args.strategy != 'default' else ""
+    # 策略/难度标注只在非默认时打印，default 输出与历史版本逐字符一致
+    _tags = []
+    if args.strategy != 'default':
+        _tags.append(f"策略：{args.strategy}")
+    if args.difficulty != 'normal':
+        _tags.append(f"难度：{args.difficulty}")
+    _tag = f"（{' · '.join(_tags)}）" if _tags else ""
     print(f" === {len(results)} 局模拟汇总{_tag} ===")
     print(" 结局分布：")
     for name, n in dist.most_common():

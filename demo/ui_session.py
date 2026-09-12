@@ -45,7 +45,7 @@ class SessionMixin:
             try:
                 setattr(widget, attr, base * self.scale)
             except Exception:
-                pass
+                pass  # 单个控件缩放失败只影响其外观，不中断其余控件与后续布局
         # 全树刷新：任何实现了 refresh_scale 的控件按当前 scale 自排
         # （比逐个登记更可靠 —— 新增控件不会漏）
         self._walk_refresh(self)
@@ -58,7 +58,7 @@ class SessionMixin:
             try:
                 fn(self.scale)
             except Exception:
-                pass
+                pass  # 同上：单个控件的 refresh_scale 失败不拖垮整体缩放
         for ch in getattr(widget, 'children', ()) or ():
             self._walk_refresh(ch, depth + 1)
 

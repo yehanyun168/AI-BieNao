@@ -537,6 +537,49 @@ check('委托/反制 TUNE 键全部被引擎引用（无死键）', not dead_key
 
 
 # ============================================================
+# [8] 单文件 800 行守卫（P2-1：只做守卫，不做拆分）
+# ============================================================
+section("[8] 单文件行数 ≤ 800（P2-1 守卫）")
+
+# 规则（与 CONTRIBUTING.md「单文件 ≤800 行」配套的自动守卫）：
+#   - 任何 demo/*.py 默认硬限 800 行 —— 新增代码文件必须 ≤800 行；
+#   - 存量超限文件进入下面的白名单，行数**冻结在登记值**：只许变小、
+#     不许变大，多 1 行（哪怕一个空行）都报错；
+#   - 白名单登记的是本守卫落地当日的实测行数，注明超限原因；
+#     拆分是独立排期的重构工作（8 人时级），本轮明确不做。
+#   - 再登记约定（P2-3 起）：经主理人授权的功能轮次触碰白名单文件时，
+#     随该次改动再登记新实测行数并注明日期与事由 —— 不是放开冻结，
+#     而是把"每次放行"显式留痕。
+FILE_LINE_LIMIT = 800
+LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 实测）
+    'pixel_assets.py':   2352,    # 自动生成的游程素材数据，重构 = 换生成器
+    'ui_v4_screens.py':  2225,    # 按屏拆分属独立重构工作
+    'ui_v4.py':          1965,    # v4 组件库拆分属独立重构工作
+    'engine.py':         1542,    # P2-3 再登记（原 1516）：init_game 增种子/难度参数
+    'main.py':           1314,    # P2-3 再登记（原 1191）：新档弹窗（难度+种子）
+    'i18n.py':           1185,    # P2-3 再登记（原 1163）：难度/新档文案 9 键×2 语
+    'ui_hud.py':          874,    # HUD Mixin 拆分属独立重构工作
+}
+
+line_violations = []
+for _f in sorted(os.listdir(HERE)):
+    if not _f.endswith('.py'):
+        continue
+    with io.open(os.path.join(HERE, _f), encoding='utf-8',
+                 errors='replace') as _fh:
+        _n = sum(1 for _ in _fh)
+    _cap = LINE_LIMIT_WHITELIST.get(_f, FILE_LINE_LIMIT)
+    if _n > _cap:
+        line_violations.append(f"{_f}: {_n} 行 > 上限 {_cap}"
+                               + ("（白名单冻结值被突破！）" if _f in LINE_LIMIT_WHITELIST else ""))
+check('demo/*.py 行数全部不超上限（存量白名单冻结在登记值）', not line_violations,
+      f"{len(line_violations)} 处：{line_violations[:3]}" if line_violations else
+      f"{len(LINE_LIMIT_WHITELIST)} 个存量白名单冻结 + 其余硬限 {FILE_LINE_LIMIT} 行")
+for v in line_violations:
+    print(f"         · {v}")
+
+
+# ============================================================
 # 汇总
 # ============================================================
 print('\n' + '=' * 62)

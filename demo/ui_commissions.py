@@ -128,7 +128,7 @@ class CommissionBar(HudBox):
             Window.bind(on_resize=self._on_window_size)
             self._win_bound = True
         except Exception:
-            self._win_bound = False
+            self._win_bound = False  # 绑定失败 = 不随窗口缩放，面板静态布局仍可用
 
     def _unbind_window(self) -> None:
         if self._measure_ev is not None:
@@ -140,7 +140,7 @@ class CommissionBar(HudBox):
             Window.unbind(size=self._on_window_size)
             Window.unbind(on_resize=self._on_window_size)
         except Exception:
-            pass
+            pass  # 解绑失败无碍：面板已关闭，多余回调不写游戏状态
         self._win_bound = False
 
     def _on_window_size(self, *_args) -> None:

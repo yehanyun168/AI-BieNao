@@ -18,6 +18,10 @@
   10. 语言切 en → 存档 → 读档 → 语言不随存档恢复（PR-24 已知待办）
   11. 极端数值（1e300）→ tick 不崩、无 inf/nan 污染存档
   12. 连续 60 tick 不操作长跑 → 不崩、周期计数正确、结局最终产生
+  P2-3 种子 + 难度（重玩性）：
+  13. 同种子两局 30 tick 逐位一致；seed=None 不播种；seed 记入 PlayerState
+  14. 难度预设：hard 旋钮 = 基准×乘数；normal 逐位还原；未知档抛 ValueError
+  15. 存档：v2 携带 seed/difficulty 且读档重播种；v1 老档迁移补默认值可读
 """
 import json
 import math
@@ -37,6 +41,7 @@ import i18n
 import save_manager
 import commissions
 import data
+import balance
 from balance import TUNE
 
 PASS, FAIL = [], []
@@ -614,11 +619,148 @@ def main() -> int:
 
     check('12. 连续 60 tick 不操作 → 不崩、计数正确、结局最终产生', _long_run)
 
+    # ============================================================
+    # P2-3 种子 + 难度（重玩性）
+    # ============================================================
+    print("=" * 62)
+    print("P2-3 种子 + 难度 —— 重玩性用例")
+    print("=" * 62)
+
+    # ---- 13. 同种子复现 / seed=None 不播种 ----
+    def _seed_reproducible():
+        """P2-3 契约：init_game(seed=7) 播种引擎全局随机（事件抽取 /
+        v2 抽取 / 反制掷点 / 委托生成全走模块级 random）→ 同种子两局
+        30 tick 的怀疑度 / 下载量轨迹逐位一致。seed=None 时不播种、
+        不抽任何随机数（保 balance_sim / 测试的外置种子流逐位不变），
+        player.seed 保持 None（真随机语义）。"""
+        def run(seed):
+            p = engine.init_game(seed=seed)
+            trace = []
+            for _ in range(30):
+                r = engine.tick_one_round()
+                trace.append((round(p.suspicion, 6),
+                              round(p.total_downloads_m, 6)))
+                if r['ending']:
+                    trace.append(r['ending'].id)
+                    break
+            return p.seed, trace
+
+        s1, t1 = run(7)
+        s2, t2 = run(7)
+        if s1 != 7 or s2 != 7:
+            return False, f"player.seed 应为 7，实际 {s1}/{s2}"
+        if t1 != t2:
+            for i, (a, b) in enumerate(zip(t1, t2)):
+                if a != b:
+                    return False, f"第 {i} 步分叉 {a} vs {b}（有随机点没被种子驱动）"
+            return False, f"轨迹长度不同 {len(t1)}/{len(t2)}"
+        p3 = engine.init_game()
+        if p3.seed is not None:
+            return False, f"seed=None 时 player.seed 应为 None，实际 {p3.seed}"
+        # 引擎真的播种了：init_game(seed=42) 后的随机流 == random.seed(42)
+        engine.init_game(seed=42)
+        r1 = random.random()
+        random.seed(42)
+        r2 = random.random()
+        if r1 != r2:
+            return False, "init_game(seed) 未按种子重置全局随机流"
+        return True, (f"seed=7 两局 {len(t1)} 步逐位一致；seed=None 不播种；"
+                      f"seed=42 确实播种全局随机")
+
+    check('13. 同种子两局逐位一致；seed=None 真随机', _seed_reproducible)
+
+    # ---- 14. 难度预设：乘法应用 + 基准还原 + 未知档拒绝 ----
+    def _difficulty_presets():
+        """P2-3：难度 = TUNE 乘法预设（balance.DIFFICULTY_PRESETS）。
+        hard 三旋钮 = 基准×乘数；normal 空预设逐位还原基准（红线：
+        标准 = 现状不变，无跨局污染）；未登记档位明确抛 ValueError。"""
+        base = dict(TUNE)
+        try:
+            balance.apply_difficulty('hard')
+            for k, m in balance.DIFFICULTY_PRESETS['hard'].items():
+                if TUNE[k] != base[k] * m:
+                    return False, f"hard.{k} = {TUNE[k]}，期望 {base[k] * m}"
+            balance.apply_difficulty('normal')
+            for k in base:
+                if TUNE[k] != base[k]:
+                    return False, f"normal 未还原基准：{k} {TUNE[k]} ≠ {base[k]}"
+            if balance.current_difficulty() != 'normal':
+                return False, (f"生效档应为 normal，实际 "
+                               f"{balance.current_difficulty()}")
+            try:
+                balance.apply_difficulty('nope')
+                return False, "未知难度档应抛 ValueError"
+            except ValueError:
+                pass
+        finally:
+            balance.apply_difficulty('normal')     # 还原，保证用例独立
+        return True, ("hard 乘数生效 / normal 逐位还原基准 / 未知档抛错 / "
+                      "生效档记账正确")
+
+    check('14. 难度预设：hard 乘数生效、normal 逐位还原基准', _difficulty_presets)
+
+    # ---- 15. 存档：seed/difficulty 进档 + 读档重播种 + v1 迁移 ----
+    def _save_seed_difficulty():
+        """P2-3：v2 存档携带 seed/difficulty；读档按种子重建随机流
+        （同档重开可复现）、按档位恢复 TUNE（读档不重置难度）；
+        手工构造的 v1 老档（无 seed/difficulty 键）经 _v1_to_v2 迁移
+        补默认值后照常可读（seed=None 真随机、difficulty=标准）。"""
+        base = dict(TUNE)
+        try:
+            p = engine.init_game(seed=7, difficulty='hard')
+            for _ in range(5):
+                engine.tick_one_round()
+            path = os.path.join(tmp, 'p23_v2.json')
+            save_manager.save(path)
+            engine.init_game()                     # 切走：换局、污染随机流
+            ok, reason = save_manager.load_ex(path)
+            if not (ok and reason == save_manager.LOAD_OK):
+                return False, f"v2 档读回失败 ({ok}, {reason})"
+            p = engine.player
+            if p.seed != 7 or p.difficulty != 'hard':
+                return False, f"seed/difficulty 读回 {p.seed}/{p.difficulty}"
+            m = balance.DIFFICULTY_PRESETS['hard']['commission_reward_compute_base']
+            if TUNE['commission_reward_compute_base'] != base[
+                    'commission_reward_compute_base'] * m:
+                return False, "读档未恢复 hard 乘数（难度被重置或未应用）"
+            # 重播种：两次「污染随机流 → 读档」后流状态一致
+            random.seed(999)
+            save_manager.load_ex(path)
+            ra = random.random()
+            random.seed(999)
+            save_manager.load_ex(path)
+            rb = random.random()
+            if ra != rb:
+                return False, "读档未按种子重播种（同档重开不可复现）"
+            # v1 老档：剥掉 seed/difficulty、version=1 → 迁移链补默认值
+            with open(path, encoding='utf-8') as f:
+                v1 = json.load(f)
+            v1['version'] = 1
+            v1['player'].pop('seed', None)
+            v1['player'].pop('difficulty', None)
+            old = os.path.join(tmp, 'p23_v1.json')
+            _write(old, json.dumps(v1, ensure_ascii=False))
+            ok, reason = save_manager.load_ex(old)
+            if not (ok and reason == save_manager.LOAD_OK):
+                return False, f"v1 老档迁移读回失败 ({ok}, {reason})"
+            p = engine.player
+            if p.seed is not None or p.difficulty != 'normal':
+                return False, (f"v1 迁移默认值错误：seed={p.seed} "
+                               f"difficulty={p.difficulty}")
+        finally:
+            balance.apply_difficulty('normal')     # 还原，保证用例独立
+        return True, ("v2 存读 seed/difficulty 一致、读档重播种、hard 乘数"
+                      "随档恢复；v1 老档迁移补默认值可读")
+
+    check('15. 存档带种子/难度、读档重播种；v1 老档迁移可读', _save_seed_difficulty)
+
     print("=" * 62)
     total = len(PASS) + len(FAIL)
     n_p02 = 5                                   # P0-2 固定 5 条
+    n_p23 = 3                                   # P2-3 固定 3 条
     print(f"结果：{len(PASS)}/{total} 通过"
-          f"（P0-2 存档容错 {n_p02} 条 + P1-7 引擎边界 {total - n_p02} 条）")
+          f"（P0-2 存档容错 {n_p02} 条 + P1-7 引擎边界 "
+          f"{total - n_p02 - n_p23} 条 + P2-3 种子难度 {n_p23} 条）")
     if FAIL:
         print("失败用例：" + "、".join(FAIL))
         print("=" * 62)

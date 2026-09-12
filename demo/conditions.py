@@ -237,7 +237,7 @@ def _cmp(a: Any, op: str, b: Any) -> bool:
     try:
         return _OPS[op](a, b)
     except TypeError:
-        return False
+        return False  # 算子/操作数类型不匹配（如 str vs int）= 条件不成立，不抛
 
 
 def _missing(name: str, strict: bool) -> bool:

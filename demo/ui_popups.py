@@ -35,7 +35,7 @@ class PopupsMixin:
             kind = getattr(e, 'value_kind', 'abs')
             try:
                 raw = (float(e.value) * 100 if kind == 'pct' else float(e.value))
-            except Exception:
+            except (ValueError, TypeError):   # 收窄：float() 只有这两类失败
                 raw = 0.0
             val = (f"{abs(raw):.0f}%" if kind == 'pct' else f"{abs(raw):.0f}")
             sign = '−' if raw < 0 else '+'

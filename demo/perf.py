@@ -97,7 +97,7 @@ def log_path() -> str:
         if custom:
             return os.path.abspath(custom)
     except Exception:
-        pass
+        pass  # 环境变量读不出 → 用默认路径；探针配置失败不影响游戏
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), LOG_NAME)
 
 
@@ -141,13 +141,13 @@ def _count_tree(root) -> tuple:
             ops += len(cv.before.children)
             ops += len(cv.after.children)
         except Exception:
-            pass
+            pass  # 个别控件画布不可访问 → 该控件不计入 ops 统计
         ch = getattr(w, 'children', None)
         if ch:
             try:
                 stack.extend(ch)
             except Exception:
-                pass
+                pass  # 遍历中控件树被改 → 少数控件不计入，无碍统计
     return widgets, ops
 
 
@@ -208,7 +208,7 @@ class _Probe:
                 if self._fh is not None:
                     self._fh.close()
             except Exception:
-                pass
+                pass  # 句柄可能已关；收尾关文件失败无碍
             self._fh = None
 
     def set_scene(self, name: str) -> None:
@@ -246,7 +246,7 @@ class _Probe:
                 self.samples = []
                 self.slow = 0
         except Exception:
-            pass
+            pass  # 分段落盘失败 → 本段少一行样本，绝不影响主循环节奏
 
     # ---------- 汇总（非热路径）----------
     def _flush(self, scene: str) -> None:
@@ -359,7 +359,7 @@ def set_scene(name: str) -> None:
     try:
         _PROBE.set_scene(name)
     except Exception:
-        pass
+        pass  # 场景标签打不上只影响日志分组，不影响采样
 
 
 def stop() -> None:

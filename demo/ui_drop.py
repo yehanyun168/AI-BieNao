@@ -399,5 +399,5 @@ class DropMixin:
             if card is not None:
                 ui_fx.shake(card)
         except Exception:
-            pass
+            pass  # 动效失败安全（同 _fx_cast）：反馈动效不能成为新崩溃点
 

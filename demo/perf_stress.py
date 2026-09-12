@@ -90,14 +90,14 @@ def _phase_boot(_dt):
     # 引导遮罩会冻结周期推进（game_tick 首行直接 return），压测必须先关掉
     try:
         engine.player.seen_tutorial = True
-    except Exception:
-        pass
+    except Exception as e:
+        _log(f'⚠️ 关引导失败（tick 将被冻结，本段数据无效）：{e!r}')
     g = _game()
     if g is not None:
         try:
             g.tutorial.finish()
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ tutorial.finish 失败（遮罩未关，tick 冻结）：{e!r}')
         g.paused = True
         g.stop_ticking()
     _state['game'] = g
@@ -115,7 +115,7 @@ def _force_tick(g) -> None:
             return
         g.game_tick(0)
     except Exception:
-        pass
+        pass  # 强推 tick 属压测驱动：个别边界异常不打断采样节奏
 
 
 def _phase_tick(_dt):
@@ -124,8 +124,8 @@ def _phase_tick(_dt):
         g.paused = False
         try:
             g._reschedule_tick()
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ _reschedule_tick 失败（自然推进停止，仅剩强推）：{e!r}')
     _state['forced'] = Clock.schedule_interval(lambda dt: _force_tick(g),
                                                TICK_FORCE)
     _log('[B] 周期推进：×1 速 + 每 %.1fs 强制推进   (%.0fs)'
@@ -149,29 +149,29 @@ def _phase_stress(_dt):
                 c.unlocked = True
                 if c.downloads_m <= 0:
                     c.downloads_m = max(1.0, c.config.population_m * 0.05)
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ 20 国解锁失败（C 段高压场景不完整）：{e!r}')
         # 日志塞满 200 条 → 抽屉 rebuild 会建满 120 行（已知热点）
         try:
             for i in range(200):
                 g.stats.push_log(i, 'perf stress log %03d %s' % (i, '·' * 18),
                                  'i')
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ 日志塞压失败（抽屉热点未构造）：{e!r}')
         ST.REDUCE_MOTION = False          # 动效全开
         try:
             g.set_speed_idx(3)            # ×4 速
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ set_speed_idx(3) 失败（C 段非 ×4 速）：{e!r}')
         try:
             if g._log_drawer is None:
                 g.toggle_log()            # 日志抽屉打开
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ 打开日志抽屉失败（抽屉热点未构造）：{e!r}')
         try:
             g.refresh_all()
-        except Exception:
-            pass
+        except Exception as e:
+            _log(f'⚠️ refresh_all 失败（首次全量重建未触发）：{e!r}')
     _state['forced'] = Clock.schedule_interval(
         lambda dt: _force_tick(_state['game']), STRESS_FORCE)
     _log('[C] 高压：20 国全解锁 + 抽屉开 + ×4 速 + 动效全开 + 每 %.1fs 推进 '
@@ -191,7 +191,7 @@ def _phase_end(_dt):
     try:
         perf.stop()
     except Exception:
-        pass
+        pass  # 探针收尾失败安全（perf 自身亦失败安全）；日志读取另有独立报告
     path = perf.log_path()
     _log('[D] 结束。日志：%s' % path)
     try:

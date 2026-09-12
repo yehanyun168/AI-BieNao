@@ -53,7 +53,7 @@ def _cancel(widget: Widget, *props: str) -> None:
     try:
         Animation.cancel_all(widget, *props)
     except Exception:
-        pass
+        pass  # 控件可能已被销毁；动效层永不影响游戏逻辑
 
 
 def _rgba(color, alpha: Optional[float] = None):
@@ -193,11 +193,11 @@ def _beacon_kill(entry) -> None:
     try:
         anim.cancel(ring)
     except Exception:
-        pass
+        pass  # 信标可能已被 on_complete 清理，二次 cancel 属预期竞态
     try:
         host.remove_widget(ring)
     except Exception:
-        pass
+        pass  # 宿主可能已销毁，移除失败即无事可做
 
 
 def beacon(target: Widget, code: str,
@@ -236,7 +236,7 @@ def beacon(target: Widget, code: str,
         try:
             host.remove_widget(ring)
         except Exception:
-            pass
+            pass  # 同上：清理竞态下失败即无事可做
 
     anim = (Animation(size=(56, 56), pos=(center[0] - 28, center[1] - 28),
                       opacity=0.0, duration=0.6, t='out_quad'))

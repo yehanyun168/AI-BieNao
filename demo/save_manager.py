@@ -18,20 +18,27 @@ P0-2 读档容错约定：
 
 P1-9 写入 / 版本迁移约定：
     save() 走原子写（.tmp → fsync → os.replace），写盘中断不再损毁主档；
-    load() 读出 version 后先过 _migrate() 迁移骨架再做字段校验，
-    当前 version=1 的档行为完全不变。将来改存档结构：SAVE_VERSION += 1，
-    按 _migrate() 里的模板补一级迁移即可，老档不会全废。
+    load() 读出 version 后先过 _migrate() 迁移链再做字段校验。
+    P2-3 起 SAVE_VERSION=2：v1 老档经 _v1_to_v2 补默认字段（seed=None /
+    difficulty=标准）照常可读，玩家数据零丢失。将来再改存档结构：
+    SAVE_VERSION += 1，按 _MIGRATIONS 补一级纯函数迁移即可，老档不会全废。
 """
 import json
 import os
+import random
 from datetime import datetime
 from typing import List, Tuple
 
 from data import STARTER_SKILLS, SKILL_UNLOCK
 from i18n import t
+import balance
 import commissions
 
-SAVE_VERSION = 1
+# P2-3：SAVE_VERSION 1 → 2。新增 player.seed / player.difficulty 两个
+# 可选字段 —— 字段是纯增量，但版本号一起 +1，让存档自描述「带不带
+# 难度语义」；v1 老档经 _migrate 的 _v1_to_v2 补默认值（seed=None
+# 真随机、difficulty=标准）照常可读，语义与 P2-3 之前的对局完全一致。
+SAVE_VERSION = 2
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 DEFAULT_SLOT = 'slot1.json'
 CRASH_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -154,6 +161,9 @@ def save(path: str = None) -> str:
             'last_commission_tick': getattr(p, 'last_commission_tick', 0),
             'compute_earned_total': getattr(p, 'compute_earned_total', 0.0),
             'skill_uses': dict(getattr(p, 'skill_uses', {})),
+            # —— P2-3 重玩性：种子 + 难度档（读档不重置难度）——
+            'seed': getattr(p, 'seed', None),
+            'difficulty': getattr(p, 'difficulty', balance.DEFAULT_DIFFICULTY),
         },
         'tech': {
             't0_unlocked': dict(p.tech.t0_unlocked),
@@ -242,6 +252,17 @@ def _apply_save(data: dict) -> None:
     p.last_commission_tick = ps.get('last_commission_tick', 0)
     p.compute_earned_total = ps.get('compute_earned_total', 0.0)
     p.skill_uses = dict(ps.get('skill_uses', {}))
+    # —— P2-3 重玩性：恢复种子与难度档（读档不重置难度）——
+    #    种子非空时按种子重建随机流：同一存档读两次，后续随机事件逐位
+    #    一致（「重开同档可复现」）；老档 / 坏值难度兜底回标准档。
+    p.seed = ps.get('seed')
+    if p.seed is not None:
+        random.seed(p.seed)
+    pid = ps.get('difficulty')
+    if pid not in balance.DIFFICULTY_PRESETS:
+        pid = balance.DEFAULT_DIFFICULTY
+    p.difficulty = pid
+    balance.apply_difficulty(pid)
     # 存档一致性校验：deadline 已过的在场委托直接丢弃 —— 不加怀疑惩罚、
     # 不计 failed（存档锅不算玩家头，设计稿 §4.1/§4.6）
     p.commissions = [c for c in p.commissions
@@ -260,47 +281,52 @@ def _apply_save(data: dict) -> None:
                                           c.config.block_budget)
 
 
+def _v1_to_v2(d: dict) -> dict:
+    """v1 → v2（P2-3 种子 + 难度）：纯函数迁移，只增字段、不丢玩家数据。
+
+    v1 档没有 seed / difficulty —— 补上与旧语义一致的默认值：
+    seed=None（真随机、不可复现）、difficulty=标准（当前 TUNE 即基准）。
+    """
+    ps = d.get('player')
+    if isinstance(ps, dict):
+        ps.setdefault('seed', None)
+        ps.setdefault('difficulty', balance.DEFAULT_DIFFICULTY)
+    d['version'] = SAVE_VERSION
+    return d
+
+
+_MIGRATIONS = {1: _v1_to_v2}
+
+
 def _migrate(data: dict, from_version: int) -> dict:
     """版本迁移骨架（P1-9）：把 ``from_version`` 的存档升级到 SAVE_VERSION。
 
     load 流程：读出 version → _migrate() → 字段校验。约定：
-      - ``from_version == SAVE_VERSION``：原样返回（当前唯一在用路径，
-        零拷贝零开销，version=1 老档行为与 P0-2 完全一致）；
-      - ``from_version <  SAVE_VERSION``：应沿迁移链逐级升级（1→2→…→N）。
-        **目前没有历史版本**（SAVE_VERSION 从 1 起步），此分支暂无实现 ——
-        明确抛 NotImplementedError，绝不静默放行或编造假迁移；
+      - ``from_version == SAVE_VERSION``：原样返回（零拷贝零开销）；
+      - ``from_version <  SAVE_VERSION``：沿 ``_MIGRATIONS`` 迁移链逐级
+        升级（1→2→…→N），每级都是**纯函数**：只增字段 / 调结构，不丢
+        玩家数据，缺键给默认值。链上缺一环明确抛 ValueError，绝不静默
+        放行或编造假迁移；
       - ``from_version >  SAVE_VERSION``：未来版本，不归迁移管（旧程序读
         新档是"降级"），调用方按 LOAD_BAD_VERSION 拒绝。
 
-    TODO(P1-10+，下次改存档结构时照此填，勿另起炉灶)：
-        1. SAVE_VERSION += 1；
-        2. 写一级**纯函数**迁移并登记（键 = 源版本号）：
-               def _v1_to_v2(d: dict) -> dict:
-                   # 只增字段 / 调结构，不丢玩家数据；缺键给默认值
-                   d['new_field'] = d.get('new_field', <默认值>)
-                   d['version'] = 2
-                   return d
-               _MIGRATIONS = {1: _v1_to_v2}
-        3. 打开下方 while 循环（已写好，去掉注释即可）；
-        4. 在 test_edge_cases.py 补一条"构造 v1 老档 → load 成功且字段补齐"。
+    已登记迁移：v1→v2（P2-3，见 ``_v1_to_v2``）；配套用例在
+    test_edge_cases.py（构造 v1 老档 → load 成功且字段补齐）。
     """
     if from_version == SAVE_VERSION:
         return data
     if from_version > SAVE_VERSION:
         # 防御兜底：正常情况下调用方已拦下未来版本
         raise ValueError(f'save from future version {from_version}')
-    # —— 逐级升级（骨架）：暂无历史版本，先明确拒绝 ——
-    # TODO(P1-10+): 接入 _MIGRATIONS 后启用下面循环：
-    #   v = from_version
-    #   while v < SAVE_VERSION:
-    #       step = _MIGRATIONS.get(v)
-    #       if step is None:
-    #           raise ValueError(f'no migration path: v{v} -> v{SAVE_VERSION}')
-    #       data = step(data)
-    #       v += 1
-    #   return data
-    raise NotImplementedError(
-        f'no migration path: v{from_version} -> v{SAVE_VERSION}')
+    # —— 逐级升级（沿迁移链，缺一环明确报错）——
+    v = from_version
+    while v < SAVE_VERSION:
+        step = _MIGRATIONS.get(v)
+        if step is None:
+            raise ValueError(f'no migration path: v{v} -> v{SAVE_VERSION}')
+        data = step(data)
+        v += 1
+    return data
 
 
 def load_ex(path: str = None) -> Tuple[bool, str]:
@@ -351,8 +377,8 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
             return False, LOAD_BAD_VERSION
         try:
             data = _migrate(data, v)
-        except NotImplementedError as e:
-            # 迁移链尚未铺到该历史版本：明确报版本不支持，不静默、不崩
+        except (NotImplementedError, ValueError) as e:
+            # 迁移链缺环 / 版本异常：明确报版本不支持，不静默、不崩
             _log_load_fail(LOAD_BAD_VERSION, path, e)
             return False, LOAD_BAD_VERSION
 

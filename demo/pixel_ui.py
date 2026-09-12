@@ -212,7 +212,7 @@ def add_pixel_border(widget, color=None, width=2):
             try:
                 widget.canvas.after.remove(old)
             except Exception:
-                pass
+                pass  # 旧边框指令可能已被画布回收，移除失败即无事可做
         # 画新边框
         with widget.canvas.after:
             Color(*border_color)
@@ -245,7 +245,7 @@ if __name__ == '__main__':
                 LabelBase.register(name='MicrosoftYaHei', fn_regular=fp)
                 LabelBase.register(name='Roboto', fn_regular=fp)
             except Exception:
-                pass
+                pass  # 字体候选逐个试（同 main）：失败退回 Kivy 默认字体
 
     class PaletteApp(App):
         def build(self):

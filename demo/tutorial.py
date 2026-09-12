@@ -86,7 +86,7 @@ class TutorialController:
             try:
                 do()
             except Exception:
-                pass
+                pass  # 演示布局是遮罩内纯展示，失败只影响观感
         for ch in getattr(w, 'children', ()) or ():
             TutorialController._force_layout(ch, depth + 1)
 
@@ -335,14 +335,14 @@ class TutorialController:
             try:
                 self.game.on_map_country_click('CN')
             except Exception:
-                pass
+                pass  # 演示动作失败只少一个高亮步骤，引导流程照常
         elif step.action == 'open_tech_page':
             # 让玩家在引导里就看到科技树（诊断结论：科技是第一加速器，
             # 但旧版引导完全没提，导致玩家 30 周期渗透仍 <20%）。
             try:
                 self.game.open_page('tech')
             except Exception:
-                pass
+                pass  # 同上：科技页打不开则跳过演示，不阻塞引导
         # 文本
         self._bubble_title.text = f"[b]{step.title}[/b]"
         self._bubble_body.text = step.body
@@ -473,8 +473,10 @@ class TutorialController:
             engine.player.seen_tutorial = True
             try:
                 save_manager.save()
-            except Exception:
-                pass
+            except Exception as e:
+                # 存档失败 ≠ 引导失败：流程照走，但必须留痕（否则玩家重开后
+                # 引导会重来且无人知道原因）。log_crash 内部自带写盘兜底。
+                save_manager.log_crash(f'[tutorial] 引导完成自动存档失败：{e!r}')
         self._teardown()
 
     def _teardown(self) -> None:
@@ -490,11 +492,11 @@ class TutorialController:
             if getattr(self.game, '_inspector', None) is not None:
                 self.game._close_inspector()
         except Exception:
-            pass
+            pass  # 面板可能已被玩家先关（重复关闭可抛）；残留只影响演示观感
         try:
             # 科技树演示步会打开全屏页；不关掉会盖在后续步骤上。
             page = getattr(self.game, '_page', None)
             if page is not None and getattr(page, 'page_name', '') == 'tech':
                 self.game.close_page()
         except Exception:
-            pass
+            pass  # 同上：清理尽力而为，不阻塞引导

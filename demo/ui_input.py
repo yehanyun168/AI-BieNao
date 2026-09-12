@@ -52,7 +52,7 @@ class InputMixin:
             from data import SKILL_UNLOCK
             req = SKILL_UNLOCK.get(sid)
         except Exception:
-            req = None
+            req = None  # 数据表异常 → 退回通用锁定文案（正常表不该走到这）
         if not req:
             return t('sk_state_lock')
         try:
@@ -108,7 +108,7 @@ class InputMixin:
                 p = p.parent
             return x <= pos[0] <= x + w.width and y <= pos[1] <= y + w.height
         except Exception:
-            return False
+            return False  # 控件树中途被销毁/重建 → 视为未命中（只读旁路）
 
     def _on_skill_hover(self, _win, pos) -> None:
         """鼠标移动 → 命中哪张技能卡 → 刷新预览条（纯展示，不写状态）。"""
@@ -131,7 +131,7 @@ class InputMixin:
                 self._skill_pv_sid = sid
                 self._render_skill_preview(sid)
         except Exception:
-            pass
+            pass  # 纯展示路径（悬停预览条）：失败只表现为本帧不刷新预览
 
     def _preview_targets(self, sid: str) -> list:
         """预览用的目标集合：与真实投放口径保持一致。
@@ -319,7 +319,7 @@ class InputMixin:
             try:
                 lo, hi = self.stats.stat_spark_range(sk)
             except Exception:
-                continue
+                continue  # 该指标暂无采样数据 → 不画箭头后缀（合理降级）
             delta = hi - lo
             if abs(delta) < (10 ** -digits) / 2:
                 arrow, mcol, dtext = '→', U.MK['dim'], '0'
@@ -357,7 +357,7 @@ class InputMixin:
             try:
                 spark.set_values(self.stats.stat_spark(sk))
             except Exception:
-                pass
+                pass  # 迷你火花图缺数据/控件重建中 → 跳过本帧，下个周期再试
         self._refresh_spark_deltas()
 
         self._animate_stat(self.stats_compute, 'stats_compute', 'yellow',
@@ -487,7 +487,7 @@ class InputMixin:
         total = sum(br.values())
         try:
             threshold = float(TUNE.get('sus_log_threshold', 5.0))
-        except Exception:
+        except (ValueError, TypeError):   # 收窄：float() 只有这两类失败
             threshold = 5.0
         if abs(total) < threshold:
             return
@@ -629,8 +629,9 @@ class InputMixin:
             # 不能因为磁盘满/权限问题让 game_tick 抛错、结局永远不出现。
             try:
                 save_manager.save()
-            except Exception:
-                pass
+            except Exception as e:
+                # 存档失败绝不能挡结算（见上注释），但必须留痕便于排查：
+                print(f'[save] ⚠️ 结局自动存档失败（不影响结局弹窗）：{e!r}')
             self.show_ending_popup(report["ending"])
 
     # ========================================================

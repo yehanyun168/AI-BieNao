@@ -29,7 +29,9 @@ from data import (
 #    不能 ``from data import``（那是一次性快照）——一律用 ``data.XXX``
 #    属性访问，见下方各调用点。
 from tech_tree import PlayerTech, aggregate_effects, SLOT_MAP
-from balance import TUNE, CRISIS_OPTIONS
+# P2-3 难度档：init_game 经 apply_difficulty/current_difficulty 读写 TUNE 预设
+from balance import (TUNE, CRISIS_OPTIONS, DEFAULT_DIFFICULTY,
+                     apply_difficulty, current_difficulty)
 
 
 # ============================================================
@@ -91,6 +93,9 @@ class PlayerState:
     last_commission_tick: int = 0      # 上次委托生成尝试的周期（生成节奏用）
     compute_earned_total: float = 0.0  # 历史累计偷取算力（C3 委托判定基准）
     skill_uses: Dict[str, int] = field(default_factory=dict)  # 技能使用次数（C4 判定基准）
+    # —— P2-3 重玩性：种子 + 难度档 ——
+    seed: Optional[int] = None         # 本局种子；None = 真随机（不可复现）
+    difficulty: str = DEFAULT_DIFFICULTY   # 难度档 id（balance.DIFFICULTY_PRESETS）
 
     @property
     def total_downloads_m(self) -> float:
@@ -124,14 +129,32 @@ def _sus(tag: str, delta: float) -> None:
     _suspicion_trace[tag] = _suspicion_trace.get(tag, 0.0) + delta
 
 
-def init_game() -> PlayerState:
-    """初始化游戏"""
+def init_game(seed: Optional[int] = None,
+              difficulty: Optional[str] = None) -> PlayerState:
+    """初始化游戏
+
+    P2-3 重玩性：
+      seed       给定 → random.seed(seed)。引擎内全部随机走模块级 random
+                 （事件抽取 / v2 抽取 / 反制掷点与时机 / 委托生成），一种子
+                 一对局；None = 真随机，不播种、也不抽任何随机数（保持
+                 balance_sim / 测试「外置 random.seed + init_game」的既有
+                 随机流逐位不变）。
+      difficulty 难度档 id（balance.DIFFICULTY_PRESETS）。给定 → 先把 TUNE
+                 整表还原到基准再应用该档乘数（无跨局污染）；None → 完全
+                 不动 TUNE（模拟器 / 测试默认路径零扰动），档位记录为当前
+                 生效档（balance.current_difficulty）。
+    """
     global player_countries, player
     global _counterplay_cooldown, _counterplay_pending
     global _recent_commission_templates
     _counterplay_cooldown = {}
     _counterplay_pending = {}
     _recent_commission_templates = []
+    if seed is not None:
+        seed = int(seed)
+        random.seed(seed)
+    if difficulty is not None:
+        difficulty = apply_difficulty(difficulty)
     player_countries = []
     for cfg in COUNTRIES:
         state = CountryState(
@@ -149,6 +172,9 @@ def init_game() -> PlayerState:
         player_countries.append(state)
 
     player = PlayerState()
+    player.seed = seed
+    player.difficulty = (difficulty if difficulty is not None
+                         else current_difficulty())
     player.compute = data.INITIAL_COMPUTE
     player.compute_peak = data.INITIAL_COMPUTE
     player.suspicion = 0

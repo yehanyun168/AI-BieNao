@@ -31,6 +31,7 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
   帧时 p50/p95/max + 控件数 + canvas 指令数 → demo/perf.log
   自动压测：python perf_stress.py（空闲 / 周期推进 / 高压 三场景各跑一段）
 """
+import hashlib
 import os
 import sys
 import traceback
@@ -119,7 +120,7 @@ def _crash_git_head() -> str:
                       encoding='utf-8') as f:
                 head = f.read().strip()
         return (head or 'unknown')[:12]
-    except Exception:
+    except (OSError, UnicodeDecodeError):   # 收窄：.git 文件读取只有这两类失败
         return 'unknown'
 
 
@@ -127,7 +128,7 @@ def _crash_kivy_version() -> str:
     try:
         import kivy
         return str(getattr(kivy, '__version__', 'unknown'))
-    except Exception:
+    except ImportError:                      # 收窄：import kivy 只可能 ImportError
         return 'unknown'
 
 
@@ -157,7 +158,7 @@ def _crash_scrub(text: str) -> str:
         if len(home) > 3:
             text = text.replace(home, '~')
     except Exception:
-        pass
+        pass  # 路径脱敏是纯展示美化：失败只影响日志可读性，不影响崩溃上报
     return text
 
 
@@ -176,7 +177,7 @@ def _crash_write(header: str, body: str) -> bool:
         save_manager.log_crash(text)
         return True
     except Exception:
-        pass
+        pass  # 崩溃上报自身已无路可报（写 crash.log 失败）；stderr 仍会打一份
     try:
         with open(os.path.join(_HERE, 'crash.log'), 'a', encoding='utf-8',
                   errors='replace') as f:
@@ -263,7 +264,7 @@ def _crash_excepthook(etype, value, tb) -> None:
         try:                             # 控制台也留一份（无窗口时唯一可见输出）
             sys.stderr.write(header + '\n' + body)
         except Exception:
-            pass
+            pass  # 控制台可能已关闭/无句柄；写不上就算了（crash.log 已有一份）
         if ok:
             _show_crash_modal()          # 弹窗失败不影响日志，见函数内 try
     except Exception:
@@ -302,6 +303,7 @@ from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
@@ -338,7 +340,7 @@ def _register_fonts() -> None:
                 if primary_font is None:
                     primary_font = path
             except Exception:
-                pass
+                pass  # 字体候选逐个试：单个注册失败换下一个，全失败仍有 Kivy 默认字体
 
     if primary_font:
         try:
@@ -361,13 +363,14 @@ from pixel_ui import add_pixel_border   # P2-5：hex_rgba 已随 '#0d1117' 收�
 
 import engine
 import save_manager
+import balance          # P2-3 难度档（DIFFICULTY_ORDER / DIFFICULTY_PRESETS）
 import achievements as achievements_mod
 import pixel_assets as PA
 
 import ui_v4 as U
 import ui_v4_screens as S
 import sfx  # 音效管理器（失败安全；tools/gen_sfx.py 合成的 CC0 WAV）
-from ui_v4 import (LegendChip, SaveSlotRow, mk_label, fit_width)
+from ui_v4 import (LegendChip, SaveSlotRow, SegSwitch, mk_label, fit_width)
 from tutorial import TutorialController   # P0-1 新手引导步骤机
 
 
@@ -493,7 +496,7 @@ def ach_snapshot(filt: str = 'all'):
     try:
         ctx = engine.build_achievement_context()
     except Exception:
-        ctx = None
+        ctx = None  # 上下文构造失败 → 成就页按"无上下文"降级，只影响展示  # 上下文构造失败 → 成就页按"无上下文"降级，只影响展示
     nearest = []
     for a in cond:
         if a.ach_id in unlocked:
@@ -501,7 +504,7 @@ def ach_snapshot(filt: str = 'all'):
         try:
             ok = bool(a.condition(ctx)) if (a.condition and ctx) else False
         except Exception:
-            ok = False
+            ok = False  # 单条成就条件求值异常 → 显示未完成，不拖垮整页列表
         nearest.append((a.name(lang), '✓' if ok else '…'))
 
     return (cells, cond_got + evt_got, len(cond) + len(evt),
@@ -530,7 +533,10 @@ def read_slot_rows(active_idx: int = 0):
                     summary = t('slot_summary').format(
                         tick=pl.get('tick_count', 0),
                         pen=f"{dl / 7480 * 100:.2f}", n=unlocked)
-            except Exception:
+            except Exception as e:
+                # 摘要读不出（多半存档损坏）：不能无声装作"空槽"——玩家会误以
+                # 为可覆盖。留一行控制台痕迹，槽位仍按空槽显示（行为不变）。
+                print(f'[slots] ⚠️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
                 summary = t('slot_empty')
         rows.append((title, summary, i == active_idx))
     return rows
@@ -546,6 +552,26 @@ def newest_save_path():
             if mt > best_t:
                 best, best_t = path, mt
     return best
+
+
+def _parse_seed(text: str):
+    """把种子输入框的文本解析成引擎种子（P2-3）。
+
+    空串 → None（真随机）；纯数字 → int；其余文字 → 稳定哈希成 int
+    （同一个词永远同一颗种子，方便玩家用口令分享对局）。
+    """
+    text = (text or '').strip()
+    if not text:
+        return None
+    try:
+        return int(text)
+    except ValueError:
+        return int(hashlib.sha1(text.encode('utf-8')).hexdigest()[:8], 16)
+
+
+def _difficulty_label(pid: str) -> str:
+    """难度档 id → 当前语言的显示名（i18n 键 diff_<id>）。"""
+    return t(f"diff_{pid}")
 
 
 # ============================================================
@@ -595,6 +621,7 @@ class MainMenu(FloatLayout):
         self.user_scale = 1.0
         self._scalables = []
         self._overlay = None
+        self._ng_modal = None            # P2-3 新档弹窗（打开时接管按键）
         self._sel_slot = 1                # 默认选中槽位 02（设计稿）
         self.scale = self._compute_scale()
         self._build()
@@ -606,7 +633,7 @@ class MainMenu(FloatLayout):
             if self._keyboard is not None:
                 self._keyboard.bind(on_key_down=self._on_key_down)
         except Exception:
-            self._keyboard = None
+            self._keyboard = None  # 拿不到键盘 = 本机不支持键位操作，鼠标仍可用
 
     # --------------------------------------------------------
     # 缩放
@@ -633,7 +660,7 @@ class MainMenu(FloatLayout):
             try:
                 setattr(widget, attr, base * self.scale)
             except Exception:
-                pass
+                pass  # 单个控件缩放失败只影响其外观，不中断其余控件与后续布局
         left = getattr(self, '_left', None)
         if left is not None:
             left.padding = (int(48 * self.scale), int(34 * self.scale))
@@ -643,7 +670,7 @@ class MainMenu(FloatLayout):
                 try:
                     fn(self.scale)
                 except Exception:
-                    pass
+                    pass  # 同上：单个控件的 refresh_scale 失败不拖垮整体缩放
         if isinstance(self._overlay, S.SettingsPage):
             self._overlay.set_zoom_text(f"×{self.user_scale:.2f}")
 
@@ -824,8 +851,77 @@ class MainMenu(FloatLayout):
         self.rebuild()
 
     def _fire_start(self) -> None:
-        if callable(self.on_start):
-            self.on_start()
+        # P2-3：新档前先选难度 + 可选种子（留空 = 真随机）
+        self._open_new_game_modal(
+            on_confirm=lambda seed, diff: self.on_start(seed=seed,
+                                                        difficulty=diff)
+            if callable(self.on_start) else None)
+
+    def _open_new_game_modal(self, on_confirm) -> None:
+        """P2-3 新档弹窗：难度三档（SegSwitch）+ 可选种子（TextInput）。
+
+        复用 ui_modal 像素弹窗与 ui_v4.SegSwitch，与覆盖确认弹窗同一套皮。
+        on_confirm(seed, difficulty) 在点「开始」时回调（取消不回调）。
+        """
+        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
+        body.add_widget(modal_header(U.SYM['play'], t('menu_start')))
+        body.add_widget(hline())
+
+        # 难度行：轻松 / 标准 / 困难，默认标准（= 现状数值）
+        drow = BoxLayout(orientation='horizontal', spacing=10,
+                         size_hint_y=None, height=44)
+        drow.add_widget(mk_label(t('ng_difficulty'), font_size=U.FS_BODY,
+                                 color=COLORS['text_dim'], size_hint_x=None,
+                                 width=110))
+        sw = SegSwitch([t('diff_easy'), t('diff_normal'), t('diff_hard')], 1)
+        sw.size_hint_x = None
+        sw.width = 260
+        sw.height = 36
+        drow.add_widget(sw)
+        drow.add_widget(Widget())
+        body.add_widget(drow)
+
+        # 种子行：可选；留空 = 真随机
+        srow = BoxLayout(orientation='horizontal', spacing=10,
+                         size_hint_y=None, height=44)
+        srow.add_widget(mk_label(t('ng_seed'), font_size=U.FS_BODY,
+                                 color=COLORS['text_dim'], size_hint_x=None,
+                                 width=110))
+        ti = TextInput(multiline=False, write_tab=False, size_hint_x=None,
+                       width=260, height=36, font_size=U.FS_BODY,
+                       hint_text=t('ng_seed_hint'), background_normal='',
+                       background_color=COLORS['panel_2'],
+                       foreground_color=COLORS['text'],
+                       cursor_color=COLORS['cyan'],
+                       hint_text_color=COLORS['text_mute'],
+                       padding=[8, 8, 8, 4])
+        add_pixel_border(ti, color=COLORS['border_2'])
+        srow.add_widget(ti)
+        srow.add_widget(Widget())
+        body.add_widget(srow)
+        body.add_widget(auto_h_label(t('ng_seed_hint'), U.FS_CAP,
+                                     color=COLORS['text_mute']))
+
+        row = BoxLayout(orientation='horizontal', spacing=12,
+                        size_hint_y=None, height=50)
+        row.add_widget(make_button(t('save_overwrite_cancel'),
+                                   font_size=U.FS_BODY, height=50,
+                                   bg=COLORS['panel_light'],
+                                   on_release=lambda *_: pop.dismiss()))
+        row.add_widget(make_button(t('menu_start'), font_size=U.FS_BODY,
+                                   height=50,
+                                   bg=(0.078, 0.188, 0.173, 1),
+                                   on_release=lambda *_: (
+                                       pop.dismiss(),
+                                       on_confirm(_parse_seed(ti.text),
+                                                  balance.DIFFICULTY_ORDER[
+                                                      sw.current]))))
+        body.add_widget(row)
+        pop = make_modal(body, size_hint=(0.52, 0.55), skin='win',
+                         close_on_outside=True)
+        pop.bind(on_dismiss=lambda *_: setattr(self, '_ng_modal', None))
+        self._ng_modal = pop
+        pop.open()
 
     def _fire_continue(self) -> None:
         path = newest_save_path()
@@ -872,7 +968,7 @@ class MainMenu(FloatLayout):
             try:
                 self.remove_widget(self._overlay)
             except Exception:
-                pass
+                pass  # 遮罩可能已随页面销毁（重复关闭）；残留最多多画一层，无碍
             self._overlay = None
 
     def _open_settings(self) -> None:
@@ -919,10 +1015,15 @@ class MainMenu(FloatLayout):
             self.on_continue(path)
 
     def _start_new_on_slot(self, path: str) -> None:
-        """在指定槽位开新游戏（来自设置浮层的「新游戏」按钮或主菜单行点击）。"""
+        """在指定槽位开新游戏（来自设置浮层的「新游戏」按钮或主菜单行点击）。
+
+        P2-3：同样先过新档弹窗（难度 + 可选种子），确认后写槽。
+        """
         self._close_overlay()                 # 关设置浮层（若有）
-        if callable(self.on_start_new_slot):
-            self.on_start_new_slot(path)
+        self._open_new_game_modal(
+            on_confirm=lambda seed, diff, p=path:
+                self.on_start_new_slot(p, seed=seed, difficulty=diff)
+            if callable(self.on_start_new_slot) else None)
 
     def _confirm_overwrite(self, path: str) -> None:
         """覆盖确认弹窗：「当前操作会覆盖当前存档，确定继续吗？」。"""
@@ -1000,6 +1101,10 @@ class MainMenu(FloatLayout):
 
     def _on_key_down(self, keyboard, keycode, text, modifiers) -> bool:
         key = keycode[1]
+        if self._ng_modal is not None:
+            # P2-3：新档弹窗打开时按键交还弹窗 / TextInput，
+            # 防 'l' 切语言、Enter 开局等主菜单快捷键劫持输入框。
+            return False
         if self._overlay is not None:
             if key == 'escape':
                 self._close_overlay()
@@ -1047,11 +1152,11 @@ class RootView(FloatLayout):
             try:
                 self.game.stop_ticking()
             except Exception:
-                pass
+                pass  # 退出收尾尽力而为：tick 已停时重复 stop 可抛，忽略
             try:
                 self.game._keyboard_closed()
             except Exception:
-                pass
+                pass  # 键盘未请求过时 _keyboard_closed 可抛；收尾不抛新异常
             self.game = None
         self.clear_widgets()
         self.menu = MainMenu(on_start=self.start_new_game,
@@ -1060,9 +1165,9 @@ class RootView(FloatLayout):
                              on_exit=self.quit_app)
         self.add_widget(self.menu)
 
-    def start_new_game(self) -> None:
-        """S01 → S02：全新一局。"""
-        engine.init_game()
+    def start_new_game(self, seed=None, difficulty=None) -> None:
+        """S01 → S02：全新一局（P2-3：可带种子与难度档）。"""
+        engine.init_game(seed=seed, difficulty=difficulty)
         self._enter_game()
 
     def start_load_game(self, path: str) -> None:
@@ -1101,13 +1206,14 @@ class RootView(FloatLayout):
                          close_on_outside=True)
         pop.open()
 
-    def start_new_game_on_slot(self, path: str) -> None:
-        """S01 → S02：在指定槽位开新游戏。
+    def start_new_game_on_slot(self, path: str, seed=None,
+                               difficulty=None) -> None:
+        """S01 → S02：在指定槽位开新游戏（P2-3：可带种子与难度档）。
 
         先把 engine 重置到初始态，再把初始进度写入该槽（覆盖旧档），
         随后进入游戏。对应「点击已有存档 → 覆盖并开新游戏」流程。
         """
-        engine.init_game()
+        engine.init_game(seed=seed, difficulty=difficulty)
         save_manager.save(path)
         self._enter_game()
 
@@ -1117,12 +1223,32 @@ class RootView(FloatLayout):
             try:
                 self.menu._keyboard_closed()
             except Exception:
-                pass
+                pass  # 同上：菜单键盘收尾尽力而为，不抛新异常
         self.menu = None
         self.game = GameUI(on_exit=self.show_menu)
         self.add_widget(self.game)
+        self._log_run_info()
         # 新游戏进入后延迟触发新手引导（等首帧布局完成，to_window 才有正确坐标）
         Clock.schedule_once(lambda dt: self.game.tutorial.maybe_start(), 0.3)
+
+    def _log_run_info(self) -> None:
+        """P2-3：开局把「本局种子 + 难度」写进日志抽屉（玩家可抄录复现）。
+
+        双写：stats.push_log（S14 日志抽屉立刻可见、带未读角标）+
+        events_history（随存档持久化，读档后仍可查）。种子为空显示
+        「随机」；纯展示设施，失败不拖垮进局。
+        """
+        try:
+            p = engine.player
+            if p is None or self.game is None:
+                return
+            seed_txt = str(p.seed) if p.seed is not None else t('ng_random')
+            line = t('ng_log_line').format(
+                seed=seed_txt, diff=_difficulty_label(p.difficulty))
+            p.events_history.insert(0, line)
+            self.game.stats.push_log(p.tick_count, line, 'i')
+        except Exception:
+            pass
 
     def quit_app(self) -> None:
         app = App.get_running_app()
@@ -1150,7 +1276,7 @@ class AIBienaoApp(App):
         try:
             Window.bind(on_touch_down=self._swallow_right_click)
         except Exception:
-            pass
+            pass  # 右键吞除失败仅表现为右键仍走 Kivy 默认行为，不影响功能
 
         # P1-3 帧率探针：仅 --perf / AI_PERF=1 时才导入并启动。
         # 整块包 try/except —— 探针是旁路观测，任何异常都不能影响开局。
@@ -1181,7 +1307,7 @@ class AIBienaoApp(App):
             try:
                 rv.game.stop_ticking()
             except Exception:
-                pass
+                pass  # 应用退出收尾：重复 stop 可抛，忽略
 
 
 if __name__ == '__main__':

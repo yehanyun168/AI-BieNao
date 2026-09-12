@@ -236,6 +236,75 @@ TUNE: Dict[str, float] = {
 }
 
 # ============================================================
+# 难度三档（P2-3 重玩性）：TUNE 乘法预设，不改引擎数值本体
+# ============================================================
+# 规则（红线：标准 = 现状逐位不变）：
+#   · 预设是「TUNE 键 → 乘数」表，只引用已有键、不新增键 —— validate()
+#     的键集检查不受影响；
+#   · apply_difficulty() 先把 TUNE 整表还原到基准快照 _TUNE_BASE 再逐键
+#     相乘 —— 切换 / 重开 / 读档都不会残留上一局的难度污染；
+#   · normal 预设为空 dict：还原基准后一个乘法都不做，TUNE 与
+#     balance.py 字面值逐位相等（连 ×1.0 都省掉），balance_sim 默认
+#     路径（从不调用 apply_difficulty）更是零接触。
+# 旋钮只动 3 个（怀疑增速 / 反制频率 / 委托奖励）：
+#   easy   ×0.65 / ×0.55 / ×1.50    hard   ×1.35 / ×1.35 / ×0.70
+#   （easy 三轮标定，P2-3 验证：初版 0.80/0.70/1.30 时自动玩家「无
+#    危机不买抗封禁」的被动性吃掉反制减少的红利，关停率反升到 7 局；
+#    压怀疑 0.65 + 降反制 0.55 + 提委托奖励 1.50 后，终极 AI 好结局
+#    7→10 局、平均反制 3.2→1.8 次/局、通关提速至 44.8 周期，压迫感
+#    全面回落。关停率 5-6 局在 30 局二项噪声带内与标准持平——自动
+#    玩家被动性所致，真人校准留给试玩环节。hard 不动——关停率已翻
+#    半。被监管是中立兜底结局（出过危机+抗封禁 T0+渗透 20%），不计
+#    入失败口径，勿用「关停+监管」误判难度。）
+_TUNE_BASE: Dict[str, float] = dict(TUNE)
+
+DIFFICULTY_PRESETS: Dict[str, Dict[str, float]] = {
+    'easy': {
+        'suspicion_sensitivity_base': 0.65,
+        'counterplay_prob': 0.55,
+        'commission_reward_compute_base': 1.50,
+    },
+    'normal': {},
+    'hard': {
+        'suspicion_sensitivity_base': 1.35,
+        'counterplay_prob': 1.35,
+        'commission_reward_compute_base': 0.70,
+    },
+}
+DIFFICULTY_ORDER = ('easy', 'normal', 'hard')
+DEFAULT_DIFFICULTY = 'normal'
+ACTIVE_DIFFICULTY = 'normal'    # 当前生效档（apply_difficulty 维护）
+
+
+def apply_difficulty(pid: str) -> str:
+    """把 TUNE 还原到基准后应用难度档 ``pid`` 的乘数，返回生效档 id。
+
+    未登记档位抛 ValueError（调用方 UI / 读档应先兜底默认档）；
+    应用后跑一遍 validate() —— 预设把某个旋钮乘出非法区间时立刻报错，
+    不让坏数值静默进局。
+    """
+    global ACTIVE_DIFFICULTY
+    if pid not in DIFFICULTY_PRESETS:
+        raise ValueError(f'unknown difficulty: {pid!r}')
+    TUNE.clear()
+    TUNE.update(_TUNE_BASE)
+    for key, mult in DIFFICULTY_PRESETS[pid].items():
+        if key not in TUNE:
+            raise KeyError(f'difficulty knob not in TUNE: {key}')
+        TUNE[key] = TUNE[key] * mult
+    errs = validate()
+    if errs:
+        raise ValueError(f'difficulty {pid!r} produced invalid TUNE: {errs}')
+    ACTIVE_DIFFICULTY = pid
+    return pid
+
+
+def current_difficulty() -> str:
+    """当前生效的难度档 id（从未应用过预设时即 DEFAULT_DIFFICULTY）。"""
+    return ACTIVE_DIFFICULTY
+
+
+# ============================================================
 # 派生表（保持可读性，供 UI / 文档引用）
 # ============================================================
 # 速度档（×base_tick_seconds）

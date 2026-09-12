@@ -50,7 +50,8 @@ def dismiss_popups() -> None:
     try:
         from kivy.uix.modalview import ModalView
     except Exception:
-        return
+        return  # Kivy 环境异常拿不到 ModalView → 放弃清理，工具自身降级
+    # 三个清理步骤逐项吞错：单个旧弹窗清理失败不阻塞其余（截图工具尽力而为）
     for w in list(getattr(Window, 'children', []) or []):
         if isinstance(w, ModalView):
             try:
@@ -93,11 +94,11 @@ class ShotApp(App):
             try:
                 getattr(g, fn)()
             except Exception:
-                pass
+                pass  # 面板可能已关（重复关闭可抛）；残留只影响本张截图
         try:
             g.close_page()
         except Exception:
-            pass
+            pass  # 同上：清理尽力而为，不阻塞截图循环
 
     def _plan(self):
         rv = self.rv

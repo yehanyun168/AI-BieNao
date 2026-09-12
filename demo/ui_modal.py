@@ -48,6 +48,7 @@ def _purge_lingering_modals() -> None:
     会导致：①连续弹窗时遮罩叠加成近纯黑；②无头/截图环境（只 ``Clock.tick``
     不 sleep）动画永不完成、旧窗永久残留。这里直接摘除，幂等安全。
     """
+    # 三个清理步骤逐项吞错：单个旧弹窗清理失败不阻塞其余（本函数幂等，重复清理无副作用）
     for w in list(getattr(Window, 'children', []) or []):
         if isinstance(w, ModalView):
             try:

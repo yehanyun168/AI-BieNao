@@ -1107,6 +1107,28 @@ TRANSLATIONS[LANG_EN].update({
 
 
 # ============================================================
+# P2-3 重玩性：难度三档 + 新档弹窗（种子）
+# ============================================================
+TRANSLATIONS[LANG_ZH].update({
+    'diff_easy': '轻松', 'diff_normal': '标准', 'diff_hard': '困难',
+    'ng_difficulty': '难度',
+    'ng_seed': '种子',
+    'ng_seed_hint': '留空 = 真随机；可填数字或口令，同串同种子',
+    'ng_random': '随机',
+    'ng_log_line': '🎲 本局种子 {seed} · 难度 {diff}',
+})
+
+TRANSLATIONS[LANG_EN].update({
+    'diff_easy': 'Easy', 'diff_normal': 'Normal', 'diff_hard': 'Hard',
+    'ng_difficulty': 'Difficulty',
+    'ng_seed': 'Seed',
+    'ng_seed_hint': 'Blank = random; numbers or a word, same text same seed',
+    'ng_random': 'random',
+    'ng_log_line': '🎲 Run seed {seed} · {diff}',
+})
+
+
+# ============================================================
 # 翻译函数
 # ============================================================
 def t(key: str, lang: str = None) -> str:

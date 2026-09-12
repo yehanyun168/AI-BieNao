@@ -336,7 +336,7 @@ class PagesMixin:
         try:
             eff = branch.effects_per_level[idx]
         except Exception:
-            return '--'
+            return '--'  # 等级越界/结构异常 → 显示占位符，不崩科技页
         if not isinstance(eff, dict):
             return str(eff)[:18]
         parts = []
@@ -391,7 +391,7 @@ class PagesMixin:
             v = ach.condition(ctx) if ach.condition else False
             return '✓' if v else '…'
         except Exception:
-            return '…'
+            return '…'  # 条件求值异常（数据组合边界）→ 显示未完成，不崩成就页
 
     # ---- S12 设置：存档槽位 ----
     def _slot_rows(self):
@@ -414,7 +414,10 @@ class PagesMixin:
                         summary = t('slot_summary').format(
                             tick=pl.get('tick_count', 0),
                             pen=f"{dl / 7480 * 100:.2f}", n=unlocked)
-                except Exception:
+                except Exception as e:
+                    # 摘要读不出（多半存档损坏）：不能无声装作"空槽"——玩家会
+                    # 误以为可覆盖。留痕，槽位仍按空槽显示（行为不变）。
+                    print(f'[slots] ⚠️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
                     summary = t('slot_empty')
             else:
                 summary = t('slot_empty')
