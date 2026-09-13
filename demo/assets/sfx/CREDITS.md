@@ -103,6 +103,36 @@
   授权：**可商用 / 禁止再分发 / 必须署名 "Atelier Magicae"**。
   因体积（11MB vs 本目录合计 240KB）与"禁止再分发"条款，**未采用**；
   如需采用，必须在本文件与游戏内 credits 中同时署名，且需评估分享包体积增长。
-- `assets_library/audio/sfx/ui-audio/`、`digital-audio/`、`sci-fi-sounds/`
+- `assets_library/audio/sfx/ui-audio/`、`digital-audio/`
   同为 Kenney CC0，本次未采用但**可随时补入**（无需改代码，放进本目录并在
   `demo/sfx.py::NAMES` 登记即可）。
+- ~~`assets_library/audio/sfx/sci-fi-sounds/` 本次未采用~~
+  → **2026-09-14 已部分采用**，见下节。
+
+---
+
+## 四、开场动画音效（2026-09-14 新增，4 个）
+
+《AI 别闹》开场动画 v2 重制（`docs/intro_v2/03_audio_design.md` v1.2）配套：
+3 个 Kenney *Sci-Fi Sounds*（CC0）选材加工 + 1 个自产合成，
+全部经 `tools/make_intro_sfx.py` 统一定标（44.1kHz mono OGG）。
+
+| 文件 | 语义 | 源文件 | 加工 |
+|---|---|---|---|
+| `server_hum.ogg` | 机房低沉运行嗡鸣（循环床） | `spaceEngineLow_003.ogg` | 8ms 交叉淡化（loop 无缝）→ 高通 28Hz → 120Hz 低架 −2dB |
+| `machine_run.ogg` | 电脑自动开机（风扇+磁盘） | `computerNoise_001.ogg` | 裁前 2.4s |
+| `impact_low.ogg` | 「目标已确立」定格重音 | `impactMetal_001.ogg` | 全长 |
+| `power_on.ogg` | 屏幕亮起的滋滋开机电流声 | **自产合成** | `tools/make_intro_sfx.py::make_power_on`（50Hz 市电 + 锯齿 FM + 白噪颗粒 + 15.7kHz 行频，0.85s） |
+
+- **生成/加工方式**：`tools/make_intro_sfx.py`（可复现，固定随机种子）
+- **响度**：`server_hum` / `machine_run` RMS −18 dBFS；`impact_low` / `power_on`
+  为瞬态衰减型，按峰值 −3 dBFS 定标（RMS −18 物理不可达，见脚本 docstring）
+- **授权**：Kenney Sci-Fi Sounds 为 CC0，可商用、可修改、可再分发，无署名义务；
+  `power_on` 自产合成，无第三方权利
+
+### 授权原文（Sci-Fi Sounds）
+
+> **Sci-Fi Sounds**
+> Created/distributed by Kenney (www.kenney.nl)
+> License: (Creative Commons Zero, CC0)
+> http://creativecommons.org/publicdomain/zero/1.0/

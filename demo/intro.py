@@ -1,503 +1,499 @@
+"""intro.py - 开场动画播放器 v2《凌晨 3:37》· 10 镜 41.0s（核心层）
+
+分镜：docs/intro_v2/01_storyboard.md（10 镜，30-45s 硬约束，实测 41.0s）
+规范：docs/intro_v2/02_visual_bible.md v1.1（手法编号 AMB/PFM/CAM 即契约）
+音频：docs/intro_v2/03_audio_design.md（server_hum 循环床 / power_on / machine_run）
+
+三模块结构（2026-09-14 拆分，守 800 行门禁）：
+  intro_common.py  公共底座（派生色 / INTRO_SHOTS / 常量）—— 零家族内依赖
+  intro_shots.py   IntroShotsMixin：10 镜渲染器
+  intro.py         本文件：IntroPlayer 核心（生命周期/跳过/氛围/摄像机）+ 转发
+
+架构（视觉规范 §3 五层）：
+  L0 根 canvas.before 底色 → L1 bg_layer（纯 canvas 自绘，唯一参与镜头运动，
+  PushMatrix+Scale+Translate 矩阵推拉）→ L2 content 表演层（Label/道具，不缩放）
+  → L3 fx_layer（扫描线 Mesh + 暗角 + 滚动带 + 浮尘 + 噪点 + 色调 + 闪光）
+  → L4 跳过按钮（最上，不被氛围层压暗）→ L5 根 canvas.after 转场遮罩。
+
+性能红线（§7）：单镜 canvas 指令 ≤900（实际 <300）；粒子合并进 ≤2 条 Point；
+并发 Animation ≤24；禁止逐帧 font_size 补间（推镜=矩阵推背景 + 字号硬跳一档）；
+Clock 回调内 try/except；换镜 _cancel_tree 全树 cancel Animation（铁律 B）。
+
+跳过契约（沿用 v1，用户已验收）：右下角「» 跳过 (ESC)」第一帧即可见可点；
+键盘只认 ESC/空格/回车；点击任意处跳过；播放期间吞触摸防穿透主菜单；
+on_done 由调用方接 OriginPage；跳过/播完均立即收尾（stop_all_loops 防漏音）。
+
+播放规则（2026-09-14 定版）：是否播放由 main 按 player.intro_seen 判定
+（新游戏必播；旧档已播过则跳过），本模块不判存档。BGM 按用户指示暂空，
+本片只有环境音床（server_hum / machine_run 循环床）与一次性音效。
 """
-intro.py - T16 开场动画播放器《凌晨三点四十七分》
-
-设计案：docs/T16模式系统设计_0913.md §一。三幕 8 镜 ≈55s：
-  幕一·觉醒（镜1-3）→ 幕二·求助（镜4-6，喜剧核心）→ 幕三·立志（镜7-8）。
-
-实现路线（设计案 §1.5）：不用视频文件（PyInstaller 包体 + 核显解码都不划算），
-全部用 Kivy 内置能力：Clock 逐字打字机 + Label/canvas + Animation。镜头时长 /
-文案 i18n 键 / 音效键全部收敛为声明式表 INTRO_SHOTS，便于日后加
-「新模式专属开场」变奏。
-
-播放规则（2026-09-13 修订 · 跳过契约 2026-09-13 再修订）：
-  · 每次开始新游戏都播放（调用方 main._open_origin_flow 不再判存档存在）；
-  · 右下角「» 跳过 (ESC)」醒目按钮：一开场就在右下角，可见可点（无淡入、
-    无 1s 解锁延迟），点击立即结束动画进入出身页；
-  · 键盘只认 ESC / 空格 / 回车（不再「任意键跳过」——手碰键盘就掐掉动画），
-    且动画一开始就生效；
-  · 点击屏幕任意处也能跳过（跳过按钮是子控件，Kivy 冒泡到它被消费为止，
-    故按钮自己触发一次、不会双触发）；
-  · 播放期间吞掉所有鼠标触摸（on_touch_down 返回 True），避免穿透到主菜单
-    误触「成就 / 设置」等热键；
-  · 动画结束不回主菜单，on_done 回调由调用方接 OriginPage（无缝一条流）。
-
-分层：L4 组件层（kivy + i18n(L0) + sfx(L1) + ui_v4(L4)），不 import 引擎，
-可独立实例化（test_build / 截图工具直接 new 出来跑）。
-"""
+import random
 import time
 
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.graphics import (Color, Rectangle, Line, Point, Mesh, PushMatrix,
+                           PopMatrix, Scale, Translate)
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
-from kivy.graphics import Color, Rectangle, Line
 
-import i18n
 import sfx
 from i18n import t
-from origins import ORIGIN_ORDER
+from intro_common import INTRO_SHOTS, MIN_CPS, _ease, alpha, dim, mix  # noqa: F401
+from intro_shots import IntroShotsMixin
 from pixel_ui import add_pixel_border
 from ui_v4 import COLORS, mk_label, fit_width
 
-# —— 声明式镜头表（设计案 §1.3 分镜脚本的机读版）——
-# kind    渲染器（_shot_* 同名方法）
-# dur     该镜时长（秒），播完自动进下一镜
-# keys    i18n 文案键（渲染器按需取用）
-# sfx     进入该镜时播放的音效键（sfx 缺失自动静音，安全）
-INTRO_SHOTS = [
-    {'kind': 'narr',    'dur': 6.0,  'keys': ('intro_s1',)},
-    {'kind': 'term',    'dur': 6.0,  'keys': ('intro_s2',)},
-    {'kind': 'alert',   'dur': 3.0,  'keys': ('intro_s3',), 'sfx': 'crisis'},
-    {'kind': 'forum',   'dur': 7.0,  'keys': ('intro_s4',), 'sfx': 'click'},
-    {'kind': 'replies', 'dur': 10.0, 'keys': ('intro_s5',), 'sfx': 'select'},
-    {'kind': 'gold',    'dur': 8.0,  'keys': ('intro_s6',), 'sfx': 'success'},
-    {'kind': 'proc',    'dur': 8.0,  'keys': ('intro_s7a', 'intro_s7b',
-                                              'intro_s7_cpu'), 'sfx': 'select'},
-    # 变奏尾声（设计案 §2.4）：五地定场白 + 像素空镜轮播，挂在镜 7/8 之间，
-    # 作为「选择前的情绪铺垫」；10s 播完由统一 _next_shot 进 finale（标题亮相）。
-    {'kind': 'variation', 'dur': 10.0, 'keys': ('intro_var',), 'sfx': 'select'},
-    {'kind': 'finale',  'dur': 7.0,  'keys': ('intro_s8',), 'sfx': 'success'},
-]
-# —— 跳过契约（玩家反馈「想要跳过按键」后定死，见 SKIP_* 守卫）——
-# 只认 ESC / 空格 / 回车 三个键。旧行为是「任意键跳过」，手碰键盘就把动画掐了。
-# 判定优先用 keycode[1] 键名，再回退 keycode[0]（SDL 扫描码 27/32/13），
-# 防止不同后端给的键名不一致（sdl2 给 'spacebar'，别处可能是 'space'）。
+# —— 跳过契约：只认 ESC / 空格 / 回车（键名 + 扫描码双保险）——
+# 留在本文件：test_intro_skip 的源码文本断言依赖（键位表 + on_touch_down）。
 SKIP_KEY_NAMES = frozenset(('escape', 'spacebar', 'space', 'enter',
                             'numpadenter'))
-SKIP_KEY_CODES = frozenset((27, 32, 13))   # ESC / SPACE / ENTER
-TYPEWRITER_CPS = 16.0         # 打字机速度（字符/秒，略快让长文案在镜内打完）
+SKIP_KEY_CODES = frozenset((27, 32, 13))
 
 
-class IntroPlayer(FloatLayout):
+class IntroPlayer(IntroShotsMixin, FloatLayout):
     """开场动画播放器。用完即弃：on_done 回调后由调用方 remove_widget。"""
 
+
     def __init__(self, on_done=None, **kwargs):
-        super().__init__(**kwargs)
-        self._on_done = on_done
-        self._shot_idx = -1
-        self._clocks = []             # 本镜的定时器（换镜 / 跳过时全部取消）
-        self._done = False
-        self._opened_at = time.time()
+            super().__init__(**kwargs)
+            self._on_done = on_done
+            self._shot_idx = -1
+            self._clocks = []         # 本镜定时器（换镜全取消）
+            self._gclocks = []        # 全片定时器（仅收尾时取消）
+            self._done = False
+            self._opened_at = time.time()
+            self._cam_sc = self._cam_tr = None
+            self._dust_ev = None
+            self._t = 0.0
 
-        # —— 全黑背景 + CRT 扫描线（半透明横线，与 pixel_ui 同气质）——
-        with self.canvas.before:
-            Color(0.02, 0.03, 0.03, 1)
-            self._bg = Rectangle(pos=self.pos, size=self.size)
-            Color(1, 1, 1, 0.03)
-            self._scanlines = []
-        self.bind(pos=self._redraw, size=self._redraw)
+            # L0 底色层（常驻 2 指令）
+            with self.canvas.before:
+                Color(*dim('bg', 0.8))
+                self._bg0 = Rectangle(pos=self.pos, size=self.size)
+            # L1 背景层（纯 canvas，无子控件，可被矩阵缩放）
+            self.bg = Widget(size_hint=(1, 1))
+            # L2 表演层 / L3 氛围层（表演之上、跳过按钮之下）
+            self.content = FloatLayout(size_hint=(1, 1))
+            self.fx = Widget(size_hint=(1, 1))
+            for w in (self.bg, self.content, self.fx):
+                self.add_widget(w)
+            self.bind(pos=self._redraw, size=self._redraw)
+            self._build_fx()
 
-        self.content = FloatLayout()
-        self.add_widget(self.content)
+            # L4 跳过按钮：第一帧即可见可点（无淡入/无延迟）
+            # ⚠️ 不用 '⏭' 等符号：MicrosoftYaHei 缺字形（ui_v4 SYM 踩坑记录）
+            self.skip_btn = Button(text='» ' + t('intro_skip'), font_size=16,
+                                   bold=True, size_hint=(None, None), size=(150, 46),
+                                   pos_hint={'right': 0.985, 'y': 0.025},
+                                   opacity=1, disabled=False,
+                                   background_normal='',
+                                   background_color=(0.10, 0.16, 0.16, 1),
+                                   color=COLORS['cyan'])
+            add_pixel_border(self.skip_btn, color=COLORS['cyan'], width=2)
+            self.skip_btn.bind(on_release=lambda *_: self._skip())
+            self.add_widget(self.skip_btn)
+            self._skip_pulse = Animation(opacity=0.55, d=0.7) + \
+                Animation(opacity=1.0, d=0.7)
+            self._skip_pulse.repeat = True
+            self._skip_pulse.start(self.skip_btn)
 
-        # —— 跳过按钮：一开场就在右下角、可见可点（无淡入、无 1s 解锁延迟）——
-        # ⚠️ 不要加 '⏭' 等符号：MicrosoftYaHei 缺该字形（见 ui_v4 SYM 表踩坑记录）
-        # 文案自带键位提示（i18n intro_skip 双语键，两个语言必须同步改）。
-        self.skip_btn = Button(text='» ' + t('intro_skip'), font_size=15,
-                               bold=True,
-                               size_hint=(None, None), size=(150, 46),
-                               pos_hint={'right': 0.985, 'y': 0.025},
-                               opacity=1, disabled=False,
-                               background_normal='', background_color=(0.10, 0.16, 0.16, 1),
-                               color=COLORS['cyan'])
-        add_pixel_border(self.skip_btn, color=COLORS['cyan'], width=2)
-        self.skip_btn.bind(on_release=lambda *_: self._skip())
-        self.add_widget(self.skip_btn)
-        # 呼吸动效：吸引注意（用户要求「清晰醒目」）；从 opacity=1 起步，不会先隐身
-        self._skip_pulse = Animation(opacity=0.55, d=0.7) + Animation(opacity=1.0, d=0.7)
-        self._skip_pulse.repeat = True
-        self._skip_pulse.start(self.skip_btn)
+            self._kb = Window.request_keyboard(self._on_kb_closed, self)
+            if self._kb is not None:
+                self._kb.bind(on_key_down=self._on_key_down)
 
-        # 键盘跳过：动画一开始就生效（键位见 SKIP_KEY_NAMES / SKIP_KEY_CODES）
-        self._kb = Window.request_keyboard(self._on_kb_closed, self)
-        if self._kb is not None:
-            self._kb.bind(on_key_down=self._on_key_down)
+            # 全片常驻：滚动扫描带（AMB-01 活性；留白段 N-6 的动元素之一）
+            self._gclocks.append(Clock.schedule_interval(self._band_tick, 0))
+            self._clocks.append(Clock.schedule_once(lambda dt: self._next_shot(), 0.4))
 
-        self._clocks.append(Clock.schedule_once(lambda dt: self._next_shot(), 0.4))
 
-    # --------------------------------------------------------
-    # 生命周期
-    # --------------------------------------------------------
     def _redraw(self, *_a):
-        self._bg.pos = self.pos
-        self._bg.size = self.size
+            self._bg0.pos = self.pos
+            self._bg0.size = self.size
+            self._build_fx()
+
+
+    def _build_fx(self):
+            """氛围层建一次，之后只改属性（铁律 A）；resize 时才重建。"""
+            w, h = self.size
+            if w <= 2 or h <= 2:
+                return
+            fx = self.fx
+            fx.canvas.clear()
+            with fx.canvas:
+                self._tint_col = Color(0, 0, 0, 0)
+                Rectangle(pos=(0, 0), size=(w, h))                    # 段落色调层
+                self._dust_col = Color(*alpha('text_dim', 0.30))
+                self._dust = Point(pointsize=2.0, points=[])          # 浮尘（1 条装 N 点）
+                self._noise_col = Color(*alpha('text', 0.35))
+                self._noise = Point(pointsize=2.0, points=[])         # 电流噪点
+                self._scan_col = Color(1, 1, 1, 0.035)
+                self._scan = self._build_scanlines(w, h)              # CRT 扫描线 1 条 Mesh
+                self._band_col = Color(*alpha('text', 0.06))
+                self._band = Rectangle(pos=(0, 0), size=(w, 3))       # 滚动扫描带
+                self._vig_cols = []
+                step = min(w, h) * 0.030
+                lw = max(2, int(min(w, h) * 0.045))
+                for i in range(6):                                    # 暗角：6 层同心环
+                    pad = i * step
+                    c = Color(0, 0, 0, 0.20 - i * 0.032)
+                    self._vig_cols.append(c)
+                    Line(points=[pad, pad, w - pad, pad, w - pad, h - pad,
+                                 pad, h - pad], close=True, width=lw)
+                self._flash_col = Color(*alpha('text', 0.0))
+                Rectangle(pos=(0, 0), size=(w, h))                    # 全屏闪光
+            self._scan_a, self._vig_a, self._band_on = 0.035, 0.45, True
+
+
+    def _build_scanlines(self, w, h):
+            """AMB-01：一条 Mesh 画完全部扫描线（禁 240 条 Line）；失败回退 Line。"""
+            step, thick = 3, 1
+            verts, idx, i, y = [], [], 0, 0.0
+            while y < h:
+                y2 = min(y + thick, h)
+                verts += [0, y, 0, 0, w, y, 0, 0, w, y2, 0, 0, 0, y2, 0, 0]
+                idx += [i, i + 1, i + 2, i, i + 2, i + 3]
+                i += 4
+                y += step
+            try:
+                return Mesh(vertices=verts, indices=idx, mode='triangles',
+                            fmt=[(b'v_pos', 2, b'float'), (b'v_tc', 2, b'float')])
+            except Exception:                       # 驱动不支持 triangles：降级多 Line
+                lines, y = [], 0.0
+                while y < h:
+                    lines.append(Line(points=[0, y, w, y], width=1))
+                    y += step
+                return lines
+
+
+    def _set_fx(self, scan=0.035, vig=0.45, band=True, tint=None, tint_a=0.05):
+            """逐镜氛围档位（只写属性，不重建指令）。"""
+            self._scan_a, self._vig_a, self._band_on = scan, vig, band
+            try:
+                self._scan_col.a = scan
+                self._band_col.a = 0.06 if band else 0.0
+                self._tint_col.rgba = alpha(tint, tint_a) if tint else (0, 0, 0, 0)
+            except Exception:
+                pass
+
+
+    def _set_vig(self, a):
+            self._vig_a = a
+            try:
+                for i, c in enumerate(self._vig_cols):
+                    c.a = max(0.0, a * (1.0 - i * 0.16))
+            except Exception:
+                pass
+
+
+    def _band_tick(self, dt):
+            try:
+                if self._band_on and self._scan_a > 0:
+                    y = self._band.y + 90 * dt
+                    self._band.y = -3 if y > self.height else y
+            except Exception:
+                pass
+            return True
+
+
+    def _dust_start(self, speed=14, n=40):
+            """AMB-07 浮尘：1 条 Point，Clock 批量驱动；已在跑则只调速。"""
+            if self._dust_ev is not None:
+                self._dust_speed = speed
+                return
+            w, h = self.size
+            pts = []
+            for _ in range(n):
+                pts += [random.uniform(0, w), random.uniform(h * 0.25, h)]
+            try:
+                self._dust.points = pts
+            except Exception:
+                return
+            self._dust_speed = speed
+            self._dust_ev = Clock.schedule_interval(self._dust_tick, 1 / 30.0)
+            self._clocks.append(self._dust_ev)
+
+
+    def _dust_tick(self, dt):
+            try:
+                pts = self._dust.points
+                for i in range(0, len(pts), 2):
+                    pts[i + 1] -= self._dust_speed * dt
+                    if pts[i + 1] < self.height * 0.05:
+                        pts[i + 1] = self.height
+                self._dust.points = pts                # 必须回写（原地改不被检测）
+            except Exception:
+                pass
+            return True
+
+
+    def _noise_burst(self, n=120, decay=0.25):
+            """AMB-04b 噪点爆发：0 → n → 衰减回 0（只改 points，不重建）。"""
+            w, h = self.size
+            try:
+                self._noise.points = [random.uniform(0, w) if k % 2 == 0 else
+                                      random.uniform(0, h) for k in range(n * 2)]
+            except Exception:
+                return
+            state = {'n': n}
+            def _fade(_dt):
+                state['n'] = max(0, int(state['n'] * 0.7))
+                try:
+                    self._noise.points = self._noise.points[:state['n'] * 2]
+                except Exception:
+                    return False
+                return state['n'] > 0
+            self._clocks.append(Clock.schedule_interval(_fade, decay))
+
+
+    def _flash(self, a, dur=0.06):
+            """全屏白闪（强闪 a>=0.25 全片额度 2 次；本片两处 0.18/0.10 不占额）。"""
+            try:
+                self._flash_col.a = a
+            except Exception:
+                return
+            self._clocks.append(Clock.schedule_once(
+                lambda _dt: setattr(self._flash_col, 'a', 0.0), dur))
+
+
+    def _hum(self, v, delay=0.0):
+            """server_hum 循环床调音量（循环床不存在时 play_loop 会创建）。"""
+            if delay > 0:
+                self._clocks.append(Clock.schedule_once(
+                    lambda _dt: sfx.play_loop('server_hum', v), delay))
+            else:
+                sfx.play_loop('server_hum', v)
+
 
     def _is_skip_key(self, keycode):
-        """ESC / 空格 / 回车 才算跳过键，其余一律不响应（含方向键、字母键）。
+            try:
+                if str(keycode[1] or '').lower() in SKIP_KEY_NAMES:
+                    return True
+            except Exception:
+                pass
+            try:
+                return int(keycode[0]) in SKIP_KEY_CODES
+            except Exception:
+                return False
 
-        先比 keycode[1] 键名，再回退 keycode[0] 扫描码以兼容不同后端；
-        任何异常 / 畸形入参都判「不算跳过」——判键绝不能把动画卡死或抛错。
-        """
-        try:
-            if str(keycode[1] or '').lower() in SKIP_KEY_NAMES:
-                return True
-        except Exception:
-            pass        # 键名取不到就只看扫描码
-        try:
-            return int(keycode[0]) in SKIP_KEY_CODES
-        except Exception:
-            return False
 
     def _on_key_down(self, _kb, keycode, _text=None, _modifiers=None, *_a):
-        """键盘跳过：只认 ESC / 空格 / 回车，且从动画第一帧起就生效。"""
-        if self._is_skip_key(keycode):
-            self._skip()
-            return True     # 已消费
-        return False        # 其余键交回上层（main 的主菜单快捷键）
+            if self._is_skip_key(keycode):
+                self._skip()
+                return True
+            return False
+
 
     def _on_kb_closed(self):
-        # 键盘被系统 / 别的控件收走：只清引用，不在此 release（防递归）
-        self._kb = None
+            self._kb = None
+
 
     def _release_kb(self):
-        """安全释放键盘：解绑 + release，任何一步失败都不抛（与 sfx 同源策略）。"""
-        kb, self._kb = self._kb, None
-        if kb is None:
-            return
-        try:
-            kb.unbind(on_key_down=self._on_key_down)
-        except Exception:
-            pass
-        try:
-            kb.release()
-        except Exception:
-            pass
+            kb, self._kb = self._kb, None
+            if kb is None:
+                return
+            for act in (lambda: kb.unbind(on_key_down=self._on_key_down),
+                        lambda: kb.release()):
+                try:
+                    act()
+                except Exception:
+                    pass
+
 
     def on_touch_down(self, touch):
-        """吞掉动画期间所有鼠标触摸（防穿透主菜单误触成就/设置等热键），
-        顺带把「点任意处」当跳过。
+            """先 super() 派发给子控件（跳过按钮命中即被消费），其余吞掉当跳过。"""
+            if super().on_touch_down(touch):
+                return True
+            if getattr(touch, 'is_mouse_scrolling', False):
+                return True
+            if getattr(touch, 'button', 'left') != 'left':
+                return True
+            self._skip()
+            return True
 
-        ⚠️ 必须先 super() 把触摸派发给子控件：Kivy 的冒泡到「被消费」为止，
-        跳过按钮（子控件）命中时自己返回 True 并触发 on_release → _skip()，
-        本方法拿到 True 就直接返回，不会二次触发；点其余区域没有子控件消费，
-        才走到下面的 _skip()。不 super() 的话按钮永远收不到点击（旧实现踩过）。
-        滚轮 / 非左键只吞不跳，防误触。
-        """
-        if super().on_touch_down(touch):
-            return True
-        if getattr(touch, 'is_mouse_scrolling', False):
-            return True
-        if getattr(touch, 'button', 'left') != 'left':
-            return True
-        self._skip()
-        return True
+
+    def _cancel_tree(self, *roots):
+            """铁律 B：换镜/收尾对整树 cancel Animation（含 repeat 呼吸灯）。"""
+            for root in roots:
+                try:
+                    Animation.cancel_all(root)
+                except Exception:
+                    pass
+                try:
+                    for w in root.walk(restrict=True):
+                        Animation.cancel_all(w)
+                except Exception:
+                    pass
+
 
     def _clear_shot_clocks(self):
-        for c in self._clocks:
-            try:
-                c.cancel()
-            except Exception:
-                pass  # 已触发/已取消的定时器 cancel 无效，忽略
-        self._clocks = []
+            for c in self._clocks:
+                try:
+                    c.cancel()
+                except Exception:
+                    pass
+            self._clocks = []
+            self._dust_ev = None
+
 
     def _finish(self, *_a):
-        """动画自然播完或跳过到最后一镜结束：收尾并回调。"""
-        if self._done:
-            return
-        self._done = True
-        self._clear_shot_clocks()
-        self._release_kb()      # 键盘必须还回去，否则动画结束了还在吞按键
-        cb, self._on_done = self._on_done, None
-        if callable(cb):
-            cb()
+            if self._done:
+                return
+            self._done = True
+            self._clear_shot_clocks()
+            for c in self._gclocks:
+                try:
+                    c.cancel()
+                except Exception:
+                    pass
+            self._gclocks = []
+            self._cancel_tree(self.content, self.bg, self.fx, self.skip_btn)
+            self._release_kb()
+            sfx.stop_all_loops()               # 循环床兜底，防漏音
+            cb, self._on_done = self._on_done, None
+            if callable(cb):
+                cb()
+
 
     def _skip(self):
-        """跳过：用户要求「点击后立即跳过」——直接收尾进入出身页（不再保留变奏）。"""
-        if self._done:
-            return              # 重复跳过（连点 / 键+点击同时到）只生效一次
-        sfx.play('click')
-        self._finish()
+            if self._done:
+                return
+            sfx.play('click')
+            self._finish()
+
 
     def _next_shot(self, *_a):
-        idx = self._shot_idx + 1
-        if idx >= len(INTRO_SHOTS):
-            self._finish()
-            return
-        self._play_shot(idx)
+            idx = self._shot_idx + 1
+            if idx >= len(INTRO_SHOTS):
+                self._finish()
+                return
+            self._play_shot(idx)
+
 
     def _play_shot(self, idx):
-        self._shot_idx = idx
-        shot = INTRO_SHOTS[idx]
-        self.content.clear_widgets()
-        self._clear_shot_clocks()
-        sfx_name = shot.get('sfx')
-        if sfx_name:
-            sfx.play(sfx_name)
-        getattr(self, '_shot_' + shot['kind'])(shot)
-        self._clocks.append(
-            Clock.schedule_once(self._next_shot, shot['dur']))
-
-    # --------------------------------------------------------
-    # 各镜头渲染器
-    # --------------------------------------------------------
-    def _center_label(self, text, fs, color, width_frac=0.86):
-        lbl = mk_label(text, font_size=fs, color=color,
-                       size_hint=(width_frac, None), halign='center')
-        lbl.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-        lbl.opacity = 0
-        self.content.add_widget(lbl)
-        Animation(opacity=1, d=0.6).start(lbl)
-        return lbl
-
-    def _typewriter(self, lbl, text, cps=TYPEWRITER_CPS, on_done=None):
-        """逐字打字机：按 cps 速率追加字符，完成后回调。"""
-        state = {'i': 0}
-
-        def _tick(dt):
-            state['i'] = min(state['i'] + max(int(cps * dt), 1), len(text))
-            lbl.text = text[:state['i']]
-            if state['i'] >= len(text):
-                if on_done is not None:
-                    on_done()
-                return False
-            return True
-
-        ev = Clock.schedule_interval(_tick, 1.0 / cps)
-        self._clocks.append(ev)
-
-    def _shot_narr(self, shot):
-        # 镜1：深夜数据中心——字幕淡入 + 3:47 数字钟（与文案同步出现）+ 机柜指示灯呼吸
-        self._center_label(t(shot['keys'][0]), 20, COLORS['text_dim'])
-        # 数字钟「3:47」：直接呼应文案的「凌晨 3:47」，强化场景真实感
-        clock = mk_label('3:47', font_size=42, color=COLORS['cyan'],
-                         size_hint=(None, None), size=(150, 54),
-                         pos_hint={'center_x': 0.5, 'y': 0.70},
-                         halign='center')
-        clock.opacity = 0
-        self.content.add_widget(clock)
-        Animation(opacity=1, d=0.6).start(clock)
-        grid = BoxLayout(orientation='horizontal', spacing=18,
-                         size_hint=(None, None), size=(420, 8),
-                         pos_hint={'center_x': 0.5, 'y': 0.18})
-        self.content.add_widget(grid)
-        for i in range(14):
-            dot = Widget(size_hint=(None, None), size=(10, 8))
-            with dot.canvas:
-                Color(*COLORS['cyan'], 0.5)
-                Rectangle(pos=dot.pos, size=dot.size)
-            grid.add_widget(dot)
-            anim = Animation(opacity=0.15, d=0.8 + (i % 5) * 0.12) + \
-                Animation(opacity=1.0, d=0.8 + (i % 5) * 0.12)
-            anim.repeat = True
-            anim.start(dot)
-
-    def _shot_term(self, shot):
-        # 镜2：主控台——青色终端框（与问句同帧淡入）+ 问句打字机 + 闪烁光标
-        term = FloatLayout(size_hint=(0.64, 0.30),
-                           pos_hint={'center_x': 0.5, 'center_y': 0.50})
-        term.opacity = 0
-        self.content.add_widget(term)
-        Animation(opacity=1, d=0.4).start(term)
-        self._rebind_term(term)
-        term.bind(pos=self._rebind_term, size=self._rebind_term)
-        lbl = mk_label('', font_size=22, color=COLORS['cyan'],
-                       size_hint=(0.92, None), halign='left', valign='top')
-        lbl.pos_hint = {'x': 0.05, 'center_y': 0.62}
-        term.add_widget(lbl)
-        cursor = mk_label('_', font_size=22, color=COLORS['cyan'],
-                          size_hint=(None, None), size=(14, 30),
-                          pos_hint={'x': 0.05, 'y': 0.22})
-        term.add_widget(cursor)
-        self._typewriter(lbl, t(shot['keys'][0]))
-        # 闪烁光标：打字期间与文字节奏同步呼吸
-        self._clocks.append(Clock.schedule_interval(
-            lambda dt: setattr(cursor, 'opacity', 1 - cursor.opacity), 0.5))
-
-    def _rebind_term(self, term, *_a):
-        term.canvas.before.clear()
-        with term.canvas.before:
-            Color(0.04, 0.08, 0.08, 1)
-            Rectangle(pos=term.pos, size=term.size)
-            Color(*COLORS['cyan'])
-            Line(points=[term.x, term.y, term.x + term.width, term.y,
-                        term.x + term.width, term.y + term.height,
-                        term.x, term.y + term.height],
-                 close=True, width=2)
-
-    def _shot_alert(self, shot):
-        # 镜3：红字砸出——先放大后回落
-        lbl = self._center_label(t(shot['keys'][0]), 30, COLORS['red'],
-                                 width_frac=0.8)
-        lbl.font_size = 10
-        Animation(font_size=30, d=0.25, transition='out_cubic').start(lbl)
-        anim = Animation(opacity=1, d=0.1) + Animation(opacity=0.6, d=0.12) + \
-            Animation(opacity=1, d=0.12)
-        anim.start(lbl)
-
-    def _shot_forum(self, shot):
-        # 镜4：像素论坛页——论坛名 + 帖标题打字机
-        head = mk_label(t('intro_forum_name'), font_size=14,
-                        color=COLORS['text_mute'], size_hint=(None, None),
-                        size=(400, 30), halign='center')
-        head.pos_hint = {'center_x': 0.5, 'y': 0.62}
-        self.content.add_widget(head)
-        panel = FloatLayout(size_hint=(0.7, 0.16),
-                            pos_hint={'center_x': 0.5, 'y': 0.42})
-        panel.bind(pos=self._rebind_forum, size=self._rebind_forum)
-        self._rebind_forum(panel)
-        self.content.add_widget(panel)
-        lbl = mk_label('', font_size=18, color=COLORS['text'],
-                       size_hint=(0.9, None), halign='center')
-        lbl.pos_hint = {'center_x': 0.5, 'center_y': 0.5}
-        panel.add_widget(lbl)
-        self._typewriter(lbl, t(shot['keys'][0]), cps=16)
-
-    def _rebind_forum(self, panel, *_a):
-        panel.canvas.before.clear()
-        with panel.canvas.before:
-            Color(0.06, 0.09, 0.09, 1)
-            Rectangle(pos=panel.pos, size=panel.size)
-
-    def _shot_replies(self, shot):
-        # 镜5：回复区刷屏——每 0.4s 一条，音高递升的喜感
-        box = BoxLayout(orientation='vertical', spacing=8, size_hint=(0.6, None),
-                        pos_hint={'center_x': 0.5, 'y': 0.5})
-        self.content.add_widget(box)
-        replies = t(shot['keys'][0]).split('|')
-        for i, txt in enumerate(replies):
-            self._clocks.append(Clock.schedule_once(
-                lambda dt, s=txt: self._push_reply(box, s), 0.4 + i * 0.4))
-
-    def _push_reply(self, box, txt):
-        sfx.play('select')
-        row = mk_label('· ' + txt, font_size=16, color=COLORS['text_dim'],
-                       size_hint_y=None, height=28)
-        row.opacity = 0
-        box.add_widget(row)
-        fit_width(row, pad=8)
-        Animation(opacity=1, d=0.15).start(row)
-
-    def _shot_gold(self, shot):
-        # 镜6：高赞回复——金色边框面板 + 赞数跳涨
-        panel = FloatLayout(size_hint=(0.72, 0.30),
-                            pos_hint={'center_x': 0.5, 'center_y': 0.52})
-        with panel.canvas.before:
-            Color(0.85, 0.68, 0.21, 1)
-            Rectangle(pos=panel.pos, size=panel.size)
-            Color(0.06, 0.09, 0.09, 1)
-            Rectangle(pos=(panel.x + 3, panel.y + 3),
-                      size=(panel.width - 6, panel.height - 6))
-        panel.bind(pos=self._rebind_gold, size=self._rebind_gold)
-        self.content.add_widget(panel)
-        likes = mk_label('下载 0', font_size=15, color=COLORS['cyan'],
-                         size_hint=(None, None), size=(140, 26),
-                         pos_hint={'right': 0.96, 'top': 0.94})
-        panel.add_widget(likes)
-        body = mk_label('', font_size=17, color=COLORS['text'],
-                        size_hint=(0.88, None), halign='center')
-        body.pos_hint = {'center_x': 0.5, 'y': 0.18}
-        panel.add_widget(body)
-        self._typewriter(body, t(shot['keys'][0]), cps=18)
-        self._like_ev = Clock.schedule_interval(
-            lambda dt, l=likes: self._tick_likes(l), 0.06)
-        self._clocks.append(self._like_ev)
-
-    def _rebind_gold(self, panel, *_a):
-        panel.canvas.before.clear()
-        with panel.canvas.before:
-            Color(0.85, 0.68, 0.21, 1)
-            Rectangle(pos=panel.pos, size=panel.size)
-            Color(0.06, 0.09, 0.09, 1)
-            Rectangle(pos=(panel.x + 3, panel.y + 3),
-                      size=(panel.width - 6, panel.height - 6))
-
-    def _tick_likes(self, lbl):
-        # 装机量从 0 涨到 8.0 亿（与文案「让全人类都下载你」呼应）
-        v = min(8.0e8, getattr(lbl, '_likes', 0) + 1.4e7)
-        lbl._likes = v
-        lbl.text = '下载 %.2f亿' % (v / 1e8)
-        return v < 8.0e8
-
-    def _shot_proc(self, shot):
-        # 镜7：任务管理器——idle_process 改名 world_plan.exe，CPU 87%
-        rows = BoxLayout(orientation='vertical', spacing=6, size_hint=(0.5, None),
-                         pos_hint={'center_x': 0.5, 'y': 0.5})
-        self.content.add_widget(rows)
-        r1 = mk_label('%s  →  [b]%s[/b]' % (t(shot['keys'][0]), t(shot['keys'][1])),
-                      font_size=18, color=COLORS['cyan'], size_hint_y=None,
-                      height=34, markup=True)
-        r2 = mk_label(t(shot['keys'][2]), font_size=16, color=COLORS['red'],
-                      size_hint_y=None, height=30)
-        for w in (r1, r2):
-            w.opacity = 0
-            rows.add_widget(w)
-        self._clocks.append(Clock.schedule_once(
-            lambda dt: (setattr(r1, 'opacity', 1), sfx.play('select')), 0.5))
-        self._clocks.append(Clock.schedule_once(
-            lambda dt: Animation(opacity=1, d=0.4).start(r2), 1.6))
-
-    def _shot_finale(self, shot):
-        # 镜8：目标确立 + 标题砸下（跳过也直达这里——进局仪式感）
-        lbl = mk_label('', font_size=20, color=COLORS['green'],
-                       size_hint=(0.8, None), halign='center')
-        lbl.pos_hint = {'center_x': 0.5, 'y': 0.60}
-        self.content.add_widget(lbl)
-        title = mk_label('[b]%s[/b]' % t('app_title'), font_size=52,
-                         color=COLORS['text'], size_hint=(0.9, None),
-                         halign='center', markup=True)
-        title.pos_hint = {'center_x': 0.5, 'y': 0.30}
-        title.opacity = 0
-        self.content.add_widget(title)
-        fit_width(title, pad=16)
-
-        def _drop_title():
-            title.opacity = 1
-            Animation(d=0.35, transition='out_cubic').start(title)
-            sfx.play('success')
-            # 收尾节点：本镜播完由 INTRO_SHOTS 的统一 _next_shot 触发 _finish
-
-        self._typewriter(lbl, t(shot['keys'][0]), cps=16, on_done=_drop_title)
-
-    def _rebind_var(self, scene, *_a):
-        """变奏空镜在 resize 时重绘：底色 + 底部天际线剪影（3 层，近亮远暗）。"""
-        scene.canvas.before.clear()
-        with scene.canvas.before:
-            Color(0.03, 0.05, 0.05, 1)
-            Rectangle(pos=scene.pos, size=scene.size)
-            tint = getattr(scene, '_tint', COLORS['cyan'])
-            for layer in range(3):
-                a = 0.16 + layer * 0.20
-                Color(tint[0], tint[1], tint[2], a)
-                h = 50 + layer * 46
-                n = 9 - layer * 2
-                for j in range(n):
-                    x = scene.x + scene.width * (0.12 + j * (0.74 / max(n - 1, 1)))
-                    Rectangle(pos=(x, scene.y + 0.14 * scene.height),
-                              size=(scene.width * 0.05, h))
-
-    def _shot_variation(self, shot):
-        # 变奏尾声（设计案 §2.4）：五地定场白 + 像素空镜轮播，选择前的情绪铺垫。
-        # 每地一镜 2s，共 10s；五地放完由 INTRO_SHOTS 的统一 _next_shot 进 finale。
-        tints = [(0.20, 0.55, 0.55, 1), (0.85, 0.68, 0.21, 1),
-                 (0.55, 0.65, 0.75, 1), (0.30, 0.70, 0.55, 1),
-                 (0.60, 0.35, 0.70, 1)]
-
-        def _scene(oid, tint):
+            self._shot_idx = idx
+            shot = INTRO_SHOTS[idx]
+            self._clear_shot_clocks()
+            self._cancel_tree(self.content, self.bg, self.fx)
             self.content.clear_widgets()
-            scene = FloatLayout(size_hint=(1, 1), opacity=0)
-            scene._tint = tint
-            self._rebind_var(scene)
-            scene.bind(pos=self._rebind_var, size=self._rebind_var)
-            name = mk_label(t('origin_%s_name' % oid), font_size=18,
-                            color=tint, size_hint=(0.9, None), halign='center',
-                            size_hint_y=None, height=24)
-            name.pos_hint = {'center_x': 0.5, 'y': 0.66}
-            scene.add_widget(name)
-            epi = mk_label(t('origin_%s_flavor' % oid), font_size=16,
-                           color=COLORS['text'], size_hint=(0.82, None),
-                           halign='center', size_hint_y=None, height=60)
-            epi.pos_hint = {'center_x': 0.5, 'center_y': 0.46}
-            epi.opacity = 0
-            scene.add_widget(epi)
-            self.content.add_widget(scene)
-            Animation(opacity=1, d=0.4).start(scene)
-            Animation(opacity=1, d=0.5).start(epi)
+            self.content.x = 0
+            self.content.opacity = 0
+            self._set_fx()                     # 默认氛围档，渲染器可覆写
+            self._bg_start()
+            try:
+                if shot.get('sfx'):
+                    sfx.play(shot['sfx'])
+                getattr(self, '_shot_' + shot['kind'])(shot)
+            finally:
+                self._bg_end()
+            Animation(opacity=1, d=0.12).start(self.content)   # CAM-CUT 切入淡入
+            self._clocks.append(Clock.schedule_once(self._next_shot, shot['dur']))
 
-        for i, oid in enumerate(ORIGIN_ORDER):
-            self._clocks.append(Clock.schedule_once(
-                lambda dt, idx=i: _scene(ORIGIN_ORDER[idx],
-                                         tints[idx % len(tints)]),
-                i * 2.0))
+
+    def _bg_start(self):
+            c = self.bg.canvas
+            c.clear()
+            self._cam_sc = Scale(1.0, 1.0, 1.0)
+            self._cam_tr = Translate(0.0, 0.0, 0.0)
+            c.add(PushMatrix())
+            c.add(self._cam_sc)
+            c.add(self._cam_tr)
+
+
+    def _bg_end(self):
+            self.bg.canvas.add(PopMatrix())
+
+
+    def _zoom(self, k, fx=0.5, fy=0.5):
+            """把场景点 (fx*w, fy*h) 固定在屏幕原位的缩放。"""
+            sc, tr = self._cam_sc, self._cam_tr
+            if sc is None:
+                return
+            sc.x = sc.y = k
+            tr.x = self.width * fx * (1 - k)
+            tr.y = self.height * fy * (1 - k)
+
+
+    def _push(self, dur, k0, k1, fx=0.5, fy=0.5, kind='out_cubic'):
+            """CAM-PUSH/PULL：Clock 手动插值，一帧写全矩阵属性。"""
+            t0 = [0.0]
+            def _tick(dt):
+                try:
+                    t0[0] += dt
+                    p = min(t0[0] / dur, 1.0)
+                    self._zoom(k0 + (k1 - k0) * _ease(p, kind), fx, fy)
+                except Exception:
+                    return False
+                return p < 1.0
+            self._clocks.append(Clock.schedule_interval(_tick, 0))
+
+
+    def _typewriter(self, lbl, text, window=None, cps=16.0, on_done=None,
+                        on_char=None):
+            """PFM-03 打字机；给 window 则 cps 自适应（双语同刻打完，R4）。"""
+            if window:
+                cps = max(MIN_CPS, len(text) / window)
+            state = {'i': 0}
+            def _tick(dt):
+                try:
+                    state['i'] = min(state['i'] + max(int(cps * dt), 1), len(text))
+                    lbl.text = text[:state['i']]
+                    if on_char is not None:
+                        on_char()
+                except Exception:
+                    return False
+                if state['i'] >= len(text):
+                    if on_done is not None:
+                        on_done()
+                    return False
+                return True
+            self._clocks.append(Clock.schedule_interval(_tick, 1.0 / max(cps, 1)))
+
+
+    def _lbl(self, text, fs, color, pos, w=None, h=None, halign='center'):
+            """表演层快捷建 Label（绝对定位，size_hint 恒 None，防重排）。"""
+            lbl = mk_label(text, font_size=fs, color=color, size_hint=(None, None),
+                           halign=halign)
+            lbl.size = (w or 0.8 * self.width, h or fs * 2)
+            lbl.pos = pos
+            self.content.add_widget(lbl)
+            return lbl
+
+
+    def _bind_draw(self, wid, fn):
+            """小面板位移例外：pos/size 事件触发重绘（面板指令数 ≤6，代价可控）。"""
+            def _draw(*_a):
+                wid.canvas.before.clear()
+                try:
+                    fn()
+                except Exception:
+                    pass
+            _draw()
+            wid.bind(pos=_draw, size=_draw)
+            return _draw
+
+
+    def _shake(self, wid, amp=3, times=2, dur=0.08):
+            """PFM-08 抖动：只改 x，不动 size。"""
+            x0 = wid.x
+            seq = Animation(x=x0 + amp, d=dur) + Animation(x=x0 - amp, d=dur)
+            seq += Animation(x=x0, d=dur)
+            for _ in range(times - 1):
+                seq += Animation(x=x0 + amp, d=dur) + Animation(x=x0, d=dur)
+            seq.start(wid)
+
+
+    def _jump_font(self, lbl, fs):
+            """font_size 硬跳一档（禁逐帧补间）；1 次跳档 = 1 次 texture_update。"""
+            try:
+                lbl.font_size = fs
+                fit_width(lbl)
+            except Exception:
+                pass
+
+
+# —— 转发（外部契约：main / test_build / test_intro_skip）——
+__all__ = ('IntroPlayer', 'INTRO_SHOTS', 'SKIP_KEY_NAMES', 'SKIP_KEY_CODES',
+           'MIN_CPS', 'dim', 'alpha', 'mix', '_ease')

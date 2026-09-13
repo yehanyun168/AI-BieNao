@@ -310,6 +310,9 @@ class SessionMixin:
 
     def restart_game(self) -> None:
         engine.init_game()
+        # intro_v2：对局内重开必然已经历过开场（新游戏进来的刚看完 /
+        # 读档进来的补播链已保证），置位防「重开→保存→退出→继续又补播」。
+        engine.player.intro_seen = True
         self.stats = S.UiStats()
         self.selected_skill = None
         self.paused = False

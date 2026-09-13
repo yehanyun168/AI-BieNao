@@ -61,8 +61,11 @@ for d in (sfx_dir, bgm_dir):
 # 点击全静默），而旧版这里漏扫 main.py，导致该缺陷长期不被测试发现。
 # 2026-09-13：ui_v4_screens.py 已拆分为 6 个模块，音效调用点随之分散，
 # 扫描清单必须覆盖全家族，否则「已接线」断言会假绿。
+# 2026-09-14：intro.py 拆为三模块，intro_shots.py（渲染器）承载全部音效调用点，
+# 同样必须入列；循环床接口 play_loop/stop_loop 也算接线（server_hum/machine_run）。
 SRC_FILES = ('ui_pages.py', 'ui_session.py', 'ui_input.py', 'ui_drop.py',
-             'main.py', 'intro.py', 'ui_popups.py',
+             'main.py', 'intro.py', 'intro_shots.py', 'intro_common.py',
+             'ui_popups.py',
              'ui_v4_common.py', 'ui_v4_panels.py', 'ui_v4_cards.py',
              'ui_v4_canvas.py', 'ui_v4_syspages.py', 'ui_v4_screens.py')
 src_all = ''.join(open(os.path.join(HERE, f), encoding='utf-8').read()
@@ -82,9 +85,12 @@ DEAD_OK = {
     'hover': "留待鼠标悬停反馈（光标方案 A 配套，尚未接线）",
     'confirm_cast': "留待「确认投放」二次确认流（当前 deploy 单音已够）",
 }
-played = {m for a in re.findall(r"sfx\.play\(([^)]*)\)", src_all, re.S)
+played = {m for a in re.findall(r"sfx\.(?:play|play_loop|stop_loop)\(([^)]*)\)",
+                                src_all, re.S)
           for m in re.findall(r"'([a-z_]+)'", a)}
-has_dyn = bool(re.search(r"sfx\.play\((sfx_name|_name|name)\)", src_all))
+# 动态派发：sfx.play(shot['sfx']) —— 开场动画 INTRO_SHOTS 表驱动（power_on 等）
+has_dyn = bool(re.search(r"sfx\.play\((shot\['sfx'\]|sfx_name|_name|name)\)",
+                         src_all))
 for n in _sfx_mod.NAMES:
     assert n in played or has_dyn or n in DEAD_OK, \
         f"音效 {n} 已声明但零调用点 → 接线 / 删除 / 登记进 DEAD_OK"

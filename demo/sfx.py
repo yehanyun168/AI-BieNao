@@ -38,7 +38,12 @@ NAMES = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
         # —— 语义补充分层（第 2 批：投放/分支）——
         'deploy', 'branch', 'confirm_cast',
         # —— 系统层反馈（第 3 批）——
-        'counter_warn', 'counter_hit', 'achieve', 'commission')
+        'counter_warn', 'counter_hit', 'achieve', 'commission',
+        # —— 开场动画环境床 / 重音（第 4 批，2026-09-14）——
+        # Kenney sci-fi-sounds CC0 选材 + tools/make_intro_sfx.py 加工，
+        # power_on 为自产合成（三层复合，见该脚本 docstring）。
+        # server_hum 以 play_loop 循环床方式使用，其余一次性播放。
+        'server_hum', 'power_on', 'machine_run', 'impact_low')
 
 # 候选后缀（按优先级；同名多后缀时取靠前者）
 SUFFIXES = ('.wav', '.ogg')
@@ -106,3 +111,62 @@ def play(name: str, volume: float = 1.0) -> None:
         snd.play()
     except Exception:
         pass
+
+
+# ============================================================
+# 循环床接口（2026-09-14，开场动画）
+# ------------------------------------------------------------
+# server_hum 这类环境床需要 loop 播放 + 运行中调音量（电涌掉压包络）。
+# 刻意**不复用** play() 的 _SOUNDS 实例：play() 有「同名先 stop 再 play」
+# 互斥语义，循环床会被任何一次同名 play() 打断。循环床用独立加载的
+# Sound 实例，与 play() 互不干扰 —— 代价是多一路可能的漏音点，所以配
+# stop_all_loops() 兜底（跳过/收尾时必须调用）。
+# ============================================================
+_LOOP_SOUNDS = {}
+
+
+def play_loop(name: str, volume: float = 1.0) -> None:
+    """循环播放一个音效（失败安全）。已在循环则只调整音量。
+
+    音量包络（如 server_hum 的电涌掉压 0.34→0.08→渐起）由调用方用
+    Animation(snd.volume) 或 Clock 驱动 —— Kivy Sound.volume 是可动画属性。
+    """
+    if not SFX_ON or not _LOADED:
+        return
+    cur = _LOOP_SOUNDS.get(name)
+    if cur is not None:
+        try:
+            cur.volume = max(0.0, min(1.0, volume))
+        except Exception:
+            pass
+        return
+    try:
+        p = _resolve(_base_dir(), name)
+        snd = SoundLoader.load(p) if p else None
+        if snd is None:
+            return
+        snd.loop = True
+        snd.volume = max(0.0, min(1.0, volume))
+        snd.play()
+        _LOOP_SOUNDS[name] = snd
+    except Exception:
+        pass
+
+
+def stop_loop(name: str) -> None:
+    """停掉指定循环床（幂等，未在循环则 no-op）。"""
+    snd = _LOOP_SOUNDS.pop(name, None)
+    if snd is None:
+        return
+    try:
+        snd.stop()
+        snd.loop = False
+        snd.unload()
+    except Exception:
+        pass
+
+
+def stop_all_loops() -> None:
+    """停掉全部循环床 —— 跳过开场 / 退出动画时的兜底，防漏音。"""
+    for name in list(_LOOP_SOUNDS):
+        stop_loop(name)

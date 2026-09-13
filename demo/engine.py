@@ -88,6 +88,8 @@ class PlayerState:
     achievements: set = field(default_factory=set)
     # —— 新手引导 ——
     seen_tutorial: bool = False        # 是否看过新手引导（避免重复弹）
+    # —— 开场动画（2026-09-14）：该档是否看过/跳过过开场（继续游戏不再播）——
+    intro_seen: bool = False
     # —— 技能解锁（开局仅 STARTER_SKILLS，其余随科技树 T0 解锁）——
     unlocked_skills: set = field(default_factory=set)
     # —— P0-3 动态委托 ——

@@ -922,9 +922,26 @@ class MainMenu(FloatLayout):
 
         不再判存档是否存在——开场动画是「进入新游戏」的固定仪式。
         IntroPlayer 全屏覆盖主菜单并吞掉触摸，播完由 on_done 无缝接 OriginPage。
+
+        intro_v2（2026-09-14）：本方法只服务「开始新游戏」链，**不得判
+        intro_seen**——新旧存档开新游戏一律播（用户规则）；「继续游戏」
+        的补播判定在 RootView.start_load_game，走 _play_intro_then。
         """
         self._close_origin_flow()
         player = intro.IntroPlayer(on_done=lambda: self._show_origin_page(on_picked))
+        player.size_hint = (1, 1)
+        player.pos_hint = {'x': 0, 'y': 0}
+        self._origin_flow = player
+        self.add_widget(player)
+
+    def _play_intro_then(self, on_done) -> None:
+        """intro_v2：全屏播开场动画，结束后回调（读档补播链专用）。
+
+        与 _open_origin_flow 的区别：on_done 不接 OriginPage——读档
+        不需要选出身，出身已经在档里。
+        """
+        self._close_origin_flow()
+        player = intro.IntroPlayer(on_done=on_done)
         player.size_hint = (1, 1)
         player.pos_hint = {'x': 0, 'y': 0}
         self._origin_flow = player
@@ -1316,6 +1333,15 @@ class RootView(FloatLayout):
         """
         ok, reason = save_manager.load_ex(path)
         if ok:
+            # intro_v2（2026-09-14）：读档补播——该档从未看过开场动画
+            # （intro_seen 缺失/False，如 v3 老档）则先补播再进局；
+            # 看过则直接进局。插入点在 load_ex 与 _enter_game 之间：
+            # 此时 player 已就位可判字段，且一处覆盖主菜单「继续」+
+            # 槽位「读取」两条入口。
+            if not getattr(engine.player, 'intro_seen', False):
+                self.menu._play_intro_then(
+                    lambda p=path: self._finish_intro_and_enter(p))
+                return
             self._enter_game()
             return
         engine.init_game()                 # 坏档 / 空槽都从干净初始态开局
@@ -1324,6 +1350,23 @@ class RootView(FloatLayout):
             # 延迟到进局首帧后再弹，避免浮层被 _enter_game 的重建吞掉
             Clock.schedule_once(
                 lambda dt, r=reason: self._show_load_fail_notice(r), 0.6)
+
+    def _finish_intro_and_enter(self, path: str) -> None:
+        """intro_v2：读档补播收尾——摘动画层 → 置位 → 立即落盘 → 进局。
+
+        落盘必须在此刻做：项目没有周期存档/退出存档（落盘点仅 5 处，
+        见 save_manager），不立刻写的话「看完 → 玩 20 分钟 → 强退」
+        下次继续还得再看一遍，正是用户规则要禁止的。落盘失败不阻断
+        进局（下次大不了再看一遍，体验降级可接受）。
+        """
+        self.menu._close_origin_flow()
+        if engine.player is not None:
+            engine.player.intro_seen = True
+            try:
+                save_manager.save(path)
+            except Exception:
+                pass  # 落盘失败不阻断进局
+        self._enter_game()
 
     def _show_load_fail_notice(self, reason: str) -> None:
         """坏档提示浮层（复用 ui_modal.make_modal，与覆盖确认弹窗同一套皮）。"""
@@ -1363,6 +1406,11 @@ class RootView(FloatLayout):
         self.menu = None
         self.game = GameUI(on_exit=self.show_menu)
         self.add_widget(self.game)
+        # intro_v2：进局 = 已看过开场（新游戏链刚播完 / 读档链补播完）。
+        # 新游戏此刻 player 是刚 init 的全新对象，置位后随首次存档落盘；
+        # 读档链已在 _finish_intro_and_enter 提前置位并落盘，这里幂等。
+        if engine.player is not None:
+            engine.player.intro_seen = True
         # BGM：主菜单池 → 对局池（开局一律 calm，之后每周期按怀疑度自动切）
         bgm.update('calm')
         self._log_run_info()

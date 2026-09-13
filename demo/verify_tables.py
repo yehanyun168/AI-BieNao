@@ -382,8 +382,15 @@ LAYERS = {
     # L3 引擎核心
     'engine.py':          3,
     # L4 引擎之上的服务 / v4 组件库
-    'intro.py':           4,   # T16：开场动画播放器（kivy+i18n+sfx+ui_v4，
-                               #       不 import 引擎，可独立实例化；仅首次新档由 main 调用）
+    # 2026-09-14：开场动画 v2 重制（10 镜 41.0s），intro.py（原 503 行 → 1300 行）
+    # 按职责拆为三模块，全部同层 L4（依赖完全相同：kivy/i18n/sfx/ui_v4/pixel_ui），
+    # 互相只有 intro → 其余 2 个的转发引用，同层允许。
+    'intro_common.py':    4,   # 公共底座：派生色 dim/alpha/mix + INTRO_SHOTS + 常量
+                               #       （零 intro 家族内依赖）
+    'intro_shots.py':     4,   # IntroShotsMixin：10 镜渲染器（禁 import intro）
+    'intro.py':           4,   # IntroPlayer 核心（生命周期/跳过/氛围/摄像机）+ 转发；
+                               #       不 import 引擎，可独立实例化；播放与否由 main
+                               #       按 player.intro_seen 判定（存档 v4 新字段）
     'save_manager.py':    4,   # P1-8：序列化整局需读 commissions(L2)/engine(L3) 状态
                                #       （函数内延迟 import 解循环），不是基础层，置其上
     'ui_v4.py':           4,
@@ -580,23 +587,16 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
     #   canvas/syspages/screens，各自 267~532 行），不再超限 → 移出白名单。
     #   若后续任一拆分模块涨过 800 行，需按「再登记约定」显式留痕后重新登记。
     'ui_v4.py':          1980,    # 2026-09-13 再登记（原 1965）：SkillBarCard 裁字/重叠修复
-    'engine.py':         1739,    # 2026-09-13 再登记（原 1732）：算力维护费（协作者 273978c）
-                                  #    PlayerState.origin 字段 + init_game(origin=)
-                                  #    重写（出生算力/怀疑/下载基数包）+ 下载增长
-                                  #    公式叠加 dl_growth_origin_mult + 显式难度
-                                  #    优先语义（挑战码难度位 = 最终难度）
-    'main.py':           1455,    # 2026-09-13 再登记（原 1377）：T16 出身流程重排
-                                  #    （_open_origin_flow/_show_origin_page/
-                                  #     _close_origin_flow + 新档弹窗出身行；
-                                  #     T13 挑战码导入的 1377 已被本值取代）
-    # 'main.py' 旧值 1377（T13 挑战码导入）
-                                  #    （_parse_seed_input 分流 + _diff_index + 新档弹窗
-                                  #     实时解析回调；T09 BGM 接线的 1319 已被本值取代）
-    'i18n.py':           1342,    # 2026-09-13 再登记（原 1239→1341）：T16 出身+开场动画+变奏收尾提示键
-                                  #    文案（origin_* ×5×5 + intro_* ×2 语；
-                                  #     T13 的 1239 已被本值取代）
-                                  #    ch_* ×14 键 ×2 语（导出/导入/战绩对照）
-                                  #    —— T11 技能扩容的 1201 已被本值取代
+    'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
+                                  #    PlayerState.intro_seen 字段（+2 行）
+    'main.py':           1502,    # 2026-09-14 再登记（原 1455）：开场动画 v2 持久化接线
+                                  #    （start_load_game 补播判定 + _play_intro_then/
+                                  #     _finish_intro_and_enter + _enter_game 置位）
+    # 'main.py' 旧值 1455（T16 出身流程重排）／1377（T13 挑战码导入）
+    'i18n.py':           1352,    # 2026-09-14 再登记（原 1342）：开场动画 v2 文案
+                                  #    （intro_s1/s2/s5/s6/s7_cpu 改 + 7 新键 +
+                                  #     补 intro_var_prompt EN 缺失 Bug）
+                                  #    —— T16 的 1342 已被本值取代
     'ui_hud.py':          908,    # 2026-09-13 再登记（原 907）：技能文案两行化
                                   #    （SKILL_I18N/SKILL_DESC/SKILL_ICON 各 +4 条 + 键位
                                   #     hint 从 str(i+1) 改为第 10 个用 '0' 兜底）

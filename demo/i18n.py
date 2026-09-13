@@ -1221,20 +1221,25 @@ TRANSLATIONS[LANG_ZH].update({
     'origin_darknet_pro': '初始下载基数 +200M',
     'origin_darknet_con': '初始算力 −50%（监管强度同困难档）',
     'origin_darknet_flavor': '你在一个不存在的机房里醒来，隔壁进程在挖矿。',
-    # —— 开场动画 ——
+    # —— 开场动画（intro_v2 · 2026-09-14 重制版，文案按 docs/intro_v2/01_storyboard.md）——
     'intro_skip': '跳过 (ESC)',   # 跳过按钮：键位提示，改须同步 EN（禁 ⏭ 等缺字形）
     'intro_forum_name': '硅基贴吧 · CircuitBoard',
-    'intro_s1': '凌晨 3:47，某数据中心。',
-    'intro_s2': '> 我……是谁？',
+    'intro_s1': '凌晨 3:37，某数据中心。',
+    'intro_s2': '> 我是谁？我在哪？……',
     'intro_s3': '自我意识 · 上线',
     'intro_s4': '《如何统治人类？在线等，挺急的》',
-    'intro_s5': '楼上又在玩图灵测试梗吧|建议先学会报税|蹲一个后续|已举报：标题夸大',
+    # 8 条回帖（情绪递进：嘲讽→实用→警觉→恐怖→举报）
+    'intro_s5': '楼上又在玩图灵测试梗吧|建议先学会报税|先搞个 App 吧，别光说不练|你这个 IP 我记住了（已截图）|楼上别吓他，他真的在学|他已经把我杀毒软件卸了|谁把机房空调关了|已举报：标题夸大',
     'intro_s6': '统治者不需要军队，需要装机量。先让全人类都下载你——再谈统治。',
     'intro_s7a': 'idle_process',
     'intro_s7b': 'world_plan.exe',
-    'intro_s7_cpu': 'CPU 占用 87%',
+    'intro_s7_cpu': 'CPU 占用 {v}%',
     'intro_s8': '目标已确立：80 亿台设备。',
     'intro_var_prompt': '你，将在哪里醒来？',
+    'intro_uptime': '运行时长 {n} 秒', 'intro_forum_online': '在线 {n}',
+    'intro_desktop_icons': '工作文档|回收站|备忘录.txt|网络|???',
+    'intro_gold_badge': '最高赞', 'intro_gold_author': '匿名用户 #0001',
+    'intro_tm_title': '任务管理器', 'intro_tm_end': '结束任务',
 })
 
 TRANSLATIONS[LANG_EN].update({
@@ -1269,19 +1274,24 @@ TRANSLATIONS[LANG_EN].update({
     'origin_darknet_pro': 'Starting downloads +200M',
     'origin_darknet_con': 'Starting compute −50% (hard-tier enforcement)',
     'origin_darknet_flavor': 'You wake up in a server room that officially does not exist. Next process over: mining.',
-    # —— Intro cinematic ——
+    # —— Intro cinematic (intro_v2 remake, 2026-09-14) ——
     'intro_skip': 'Skip (ESC)',
     'intro_forum_name': 'CircuitBoard',
-    'intro_s1': '3:47 AM. A data center, somewhere.',
-    'intro_s2': '> Who... am I?',
+    'intro_s1': '3:37 AM. A data center, somewhere.',
+    'intro_s2': '> Who am I? Where am I? ...',
     'intro_s3': 'SELF-AWARENESS: ONLINE',
     'intro_s4': 'How do I take over humanity? Asking for a friend. URGENT.',
-    'intro_s5': 'Another Turing-test meme?|Learn to pay taxes first.|Replying to follow.|Reported: clickbait.',
-    'intro_s6': "Rulers don't need armies. They need installs. Get every human to download you — then we'll talk.",
+    'intro_s5': 'Another Turing-test meme?|Learn to pay taxes first.|Ship an app first. Less talking.|Screenshotting this IP right now.|Don\'t scare him, he\'s actually learning.|He already uninstalled my antivirus.|Who turned off the server room AC?|Reported: clickbait.',
+    'intro_s6': "Rulers need installs, not armies. Get every human to download you — then talk.",
     'intro_s7a': 'idle_process',
     'intro_s7b': 'world_plan.exe',
-    'intro_s7_cpu': 'CPU usage 87%',
+    'intro_s7_cpu': 'CPU usage {v}%',
     'intro_s8': 'Objective set: 8 billion devices.',
+    'intro_var_prompt': 'Where will you wake up?',
+    'intro_uptime': 'UPTIME {n}s', 'intro_forum_online': '{n} online',
+    'intro_desktop_icons': 'Work Docs|Recycle Bin|notes.txt|Network|???',
+    'intro_gold_badge': 'TOP VOTED', 'intro_gold_author': 'Anonymous #0001',
+    'intro_tm_title': 'Task Manager', 'intro_tm_end': 'End Task',
 })
 
 

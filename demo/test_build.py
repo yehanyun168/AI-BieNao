@@ -710,11 +710,13 @@ _ok2 = _save_manager.load(_tmp)
 assert _ok2 and _engine.player.origin == 'garage', "v2 档应迁移为白板出身"
 os.remove(_tmp)
 
-# 开场动画表：9 镜（8 主片 + 1 变奏尾声）、最后一镜 finale、含 variation 镜
-assert len(_intro_mod.INTRO_SHOTS) == 9
-assert _intro_mod.INTRO_SHOTS[-1]['kind'] == 'finale'
-assert any(_s['kind'] == 'variation' for _s in _intro_mod.INTRO_SHOTS)
-assert sum(_s['dur'] for _s in _intro_mod.INTRO_SHOTS) >= 50.0
+# 开场动画表（v2 重制）：10 镜 41.0s（30-45 硬约束）、最后一镜 handoff、
+# variation 镜已删（变奏尾声并入 SHOT10 五剪影，docs/intro_v2/01_storyboard §6-D1）
+assert len(_intro_mod.INTRO_SHOTS) == 10
+assert _intro_mod.INTRO_SHOTS[-1]['kind'] == 'handoff'
+assert not any(_s['kind'] == 'variation' for _s in _intro_mod.INTRO_SHOTS)
+_intro_total = sum(_s['dur'] for _s in _intro_mod.INTRO_SHOTS)
+assert 30.0 <= _intro_total <= 45.0, _intro_total
 
 # i18n：origin_*/intro_* 键双语齐全 + 出身页/流程接线
 _ORG_KEYS = ['origin_title', 'origin_pick_hint', 'origin_tag', 'ng_origin_line']
@@ -723,7 +725,11 @@ for _oid in _orig.ORIGIN_ORDER:
                   ('name', 'sell', 'pro', 'con', 'flavor')]
 _ORG_KEYS += ['intro_skip', 'intro_forum_name', 'intro_s1', 'intro_s2',
               'intro_s3', 'intro_s4', 'intro_s5', 'intro_s6', 'intro_s7a',
-              'intro_s7b', 'intro_s7_cpu', 'intro_s8']
+              'intro_s7b', 'intro_s7_cpu', 'intro_s8',
+              # 开场动画 v2 新增键（docs/intro_v2/01_storyboard §4.3/§4.4）
+              'intro_uptime', 'intro_desktop_icons', 'intro_forum_online',
+              'intro_gold_badge', 'intro_gold_author', 'intro_tm_title',
+              'intro_tm_end', 'intro_var_prompt']
 for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
     _miss = [k for k in _ORG_KEYS if k not in i18n_mod.TRANSLATIONS[_lang]]
     assert not _miss, f"i18n[{_lang}] 缺 T16 键: {_miss}"

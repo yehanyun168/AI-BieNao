@@ -41,7 +41,10 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 # 真随机、difficulty=标准）照常可读，语义与 P2-3 之前的对局完全一致。
 # T16：SAVE_VERSION 2 → 3。新增 player.origin（觉醒出身），v2 老档经
 # _v2_to_v3 补白板出身（garage，零行为变化——garage 对 TUNE 无修正）。
-SAVE_VERSION = 3
+# intro_v2：SAVE_VERSION 3 → 4。新增 player.intro_seen（该档是否看过/
+# 跳过过开场动画），v3 老档经 _v3_to_v4 补 False —— 语义=「没播过」，
+# 老玩家下次继续游戏时补播一次新开场，此后不再重复。
+SAVE_VERSION = 4
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 DEFAULT_SLOT = 'slot1.json'
 CRASH_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -155,6 +158,7 @@ def save(path: str = None) -> str:
             'v2_seen': sorted(getattr(p, 'v2_seen', set())),
             'achievements': sorted(p.achievements),
             'seen_tutorial': bool(getattr(p, 'seen_tutorial', False)),
+            'intro_seen': bool(getattr(p, 'intro_seen', False)),
             'unlocked_skills': sorted(getattr(p, 'unlocked_skills', [])),
             # —— P0-3 委托 / 反制相关计数 ——
             'commissions': [commissions.to_dict(c) for c in
@@ -233,6 +237,7 @@ def _apply_save(data: dict) -> None:
     p.v2_seen = set(ps.get('v2_seen', []))
     p.achievements = set(ps.get('achievements', []))
     p.seen_tutorial = bool(ps.get('seen_tutorial', False))
+    p.intro_seen = bool(ps.get('intro_seen', False))    # intro_v2：缺键=没播过
     raw = ps.get('unlocked_skills')
     if raw:
         p.unlocked_skills = set(raw)
@@ -326,6 +331,23 @@ def _v2_to_v3(d: dict) -> dict:
 
 
 _MIGRATIONS[2] = _v2_to_v3
+
+
+def _v3_to_v4(d: dict) -> dict:
+    """v3 → v4（intro_v2 开场动画播放状态）：纯函数迁移，只增字段。
+
+    v3 档没有 intro_seen —— 补 False（=「没播过」）：老玩家下次继续
+    游戏时补播一次重制开场，播完立刻落盘，此后不再重复。与
+    seen_tutorial / origin 的「缺键 = 最保守的还没发生过」约定一致。
+    """
+    ps = d.get('player')
+    if isinstance(ps, dict):
+        ps.setdefault('intro_seen', False)
+    d['version'] = SAVE_VERSION
+    return d
+
+
+_MIGRATIONS[3] = _v3_to_v4
 
 
 def _migrate(data: dict, from_version: int) -> dict:
