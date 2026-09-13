@@ -4,9 +4,9 @@ tech_tree.py - 分支型科技树（核心机制）
 设计原则：
   - 进化（科技）都是全局性的，不分国家
   - 资源消耗：算力
-  - 结构：每个「槽位」有 1 个 T0 上游 + 3 条并行分支
+  - 结构：6 个平行槽位，每个槽位有 1 个 T0 + 3 条并行分支
   - 每个分支可点 3 级（L1/L2/L3），效果递增
-  - 必须先点 T0，才能点该槽位的任何分支
+  - 各槽位 T0 可独立解锁；必须先点 T0，才能点该槽位的任何分支
   - **同一槽位的 3 条分支并行、可全部点满**（v0.5 起取消互斥，
     参考《瘟疫公司》的科技树：不惩罚玩家做多线投入，选择是「先点哪条」
     的节奏问题，而非「只能选一条」的排他问题）
@@ -106,13 +106,13 @@ TECH_TREE: List[TechSlot] = [
         ],
     ),
 
-    # ------------------- Slot 2: 平台渗透（前置：本地化）-------------------
+    # ------------------- Slot 2: 平台渗透（无前置）-------------------
     TechSlot(
         slot_id='platform',
         name='平台渗透',
         icon='P',
         description='触达更多终端：T0 解锁后全局下载量 +10%',
-        prereq_slot='localization',
+        prereq_slot=None,
         t0_cost=25,
         t0_effect={'type': 'global_downloads_mult', 'value': 1.10},
         branches=[
@@ -155,13 +155,13 @@ TECH_TREE: List[TechSlot] = [
         ],
     ),
 
-    # ------------------- Slot 3: 算力效率（前置：平台渗透）-------------------
+    # ------------------- Slot 3: 算力效率（无前置）-------------------
     TechSlot(
         slot_id='compute',
         name='算力效率',
         icon='C',
         description='优化的偷算力管道：T0 解锁后单位用户算力 +15%',
-        prereq_slot='platform',
+        prereq_slot=None,
         t0_cost=30,
         t0_effect={'type': 'compute_per_user_mult', 'value': 1.15},
         branches=[
@@ -204,13 +204,13 @@ TECH_TREE: List[TechSlot] = [
         ],
     ),
 
-    # ------------------- Slot 4: 病毒传播（前置：算力效率）-------------------
+    # ------------------- Slot 4: 病毒传播（无前置）-------------------
     TechSlot(
         slot_id='viral',
         name='病毒传播',
         icon='V',
         description='让用户替你扩散：T0 解锁后全局下载量 +15%',
-        prereq_slot='compute',
+        prereq_slot=None,
         t0_cost=35,
         t0_effect={'type': 'global_downloads_mult', 'value': 1.15},
         branches=[
@@ -253,13 +253,13 @@ TECH_TREE: List[TechSlot] = [
         ],
     ),
 
-    # ------------------- Slot 5: 功能深度（前置：病毒传播）-------------------
+    # ------------------- Slot 5: 功能深度（无前置）-------------------
     TechSlot(
         slot_id='capability',
         name='功能深度',
         icon='CAP',
         description='扩充 AI 能力边界：T0 解锁多模态，可生成图/视频/代码',
-        prereq_slot='viral',
+        prereq_slot=None,
         t0_cost=40,
         t0_effect={'type': 'unlock_function', 'function': 'multi_modal'},
         branches=[
@@ -302,13 +302,13 @@ TECH_TREE: List[TechSlot] = [
         ],
     ),
 
-    # ------------------- Slot 6: 抗封禁（前置：功能深度）-------------------
+    # ------------------- Slot 6: 抗封禁（无前置）-------------------
     TechSlot(
         slot_id='resistance',
         name='抗封禁',
         icon='R',
         description='对抗各国封禁：T0 解锁后抗阻止 +10%',
-        prereq_slot='capability',
+        prereq_slot=None,
         t0_cost=50,
         t0_effect={'type': 'block_resist', 'value': 0.10},
         branches=[

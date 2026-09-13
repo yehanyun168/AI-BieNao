@@ -2,9 +2,9 @@
 """科技树 v0.5 网络图核验：节点/连线结构 + 取消互斥 + 状态机 + 键盘导航。
 
 对应本轮「科技树重做」改造，断言：
-  [1] 画布节点数 == 24（6 T0 + 18 分支），主链 dep 连线 5 条、扇出 fan 连线 18 条
+  [1] 画布节点数 == 24（6 T0 + 18 分支），大类 dep 连线 0 条、扇出 fan 连线 18 条
   [2] 取消互斥：同一槽位 3 条分支可同时升到 L3（旧版只允许 1 条）
-  [3] 主链前置：未解锁上游 T0 时下游 T0 为 lock
+  [3] 大类平行：全部 T0 可独立解锁
   [4] 状态机：can / poor / done / lock 四态判定正确
   [5] 键盘导航 move_selection 在槽位与分支间正确移动
   [6] 点选回灌：on_select 回调把选中键交给 main 并刷新详情面板
@@ -62,13 +62,10 @@ def main() -> int:
     check(n_br == 18, "分支节点 == 18", f"n={n_br}")
     dep = [l for l in cv._links if l[2] == 'dep']
     fan = [l for l in cv._links if l[2] == 'fan']
-    check(len(dep) == 5, "主链 dep 连线 == 5", f"n={len(dep)}")
+    check(len(dep) == 0, "大类之间无 dep 连线", f"n={len(dep)}")
     check(len(fan) == 18, "扇出 fan 连线 == 18", f"n={len(fan)}")
-    # 主链顺序正确
-    chain = [l[1] for l in dep]
-    want = ['t0:platform', 't0:compute', 't0:viral', 't0:capability',
-            't0:resistance']
-    check(chain == want, "主链顺序正确", f"{[c.split(':')[1] for c in chain]}")
+    check(all(slot.prereq_slot is None for slot in TECH_TREE),
+          "全部大类均无前置")
 
     print("\n[2] 取消互斥（v0.5 核心变更）")
     engine.init_game()
@@ -93,15 +90,13 @@ def main() -> int:
     check(pt.branch_levels.get(slot0.branches[0].branch_id) == 3,
           "L3 后继续升级不变（不溢出）")
 
-    print("\n[3] 主链前置判定")
+    print("\n[3] 大类平行判定")
     engine.init_game()
     pt = engine.player.tech
-    check(not pt.can_unlock_t0('resistance'),
-          "未解锁上游时不能解锁抗封禁 T0")
-    for sid in ('localization', 'platform', 'compute', 'viral', 'capability'):
-        engine.player.compute += 1000.0
-        engine.unlock_t0(sid)
-    check(pt.can_unlock_t0('resistance'), "前置齐备后可解锁抗封禁 T0")
+    check(all(pt.can_unlock_t0(slot.slot_id) for slot in TECH_TREE),
+          "开局全部大类 T0 均可独立解锁")
+    engine.player.compute += 1000.0
+    check(engine.unlock_t0('resistance'), "抗封禁 T0 可直接解锁")
     check(len(pt.active_branches()) == 0, "未投分支时 active_branches 为空")
 
     print("\n[4] 状态机（feeding states）")
@@ -114,7 +109,7 @@ def main() -> int:
     st0 = page.canvas_view.nodes['t0:localization'].state
     st1 = page.canvas_view.nodes['t0:platform'].state
     check(st0 in ('can', 'poor'), "槽位1 T0 为 can/poor", f"state={st0}")
-    check(st1 == 'lock', "槽位2 T0 为 lock（上游未解锁）", f"state={st1}")
+    check(st1 in ('can', 'poor'), "槽位2 T0 为 can/poor", f"state={st1}")
     bstate = page.canvas_view.nodes['br:south_asia'].state
     check(bstate == 'lock', "分支在 T0 未解锁时为 lock", f"state={bstate}")
 
