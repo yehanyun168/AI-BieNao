@@ -391,6 +391,8 @@ LAYERS = {
     'ui_v4_screens.py':   5,
     'ui_shared.py':       6,
     'ui_fx.py':           7,   # P1-8：动效层（依赖 ui_shared/pixel_ui），被 ui_drop/ui_input 延迟调用
+    'cursor_fx.py':       7,   # 2026-09-13：光标语义层（只依赖 kivy Window，零项目依赖，
+                               #       与 ui_fx/ui_modal 同级；由 main 在 GameUI/MainMenu 装配）
     'ui_modal.py':        7,
     'ui_hud.py':          8,
     'ui_pages.py':        9,

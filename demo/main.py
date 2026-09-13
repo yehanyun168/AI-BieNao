@@ -41,9 +41,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-# ============================================================
 # P0-7 禁掉 Kivy 文件日志（必须位于首次 import kivy 之前）
-# ============================================================
 # Kivy 在 import 阶段会执行 file_log_handler.purge_logs()，清理
 # ~/.kivy/logs/ 下的历史日志；部分 Windows 机器上该目录受文件保护，
 # safe-delete 会抛 OSError —— 游戏还没开窗口就崩在启动阶段。
@@ -54,17 +52,11 @@ os.environ.setdefault('KIVY_NO_FILELOG', '1')
 
 
 # ============================================================
-# P1-3 帧率探针开关（默认关闭 —— 详见 perf.py 模块头）
-# ============================================================
-# 开启方式（二选一）：
-#   python main.py --perf
-#   set AI_PERF=1          （Windows）
-#   AI_PERF=1 python main.py
-# 可选：AI_PERF_EVERY=5（汇总周期秒数）、AI_PERF_LOG=xxx.log（自定义路径）
-# 日志写 demo/perf.log（*.log 已被 .gitignore 忽略，不会入库）。
-#
-# 为什么在这里（import kivy 之前）就算好：
-#   1) ``--perf`` 必须从 sys.argv 里摘掉，否则会被 Kivy 的参数解析当未知选项；
+# P1-3 帧率探针开关（默认关闭）—— 开启：``python main.py --perf`` 或
+# ``set AI_PERF=1``；可选 AI_PERF_EVERY=5（汇总秒数）、AI_PERF_LOG=xxx.log。
+# 日志写 demo/perf.log（*.log 已 gitignore，不入库）。
+# 为什么在 import kivy 之前就算好：
+#   1) ``--perf`` 必须从 sys.argv 摘掉，否则被 Kivy 参数解析当未知选项；
 #   2) 关闭时 main 根本不 import perf —— 不注册 Clock 回调、不开文件句柄，
 #      真正零开销（只多两次字符串比较）。
 def _perf_requested() -> bool:
@@ -444,6 +436,10 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._build_ui()
         # P1-2：悬停技能卡 → 底部预览条（只加信息，不改点击即释放的手感）
         self._bind_skill_hover()
+        # 光标方案 A：按语义切换系统光标（可点→hand / 投放→crosshair /
+        # 禁用→no）。失败安全，装不上只是没光标反馈，不影响任何功能。
+        import cursor_fx
+        cursor_fx.install(self)
         self.refresh_all()
         self._apply_scale()
         Window.bind(on_resize=self._on_window_resize)
@@ -659,6 +655,11 @@ class MainMenu(FloatLayout):
         self.scale = self._compute_scale()
         self._build()
         self._apply_scale()
+        # 光标方案 A：主菜单同样装（5 主按钮 + 3 存档槽才有手型反馈）。
+        # MainMenu 无 drop_mode 属性 —— cursor_fx 用 getattr 取、缺省 False，
+        # 故主菜单只会命中 hand / no / arrow 三种。
+        import cursor_fx
+        cursor_fx.install(self)
         Window.bind(on_resize=self._on_resize)
         self._keyboard = None
         try:
