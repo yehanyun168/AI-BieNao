@@ -397,13 +397,20 @@ def tick_one_round(skill_in_use: Optional[str] = None,
 
     # T04 尖峰治理：偷算力聚合项过软饱和（记账值 = 实际落地值，保观测可信）
     total_suspicion = soft_cap_suspicion(total_suspicion)
-    player.compute += total_stolen + (skill_compute_bonus if not targeted else 0.0)
+    # 算力维护费（协作者 273978c 提案）：每周期扣 tick×系数，模拟基础设施
+    # 扩张的运维成本。⚠️ 默认 0.0 = 关闭（不改已标定经济）；开启需重新跑
+    # balance_sim --seeds 30 校准（协作者原提案 2.0）。
+    compute_before = player.compute
+    report['maintenance_fee'] = player.tick_count * TUNE['maintenance_per_tick']
+    player.compute = max(0.0, player.compute + total_stolen
+                         + (skill_compute_bonus if not targeted else 0.0)
+                         - report['maintenance_fee'])
     player.compute_peak = max(player.compute_peak, player.compute)
     _sus('steal', total_suspicion)                       # 偷算力（基础）
     _sus('skill', (skill_suspicion_delta if not targeted else 0.0))  # 技能附带
     player.suspicion = max(0, min(100, player.suspicion + total_suspicion + (skill_suspicion_delta if not targeted else 0.0)))
     player.suspicion_peak = max(player.suspicion_peak, player.suspicion)
-    report["compute_gain"] = total_stolen
+    report["compute_gain"] = player.compute - compute_before
     report["suspicion_gain"] = total_suspicion
     # P0-3 快照计数：历史累计偷取算力（C3「算力冲刺」委托的判定基准）
     player.compute_earned_total += total_stolen
