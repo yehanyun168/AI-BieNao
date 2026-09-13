@@ -488,7 +488,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         report["events"].append((evt, {}))
     elif event_kind == 'global':
         _apply_event(evt)
-        player.events_history.insert(0, f"[周期 {player.tick_count}] {evt.icon} {evt.message}")
+        player.events_history.insert(0, f"[周期 {player.tick_count}] {evt.icon} {evt.text('message', i18n.get_lang())}")
         report["events"].append((evt, {}))
     if crisis_active:
         for c in player_countries:
@@ -771,7 +771,7 @@ def resolve_choice(evt, option_index: int = 0) -> List[str]:
                 player.ending_id = mapped
                 logs.append(f"结局 {mapped}")
 
-    msg = f"{evt.icon} {evt.title} → {opt.text}"
+    msg = f"{evt.icon} {evt.title_for(i18n.get_lang())} → {opt.text_for(i18n.get_lang())}"
     player.events_history.insert(0, f"[周期 {player.tick_count}] {msg}")
     if len(player.events_history) > 20:
         player.events_history = player.events_history[:20]
@@ -1706,7 +1706,7 @@ if __name__ == "__main__":
 
         if turn % 5 == 0 or action or report["events"]:
             evt_str = " | ".join(
-                e[0].title if isinstance(e[0], data.GameEvent)
+                e[0].text('title', i18n.get_lang()) if isinstance(e[0], data.GameEvent)
                 else (e[0].title_zh if isinstance(e[0], ce.CountryEvent) else str(e[0]))
                 for e in report["events"]
             )

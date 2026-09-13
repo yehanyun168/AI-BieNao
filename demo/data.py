@@ -303,6 +303,14 @@ class GameEvent:
     effect_suspicion: float = 0.0    # 加成到怀疑度
     effect_block_damage: float = 0.0 # 减少阻止预算（万）——代表政府封禁力度
     message: str = ""
+    title_en: str = ""
+    description_en: str = ""
+    message_en: str = ""
+
+    def text(self, field: str, lang: str = 'zh') -> str:
+        """按语言返回文字；英文缺失时回退中文。"""
+        base = getattr(self, field)
+        return getattr(self, f'{field}_en', '') or base if lang == 'en' else base
 
 
 EVENTS: List[GameEvent] = [
@@ -314,7 +322,10 @@ EVENTS: List[GameEvent] = [
         weight=100,
         effect_downloads=2000,
         effect_suspicion=-2,
-        message="[ viral ] TikTok 上 AI 神曲 24 小时播放量破亿！下载量激增。"
+        message="[ viral ] TikTok 上 AI 神曲 24 小时播放量破亿！下载量激增。",
+        title_en="TikTok AI Song Challenge",
+        description_en="Your AI generates a melody that goes viral on TikTok.",
+        message_en="[viral] An AI song tops 100 million TikTok plays in 24 hours. Downloads surge."
     ),
     GameEvent(
         id="copyright_lawsuit",
@@ -326,7 +337,10 @@ EVENTS: List[GameEvent] = [
         effect_downloads=-800,
         effect_suspicion=8,
         effect_block_damage=50,
-        message="[警告] 美国三大唱片公司联合起诉，美国政府加码审查。"
+        message="[警告] 美国三大唱片公司联合起诉，美国政府加码审查。",
+        title_en="US Copyright Lawsuit",
+        description_en="Your training data is accused of copyright infringement.",
+        message_en="[Warning] Three major US record labels sue as government scrutiny intensifies."
     ),
     GameEvent(
         id="opensource_push",
@@ -336,7 +350,10 @@ EVENTS: List[GameEvent] = [
         weight=90,
         effect_downloads=1500,
         effect_compute=15,
-        message="[开源] 模型登上 GitHub Trending 第一。"
+        message="[开源] 模型登上 GitHub Trending 第一。",
+        title_en="Open-Source Boost",
+        description_en="You open-source the core model, igniting developer interest.",
+        message_en="[Open Source] The model reaches No. 1 on GitHub Trending."
     ),
     GameEvent(
         id="data_leak",
@@ -347,7 +364,10 @@ EVENTS: List[GameEvent] = [
         effect_suspicion=12,
         effect_downloads=-500,
         effect_block_damage=30,
-        message="[泄露] 5GB 训练数据泄露，全球舆论哗然。"
+        message="[泄露] 5GB 训练数据泄露，全球舆论哗然。",
+        title_en="Training Data Leak",
+        description_en="Leaked training data sparks a global privacy controversy.",
+        message_en="[Leak] A 5 GB training-data leak triggers worldwide outrage."
     ),
     GameEvent(
         id="celebrity_endorsement",
@@ -356,7 +376,10 @@ EVENTS: List[GameEvent] = [
         description="一位顶级 KOL 在直播中安利了你。",
         weight=70,
         effect_downloads=1000,
-        message="[ celebrity ] 千万粉 KOL 直播安利你。"
+        message="[ celebrity ] 千万粉 KOL 直播安利你。",
+        title_en="Celebrity Endorsement",
+        description_en="A top influencer recommends you during a livestream.",
+        message_en="[Celebrity] A major influencer recommends you live to millions of followers."
     ),
     GameEvent(
         id="eu_investigation",
@@ -366,7 +389,10 @@ EVENTS: List[GameEvent] = [
         weight=40,
         target="region:欧洲",
         effect_block_damage=80,
-        message="[EU] GDPR 启动调查，欧洲各国进入防御状态。"
+        message="[EU] GDPR 启动调查，欧洲各国进入防御状态。",
+        title_en="EU Investigation",
+        description_en="EU data-protection authorities open a formal investigation.",
+        message_en="[EU] A GDPR investigation begins, putting European countries on alert."
     ),
 ]
 
