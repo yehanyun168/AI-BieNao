@@ -9,10 +9,14 @@ intro.py - T16 开场动画播放器《凌晨三点四十七分》
 文案 i18n 键 / 音效键全部收敛为声明式表 INTRO_SHOTS，便于日后加
 「新模式专属开场」变奏。
 
-播放规则（2026-09-13 修订）：
+播放规则（2026-09-13 修订 · 跳过契约 2026-09-13 再修订）：
   · 每次开始新游戏都播放（调用方 main._open_origin_flow 不再判存档存在）；
-  · 右下角「跳过 >>」醒目按钮：约 1s 后淡入，点击立即结束动画进入出身页；
-  · 任意键也可跳过（动画自绑定键盘）；
+  · 右下角「» 跳过 (ESC)」醒目按钮：一开场就在右下角，可见可点（无淡入、
+    无 1s 解锁延迟），点击立即结束动画进入出身页；
+  · 键盘只认 ESC / 空格 / 回车（不再「任意键跳过」——手碰键盘就掐掉动画），
+    且动画一开始就生效；
+  · 点击屏幕任意处也能跳过（跳过按钮是子控件，Kivy 冒泡到它被消费为止，
+    故按钮自己触发一次、不会双触发）；
   · 播放期间吞掉所有鼠标触摸（on_touch_down 返回 True），避免穿透到主菜单
     误触「成就 / 设置」等热键；
   · 动画结束不回主菜单，on_done 回调由调用方接 OriginPage（无缝一条流）。
@@ -57,7 +61,13 @@ INTRO_SHOTS = [
     {'kind': 'variation', 'dur': 10.0, 'keys': ('intro_var',), 'sfx': 'select'},
     {'kind': 'finale',  'dur': 7.0,  'keys': ('intro_s8',), 'sfx': 'success'},
 ]
-SKIP_UNLOCK_AT = 1.0          # 约 1s 后淡入醒目「跳过」按钮（用户要求立刻可跳过）
+# —— 跳过契约（玩家反馈「想要跳过按键」后定死，见 SKIP_* 守卫）——
+# 只认 ESC / 空格 / 回车 三个键。旧行为是「任意键跳过」，手碰键盘就把动画掐了。
+# 判定优先用 keycode[1] 键名，再回退 keycode[0]（SDL 扫描码 27/32/13），
+# 防止不同后端给的键名不一致（sdl2 给 'spacebar'，别处可能是 'space'）。
+SKIP_KEY_NAMES = frozenset(('escape', 'spacebar', 'space', 'enter',
+                            'numpadenter'))
+SKIP_KEY_CODES = frozenset((27, 32, 13))   # ESC / SPACE / ENTER
 TYPEWRITER_CPS = 16.0         # 打字机速度（字符/秒，略快让长文案在镜内打完）
 
 
@@ -83,24 +93,25 @@ class IntroPlayer(FloatLayout):
         self.content = FloatLayout()
         self.add_widget(self.content)
 
-        # —— 跳过按钮：醒目（大号 + 青色高亮边框 + 轻微呼吸），SKIP_UNLOCK_AT 秒后淡入 ——
+        # —— 跳过按钮：一开场就在右下角、可见可点（无淡入、无 1s 解锁延迟）——
         # ⚠️ 不要加 '⏭' 等符号：MicrosoftYaHei 缺该字形（见 ui_v4 SYM 表踩坑记录）
+        # 文案自带键位提示（i18n intro_skip 双语键，两个语言必须同步改）。
         self.skip_btn = Button(text='» ' + t('intro_skip'), font_size=15,
                                bold=True,
                                size_hint=(None, None), size=(150, 46),
                                pos_hint={'right': 0.985, 'y': 0.025},
-                               opacity=0, disabled=True,
+                               opacity=1, disabled=False,
                                background_normal='', background_color=(0.10, 0.16, 0.16, 1),
                                color=COLORS['cyan'])
         add_pixel_border(self.skip_btn, color=COLORS['cyan'], width=2)
         self.skip_btn.bind(on_release=lambda *_: self._skip())
         self.add_widget(self.skip_btn)
-        # 呼吸动效：吸引注意（用户要求「清晰醒目」）
+        # 呼吸动效：吸引注意（用户要求「清晰醒目」）；从 opacity=1 起步，不会先隐身
         self._skip_pulse = Animation(opacity=0.55, d=0.7) + Animation(opacity=1.0, d=0.7)
         self._skip_pulse.repeat = True
-        self._clocks.append(Clock.schedule_once(self._unlock_skip, SKIP_UNLOCK_AT))
+        self._skip_pulse.start(self.skip_btn)
 
-        # 任意输入提前解锁跳过（设计案：任意键/点击跳过）
+        # 键盘跳过：动画一开始就生效（键位见 SKIP_KEY_NAMES / SKIP_KEY_CODES）
         self._kb = Window.request_keyboard(self._on_kb_closed, self)
         if self._kb is not None:
             self._kb.bind(on_key_down=self._on_key_down)
@@ -114,25 +125,64 @@ class IntroPlayer(FloatLayout):
         self._bg.pos = self.pos
         self._bg.size = self.size
 
-    def _unlock_skip(self, *_a):
-        self.skip_btn.disabled = False
-        Animation(opacity=1, d=0.3).start(self.skip_btn)
-        self._skip_pulse.start(self.skip_btn)
+    def _is_skip_key(self, keycode):
+        """ESC / 空格 / 回车 才算跳过键，其余一律不响应（含方向键、字母键）。
 
-    def _on_key_down(self, *_a):
-        if not self.skip_btn.disabled:
+        先比 keycode[1] 键名，再回退 keycode[0] 扫描码以兼容不同后端；
+        任何异常 / 畸形入参都判「不算跳过」——判键绝不能把动画卡死或抛错。
+        """
+        try:
+            if str(keycode[1] or '').lower() in SKIP_KEY_NAMES:
+                return True
+        except Exception:
+            pass        # 键名取不到就只看扫描码
+        try:
+            return int(keycode[0]) in SKIP_KEY_CODES
+        except Exception:
+            return False
+
+    def _on_key_down(self, _kb, keycode, _text=None, _modifiers=None, *_a):
+        """键盘跳过：只认 ESC / 空格 / 回车，且从动画第一帧起就生效。"""
+        if self._is_skip_key(keycode):
             self._skip()
-        return True
+            return True     # 已消费
+        return False        # 其余键交回上层（main 的主菜单快捷键）
 
     def _on_kb_closed(self):
+        # 键盘被系统 / 别的控件收走：只清引用，不在此 release（防递归）
         self._kb = None
 
-    def on_touch_down(self, touch):
-        """吞掉动画期间所有鼠标触摸，防止穿透到主菜单误触成就/设置等热键。
+    def _release_kb(self):
+        """安全释放键盘：解绑 + release，任何一步失败都不抛（与 sfx 同源策略）。"""
+        kb, self._kb = self._kb, None
+        if kb is None:
+            return
+        try:
+            kb.unbind(on_key_down=self._on_key_down)
+        except Exception:
+            pass
+        try:
+            kb.release()
+        except Exception:
+            pass
 
-        跳过按钮是子控件，会先于本方法收到触摸并自行消费（Button 返回
-        True），故点击「跳过」依然有效；其余区域一律拦截。
+    def on_touch_down(self, touch):
+        """吞掉动画期间所有鼠标触摸（防穿透主菜单误触成就/设置等热键），
+        顺带把「点任意处」当跳过。
+
+        ⚠️ 必须先 super() 把触摸派发给子控件：Kivy 的冒泡到「被消费」为止，
+        跳过按钮（子控件）命中时自己返回 True 并触发 on_release → _skip()，
+        本方法拿到 True 就直接返回，不会二次触发；点其余区域没有子控件消费，
+        才走到下面的 _skip()。不 super() 的话按钮永远收不到点击（旧实现踩过）。
+        滚轮 / 非左键只吞不跳，防误触。
         """
+        if super().on_touch_down(touch):
+            return True
+        if getattr(touch, 'is_mouse_scrolling', False):
+            return True
+        if getattr(touch, 'button', 'left') != 'left':
+            return True
+        self._skip()
         return True
 
     def _clear_shot_clocks(self):
@@ -149,14 +199,15 @@ class IntroPlayer(FloatLayout):
             return
         self._done = True
         self._clear_shot_clocks()
-        if self._kb is not None:
-            self._on_kb_closed()
+        self._release_kb()      # 键盘必须还回去，否则动画结束了还在吞按键
         cb, self._on_done = self._on_done, None
         if callable(cb):
             cb()
 
     def _skip(self):
         """跳过：用户要求「点击后立即跳过」——直接收尾进入出身页（不再保留变奏）。"""
+        if self._done:
+            return              # 重复跳过（连点 / 键+点击同时到）只生效一次
         sfx.play('click')
         self._finish()
 

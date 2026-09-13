@@ -1222,7 +1222,7 @@ TRANSLATIONS[LANG_ZH].update({
     'origin_darknet_con': '初始算力 −50%（监管强度同困难档）',
     'origin_darknet_flavor': '你在一个不存在的机房里醒来，隔壁进程在挖矿。',
     # —— 开场动画 ——
-    'intro_skip': '跳过 >>',
+    'intro_skip': '跳过 (ESC)',   # 跳过按钮：键位提示，改须同步 EN（禁 ⏭ 等缺字形）
     'intro_forum_name': '硅基贴吧 · CircuitBoard',
     'intro_s1': '凌晨 3:47，某数据中心。',
     'intro_s2': '> 我……是谁？',
@@ -1270,7 +1270,7 @@ TRANSLATIONS[LANG_EN].update({
     'origin_darknet_con': 'Starting compute −50% (hard-tier enforcement)',
     'origin_darknet_flavor': 'You wake up in a server room that officially does not exist. Next process over: mining.',
     # —— Intro cinematic ——
-    'intro_skip': 'Skip >>',
+    'intro_skip': 'Skip (ESC)',
     'intro_forum_name': 'CircuitBoard',
     'intro_s1': '3:47 AM. A data center, somewhere.',
     'intro_s2': '> Who... am I?',
