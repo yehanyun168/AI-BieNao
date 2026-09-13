@@ -46,17 +46,10 @@ if _HERE not in sys.path:
 # ============================================================
 # Kivy 在 import 阶段会执行 file_log_handler.purge_logs()，清理
 # ~/.kivy/logs/ 下的历史日志；部分 Windows 机器上该目录受文件保护，
-# safe-delete 会抛：
-#     OSError: [safe-delete] 操作失败
-# —— 游戏还没开窗口就崩在启动阶段，窗口根本出不来。
-#
-# 危害特征（这也是必须在本文件兜底的原因）：
-#   * 首次运行通常正常（还没有历史日志可清）；
-#   * 玩过若干局、日志累积之后才触发 —— 典型「玩了几天突然打不开」；
-#   * 玩家完全无法自行排查，且正好落在 M1 真人测试窗口里。
-#
-# 为什么用 setdefault 而不是直接赋值：尊重外部环境已设置的值
-# （run_demo.bat 已设 1；开发者需要排查时也可自行设 0 重新打开日志）。
+# safe-delete 会抛 OSError —— 游戏还没开窗口就崩在启动阶段。
+# 危害特征（这也是必须在本文件兜底的原因）：首次运行通常正常（无历史日志可清），
+# 玩过若干局后才触发 —— 典型「玩了几天突然打不开」，且玩家无法自行排查。
+# 用 setdefault 而非赋值：尊重外部环境（run_demo.bat 已设 1，排查时可设 0）。
 os.environ.setdefault('KIVY_NO_FILELOG', '1')
 
 
@@ -71,10 +64,9 @@ os.environ.setdefault('KIVY_NO_FILELOG', '1')
 # 日志写 demo/perf.log（*.log 已被 .gitignore 忽略，不会入库）。
 #
 # 为什么在这里（import kivy 之前）就算好：
-#   1) ``--perf`` 必须从 sys.argv 里摘掉，否则会被 Kivy 自己的参数解析
-#      当成未知选项处理，污染后续解析；
+#   1) ``--perf`` 必须从 sys.argv 里摘掉，否则会被 Kivy 的参数解析当未知选项；
 #   2) 关闭时 main 根本不 import perf —— 不注册 Clock 回调、不开文件句柄，
-#      连模块导入的几微秒都省掉，做到真正零开销（只多两次字符串比较）。
+#      真正零开销（只多两次字符串比较）。
 def _perf_requested() -> bool:
     if '--perf' in sys.argv:
         return True
@@ -626,6 +618,7 @@ class _MenuSlot(SaveSlotRow):
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos) and self._on_pick:
+            sfx.play('select')          # 存档槽选中音（2026-09-13 修：原为零接线静默）
             self._on_pick()
             return True
         return super().on_touch_down(touch)
@@ -850,7 +843,13 @@ class MainMenu(FloatLayout):
         add_pixel_border(b, color=bc)
         b.bind(size=lambda i, v: setattr(i, 'text_size', (max(v[0] - 26, 10), v[1])))
         if enabled and cb:
-            b.bind(on_release=lambda *_: cb())
+            # 点击音（2026-09-13 修）：main.py 此前是唯一零音效接线的 UI 文件，
+            # 5 枚主按钮点击全静默 —— 玩家会怀疑「点了没生效」。primary
+            # （开始新游戏）是关键时刻，用 confirm 与普通导航 click 区分。
+            def _fire(_cb=cb, _tone=tone):
+                sfx.play('confirm' if _tone == 'primary' else 'click')
+                _cb()
+            b.bind(on_release=lambda *_: _fire())
         else:
             b.disabled = True
             b.opacity = 0.45               # 设计稿：禁用态 opacity .45
