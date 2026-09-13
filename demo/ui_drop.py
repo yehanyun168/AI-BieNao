@@ -104,6 +104,7 @@ class DropMixin:
         ok, reason, _disc = engine.target_availability(
             code, self.drop_skill, len(self.drop_targets))
         if not ok:
+            sfx.play('error')             # 目标不可选（算力不足/该国不适格）—— 与文字原因配对
             self._notify(f"{get_country_name(code)}: {self._reason_text(reason, code)}")
             return
         if code in self.drop_targets:
@@ -367,6 +368,7 @@ class DropMixin:
             self._notify(f"{self._skill_name(sid)}")
             self._fx_cast(sid, [])
         else:
+            sfx.play('error')             # 算力不足/条件不满足 —— 与 _fx_reject 视觉配对
             self._notify(t('no_compute'))
             self._fx_reject(sid)
 

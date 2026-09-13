@@ -718,6 +718,53 @@ print("   ■ 22) T16 觉醒出身（表一致性 / 难度映射 / 出生包 ×5
       "存档 v2→v3 迁移与往返 / 动画 9 镜含变奏尾声 / origin_*·intro_* 双语 /"
       "出身页与流程接线）")
 
+# ============================================================
+# 23) 音效资源完整性（2026-09-13 素材集成）
+#     为什么要断言：sfx.py 是「失败安全」设计 —— 文件缺失只打一行警告后静默
+#     跳过，游戏照跑但不响。这保证了不崩，代价是**缺失无声无息**。
+#     真人测试包里丢过音效（repack 硬编码清单漏登记），就是靠这条才能发现。
+# ============================================================
+import sfx as _sfx_mod
+
+_sfx_dir = os.path.join(_HERE, 'assets', 'sfx')
+_missing = []
+for _n in _sfx_mod.NAMES:
+    if not any(os.path.exists(os.path.join(_sfx_dir, _n + _s))
+               for _s in _sfx_mod.SUFFIXES):
+        _missing.append(_n)
+assert not _missing, f"demo/assets/sfx 缺音效文件: {_missing}（sfx.py 会静默静音）"
+
+# 基础 12 个合成音必须存在（gen_sfx.py 可复现；删掉=破坏可复现基线）
+_base12 = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
+           'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock')
+_miss_base = [n for n in _base12 if n not in _sfx_mod.NAMES]
+assert not _miss_base, f"sfx.NAMES 丢了合成基线音效: {_miss_base}"
+
+# 语义分层 6 个（2026-09-13 新增）必须都在 NAMES 里，且各有文件
+_semantic = ('hover', 'page', 'toggle', 'error', 'confirm', 'scroll')
+for _n in _semantic:
+    assert _n in _sfx_mod.NAMES, f"sfx.NAMES 缺语义分层音效: {_n}"
+
+# BGM 两态必须存在（bgm.py 同样静默降级）
+_bgm_dir = os.path.join(_HERE, 'assets', 'bgm')
+for _st in ('calm', 'tense'):
+    assert os.path.exists(os.path.join(_bgm_dir, _st + '.wav')) or \
+        os.path.exists(os.path.join(_bgm_dir, _st + '.ogg')), \
+        f"demo/assets/bgm 缺 BGM: {_st}"
+
+# 授权声明必须随源码走（素材合规留痕）
+assert os.path.exists(os.path.join(_sfx_dir, 'CREDITS.md')), \
+    "demo/assets/sfx/CREDITS.md 缺失（素材授权声明必须入库）"
+
+# 接线断言：新增语义音效必须真的被用上，否则等于没集成
+_src_all = ''
+for _f in ('ui_pages.py', 'ui_session.py', 'ui_input.py', 'ui_drop.py'):
+    _src_all += open(os.path.join(_HERE, _f), encoding='utf-8').read()
+for _needle in ("sfx.play('error')", "sfx.play('page')", "sfx.play('toggle')"):
+    assert _needle in _src_all, f"语义音效未接线: {_needle}"
+print("   ■ 23) 音效资源完整性（18 个音效文件齐备 / 合成基线 12 + 语义分层 6 /"
+      " BGM 两态齐全 / 授权声明入库 / 语义音效接线已生效）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

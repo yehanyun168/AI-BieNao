@@ -60,12 +60,22 @@ class PagesMixin:
             self._page = None
         self.rail.set_active('none')
 
+    def _close_page_user(self) -> None:
+        """用户主动退出页面（点返回 / Esc）—— 补一个返回音。
+
+        ⚠️ 不能直接写在 close_page() 里：open_page() 切换页面时会先内部
+        close_page() 再建新页，那样「切页」也会响返回音，语义就乱了。
+        因此只在真正的用户退出路径（返回按钮）上挂这个包装。
+        """
+        sfx.play('page')
+        self.close_page()
+
     def _build_page(self, name: str):
         if name == 'skills':
             p = S.SkillPage(on_action=self._skill_page_action,
                             on_sort=self._refresh_skill_page)
             p.ensure_cards(SKILL_ORDER)
-            p.set_back_button(t('k_esc'), self.close_page)
+            p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         if name == 'tech':
             p = S.TechPage(on_unlock=self.on_unlock_t0,
@@ -73,15 +83,15 @@ class PagesMixin:
                            on_reset=self._reset_tech,
                            on_select=self._on_tech_node_select)
             p.ensure_slots(TECH_TREE)
-            p.set_back_button(t('k_esc'), self.close_page)
+            p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         if name == 'ach':
             p = S.AchPage(on_filter=self._refresh_ach_page)
-            p.set_back_button(t('k_esc'), self.close_page)
+            p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         if name == 'help':
             p = S.HelpPage()
-            p.set_back_button(t('k_esc'), self.close_page)
+            p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         if name == 'settings':
             p = S.SettingsPage(
@@ -93,7 +103,7 @@ class PagesMixin:
                 on_tutorial=self.tutorial.replay,
                 slot_actions=self._slot_actions,
                 on_reset=lambda: self._notify(t('set_restore')))
-            p.set_back_button(t('k_esc'), self.close_page)
+            p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         return None
 

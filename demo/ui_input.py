@@ -227,6 +227,7 @@ class InputMixin:
     def on_skill_card_click(self, sid: str) -> None:
         """点技能带卡片：下载类 → 进投放模式；偷算力类 → 直接释放"""
         if sid not in engine.player.unlocked_skills:
+            sfx.play('error')             # 非法操作音（原为静默，玩家易误以为点击没生效）
             self._notify(t('sk_state_lock'))
             return
         if self.drop_mode and self.drop_skill == sid:

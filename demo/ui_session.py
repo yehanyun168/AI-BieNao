@@ -285,12 +285,19 @@ class SessionMixin:
             self.legend_hud.apply_a11y()
 
     def _set_sound_idx(self, i: int) -> None:
-        """音效开关：0=关 / 1=开（P0-5）。"""
+        """音效开关：0=关 / 1=开（P0-5）。
+
+        注意播放顺序：**先按新状态切换、再播 toggle**。若先播再切，
+        关闭音效时这一声会成为绝响（set_enabled(False) 之后 play() 被拦），
+        玩家会觉得「点了没反应」；反过来则开启时也一定听得见。
+        """
         sfx.set_enabled(bool(int(i)))
+        sfx.play('toggle')
 
     def _set_music_idx(self, i: int) -> None:
         """音乐开关：0=关 / 1=开（T09）。关闭停播，开启按当前怀疑度补播。"""
         bgm.set_enabled(bool(int(i)))
+        sfx.play('toggle')
 
     def exit_to_menu(self) -> None:
         self.stop_ticking()
