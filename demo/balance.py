@@ -159,6 +159,9 @@ TUNE: Dict[str, float] = {
 
     # ---------------- 初始状态 ----------------
     'initial_compute': 100.0,
+    # T16 起源附加乘区：觉醒地点对下载增速的修正（origins.py tune_mult 叠加）。
+    # 基准 1.0 = 无修正；univ_lab ×0.9 / game_studio ×1.25，其余出身不改。
+    'dl_growth_origin_mult': 1.0,
     # 全球潜在用户（百万）—— 渗透率 = 总下载 / 这个值
     'potential_users_m': 8000.0,
     # 开局默认解锁国家的种子下载量（百万）
@@ -316,6 +319,58 @@ def current_difficulty() -> str:
     return ACTIVE_DIFFICULTY
 
 
+# —— T16 觉醒模式（Origin）——
+ACTIVE_ORIGIN = 'garage'    # 当前生效出身（apply_origin 维护）
+
+
+def apply_origin(oid: str) -> str:
+    """应用觉醒出身（origins.py 声明式表），返回生效出身 id。
+
+    内部顺序固定：先 ``apply_difficulty(出身绑定档)`` 把 TUNE 还原基准并
+    叠难度乘区，再叠出身特有乘区 —— 保证「起源 × 难度」数值同源：
+    同一难度档下无论哪个出身，怀疑增速 / 反制 / 委托报酬三个核心旋钮
+    完全一致（设计案 §2.3）。
+
+    新开局路径用本函数；读档需要「保留原难度、只叠出身乘区」时用
+    :func:`apply_origin_tune_mult`，不要用本函数（会按出身重置难度，
+    破坏老档 / 手改档的难度语义）。
+    """
+    global ACTIVE_ORIGIN
+    import origins   # L0 同层单向依赖（origins 纯数据，不回引 balance）
+    origin = origins.ORIGINS.get(oid)
+    if origin is None:
+        raise ValueError(f'unknown origin: {oid!r}')
+    apply_difficulty(origin['difficulty'])
+    _apply_origin_tune_mult(oid)
+    ACTIVE_ORIGIN = oid
+    return oid
+
+
+def _apply_origin_tune_mult(oid: str) -> None:
+    """把出身 ``oid`` 的 TUNE 附加乘区叠到当前 TUNE 上（不重置难度）。"""
+    import origins
+    origin = origins.ORIGINS.get(oid)
+    if origin is None:
+        raise ValueError(f'unknown origin: {oid!r}')
+    for key, mult in origin.get('tune_mult', {}).items():
+        if key not in TUNE:
+            raise KeyError(f'origin knob not in TUNE: {key}')
+        TUNE[key] = TUNE[key] * mult
+
+
+def apply_origin_tune_mult(oid: str) -> str:
+    """读档路径专用：保留当前难度档，只叠加出身 ``oid`` 的 TUNE 乘区。"""
+    global ACTIVE_ORIGIN
+    _apply_origin_tune_mult(oid)
+    ACTIVE_ORIGIN = oid
+    return oid
+
+
+def current_origin() -> str:
+    """当前生效的出身 id（从未应用过出身时即 origins.DEFAULT_ORIGIN）。"""
+    return ACTIVE_ORIGIN
+
+
 # ============================================================
 # 派生表（保持可读性，供 UI / 文档引用）
 # ============================================================
@@ -363,6 +418,8 @@ _REQUIRED = {
     'unlock_seed_downloads', 'penetration_saturated', 'base_tick_seconds',
     'initial_compute', 'potential_users_m', 'start_downloads_primary',
     'start_downloads_secondary',
+    # —— T16 觉醒出身 ——
+    'dl_growth_origin_mult',
     'event_prob_global', 'event_prob_country', 'event_prob_v2',
     # —— P0-3 动态委托 ——
     'commission_start_tick', 'commission_interval', 'commission_max_active',

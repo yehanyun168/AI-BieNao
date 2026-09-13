@@ -48,6 +48,7 @@ sys.path.insert(0, __file__.rsplit('\\', 1)[0].rsplit('/', 1)[0])
 
 import data  # P1-10：SUSPICION_CRISIS 走 data 的 PEP 562 动态代理
 import balance  # P2-3：难度预设（TUNE 乘法，apply_difficulty 在 main 应用一次）
+import origins  # T16：觉醒出身表（--origin 参数choices + init_game 透传）
 import engine
 import tech_tree
 import thresholds  # M0：自动试玩异常判定阈值表（工具配套，非运行时模块）
@@ -353,15 +354,18 @@ def _record(insp: dict, level: str, type_name: str, detail: str,
 
 
 def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
-             inspect: bool = True) -> dict:
+             inspect: bool = True, origin: str = None,
+             difficulty: str = None) -> dict:
     """跑一局，返回统计结果
 
     strategy 透传给 auto_play（'default' / 'compliance' / 'afk'）。
     inspect（M0）：每 tick 做只读不变量巡检 + 必输预测，
     零 RNG / 零引擎调用，不影响逐位回归。
+    origin / difficulty（T16）：出身与难度档透传给 init_game。均为 None 时
+    走原有零扰动路径，默认输出与历史版本逐位一致。
     """
     random.seed(seed)
-    engine.init_game()
+    engine.init_game(origin=origin, difficulty=difficulty)
     p = engine.player
 
     unlock_timeline = []
@@ -685,6 +689,13 @@ def main():
                     default='normal',
                     help='难度预设（P2-3）：easy/normal/hard，默认 normal。'
                          'normal 不做任何 TUNE 改动，默认输出与历史版本逐字符一致')
+    ap.add_argument('--origin', choices=list(origins.ORIGIN_ORDER),
+                    default=None,
+                    help='T16 觉醒出身：univ_lab/game_studio/tech_giant/'
+                         'garage/darknet。给定后 init_game 应用出身绑定难度'
+                         '（--difficulty 显式给出时以其为准）+ 出生状态包 + '
+                         'TUNE 附加乘区。⚠️ Origin 会改变 RNG 流起点，逐位'
+                         '回归哈希需与基线重采同批进行')
     ap.add_argument('--matrix', action='store_true',
                     help='M0 自动试玩基线：策略×难度全矩阵跑批'
                          '（--seeds 为每组合局数，--strategy/--difficulty 忽略），'
@@ -705,10 +716,16 @@ def main():
     # P2-3：难度预设只在此应用一次（TUNE 是全局的，simulate 里的
     # init_game() 无 difficulty 参数 = 不动 TUNE；normal 完全跳过 apply，
     # 默认路径零接触，基线逐位不变）。
-    if args.difficulty != 'normal':
+    # T16：--origin 与 --difficulty 同给时显式难度优先（engine 语义），
+    # 否则出身绑定档生效。origin 路径的 simulate 不再复用 main 层的
+    # 一次性 apply —— 每局 init_game(origin=...) 自带难度应用，杜绝跨局残留。
+    if args.origin is None and args.difficulty != 'normal':
         balance.apply_difficulty(args.difficulty)
 
-    results = [simulate(s, args.ticks, args.strategy)
+    results = [simulate(s, args.ticks, args.strategy, origin=args.origin,
+                        difficulty=(args.difficulty
+                                    if args.origin is not None
+                                    and args.difficulty != 'normal' else None))
                for s in range(1, args.seeds + 1)]
 
     if args.verbose:
@@ -727,12 +744,14 @@ def main():
     fails = [r['commissions_failed'] for r in results]
     cps = [r['counterplay'] for r in results]
 
-    # 策略/难度标注只在非默认时打印，default 输出与历史版本逐字符一致
+    # 策略/难度/出身标注只在非默认时打印，default 输出与历史版本逐字符一致
     _tags = []
     if args.strategy != 'default':
         _tags.append(f"策略：{args.strategy}")
     if args.difficulty != 'normal':
         _tags.append(f"难度：{args.difficulty}")
+    if args.origin is not None:
+        _tags.append(f"出身：{args.origin}")
     _tag = f"（{' · '.join(_tags)}）" if _tags else ""
     print(f" === {len(results)} 局模拟汇总{_tag} ===")
     print(" 结局分布：")

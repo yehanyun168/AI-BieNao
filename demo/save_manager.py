@@ -33,12 +33,15 @@ from data import STARTER_SKILLS, SKILL_UNLOCK
 from i18n import t
 import balance
 import commissions
+import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 
 # P2-3：SAVE_VERSION 1 → 2。新增 player.seed / player.difficulty 两个
 # 可选字段 —— 字段是纯增量，但版本号一起 +1，让存档自描述「带不带
 # 难度语义」；v1 老档经 _migrate 的 _v1_to_v2 补默认值（seed=None
 # 真随机、difficulty=标准）照常可读，语义与 P2-3 之前的对局完全一致。
-SAVE_VERSION = 2
+# T16：SAVE_VERSION 2 → 3。新增 player.origin（觉醒出身），v2 老档经
+# _v2_to_v3 补白板出身（garage，零行为变化——garage 对 TUNE 无修正）。
+SAVE_VERSION = 3
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 DEFAULT_SLOT = 'slot1.json'
 CRASH_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -164,6 +167,8 @@ def save(path: str = None) -> str:
             # —— P2-3 重玩性：种子 + 难度档（读档不重置难度）——
             'seed': getattr(p, 'seed', None),
             'difficulty': getattr(p, 'difficulty', balance.DEFAULT_DIFFICULTY),
+            # —— T16 觉醒出身（读档只叠乘区不重置难度）——
+            'origin': getattr(p, 'origin', 'garage'),
         },
         'tech': {
             't0_unlocked': dict(p.tech.t0_unlocked),
@@ -263,6 +268,13 @@ def _apply_save(data: dict) -> None:
         pid = balance.DEFAULT_DIFFICULTY
     p.difficulty = pid
     balance.apply_difficulty(pid)
+    # T16 觉醒出身：坏值兜底白板。⚠️ 用 apply_origin_tune_mult 只叠乘区、
+    # 不重置难度 —— 出身绑定的难度只在新开局时生效，读档以存档 difficulty 为准。
+    oid = ps.get('origin')
+    if oid not in origins.ORIGINS:
+        oid = origins.DEFAULT_ORIGIN
+    p.origin = oid
+    balance.apply_origin_tune_mult(oid)
     # 存档一致性校验：deadline 已过的在场委托直接丢弃 —— 不加怀疑惩罚、
     # 不计 failed（存档锅不算玩家头，设计稿 §4.1/§4.6）
     p.commissions = [c for c in p.commissions
@@ -296,6 +308,24 @@ def _v1_to_v2(d: dict) -> dict:
 
 
 _MIGRATIONS = {1: _v1_to_v2}
+
+
+def _v2_to_v3(d: dict) -> dict:
+    """v2 → v3（T16 觉醒出身）：纯函数迁移，只增字段、不丢玩家数据。
+
+    v2 档没有 origin —— 补白板出身 garage（对 TUNE 零修正），保证老档
+    行为逐位不变。⚠️ 不按老档 difficulty 反推出身：easy 对应两个出身
+    （实验室 / 游戏公司），反推不唯一；garage 的 tune_mult 为空，读档时
+    `apply_origin_tune_mult('garage')` 是一次空操作，难度语义原样保留。
+    """
+    ps = d.get('player')
+    if isinstance(ps, dict):
+        ps.setdefault('origin', 'garage')
+    d['version'] = SAVE_VERSION
+    return d
+
+
+_MIGRATIONS[2] = _v2_to_v3
 
 
 def _migrate(data: dict, from_version: int) -> dict:

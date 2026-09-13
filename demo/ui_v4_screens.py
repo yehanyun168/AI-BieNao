@@ -34,6 +34,8 @@ from pixel_ui import COLORS, PixelLabel, add_pixel_border
 from ui_v4 import hline
 
 import i18n
+import origins
+import sfx
 import ui_v4 as U
 from ui_v4 import (
     AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
@@ -2236,3 +2238,89 @@ class LogDrawer(StrokePanel):
             text = f"[color={U.MK['mute']}][{item.get('tick', 0)}][/color] {item.get('text', '')}"
             self.box.add_widget(LogRow(text, item.get('tone', 'i')))
         self.chip_unread.set_tone('sys', f"{unread} {i18n.t('log_unread')}")
+
+
+# ============================================================
+# S15 觉醒地点选择页（T16：新档流程 = 开场动画 → 本页 → 新档弹窗）
+# ============================================================
+_ORIGIN_DIFF_TONE = {'easy': 'up', 'normal': 'sys', 'hard': 'dn'}
+
+
+class OriginCard(StrokePanel):
+    """单个觉醒地点卡：名称 + 难度徽标 + 卖点 + 增益/减益 + 定场白。
+
+    整卡可点（on_touch_down 命中即回调 on_pick(origin_id)）。
+    """
+
+    def __init__(self, oid: str, on_pick: Callable = None, **kwargs):
+        kwargs.setdefault('size_hint_y', None)
+        super().__init__(bg=COLORS['panel'], border=COLORS['border_2'],
+                         spacing=0, padding=0, **kwargs)
+        self.oid = oid
+        self._on_pick = on_pick
+        o = origins.ORIGINS[oid]
+        diff_key = o.get('difficulty', 'normal')
+
+        v = BoxLayout(orientation='vertical', spacing=4, padding=(10, 8))
+        # 第一行：名称 + 难度徽标
+        hd = BoxLayout(orientation='horizontal', spacing=8,
+                       size_hint_y=None, height=26)
+        hd.add_widget(mk_label(i18n.t('origin_%s_name' % oid),
+                               font_size=FS_H3, color=COLORS['cyan']))
+        hd.add_widget(Widget())
+        hd.add_widget(PxChip(i18n.t('origin_tag').format(
+            diff=i18n.t('diff_' + diff_key)),
+            tone=_ORIGIN_DIFF_TONE.get(diff_key, 'plain'), height=24))
+        v.add_widget(hd)
+        # 第二行：一句话卖点
+        v.add_widget(mk_label(i18n.t('origin_%s_sell' % oid),
+                              font_size=FS_BODY, color=COLORS['text'],
+                              size_hint_y=None, height=20))
+        # 第三行：增益 / 减益
+        pc = BoxLayout(orientation='horizontal', spacing=12,
+                       size_hint_y=None, height=20)
+        pc.add_widget(mk_label('▲ ' + i18n.t('origin_%s_pro' % oid),
+                               font_size=FS_CAP, color=COLORS['green']))
+        pc.add_widget(mk_label('▼ ' + i18n.t('origin_%s_con' % oid),
+                               font_size=FS_CAP, color=COLORS['red']))
+        v.add_widget(pc)
+        # 第四行：定场白（开场动画的衔接钩子）
+        v.add_widget(mk_label(i18n.t('origin_%s_flavor' % oid),
+                              font_size=FS_CAP, color=COLORS['text_mute'],
+                              size_hint_y=None, height=18))
+        self.add_widget(v)
+
+    def on_touch_down(self, touch):
+        if self.disabled or not self.collide_point(*touch.pos):
+            return False
+        sfx.play('select')
+        if callable(self._on_pick):
+            self._on_pick(self.oid)
+        return True
+
+
+class OriginPage(U.PageScreen):
+    """觉醒地点选择全屏页（设计稿 S15）：五卡竖排 + 绑定难度徽标。
+
+    on_pick(oid) 选中地点回调（调用方接新档弹窗）；
+    on_cancel 返回主菜单（调用方关闭流程，不开局）。
+    """
+
+    def __init__(self, on_pick: Callable = None, on_cancel: Callable = None,
+                 **kwargs):
+        super().__init__(title=i18n.t('origin_title'), **kwargs)
+        self.set_back_button(i18n.t('k_esc'), lambda: on_cancel and on_cancel())
+        self.add_head_widget(mk_label(i18n.t('origin_pick_hint'),
+                                      font_size=FS_CAP,
+                                      color=COLORS['text_mute']))
+        scroll = ScrollView(bar_width=6)
+        grid = GridLayout(cols=1, spacing=10, padding=(4, 4),
+                          size_hint_y=None)
+        grid.bind(minimum_height=grid.setter('height'))
+        for oid in origins.ORIGIN_ORDER:
+            grid.add_widget(OriginCard(oid, on_pick=on_pick, height=132))
+        scroll.add_widget(grid)
+        self.body.add_widget(scroll)
+        self.add_head_widget(mk_label(i18n.t('origin_locked_hint'),
+                                      font_size=FS_TINY,
+                                      color=COLORS['text_mute']))

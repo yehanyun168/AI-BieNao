@@ -30,8 +30,12 @@ from data import (
 #    属性访问，见下方各调用点。
 from tech_tree import PlayerTech, aggregate_effects, SLOT_MAP
 # P2-3 难度档：init_game 经 apply_difficulty/current_difficulty 读写 TUNE 预设
+# T16 觉醒出身：init_game 按「出身绑定档 apply_difficulty + 出身乘区
+# apply_origin_tune_mult」两步应用（balance.apply_origin 是其等价封装）
+import origins
 from balance import (TUNE, CRISIS_OPTIONS, DEFAULT_DIFFICULTY,
-                     apply_difficulty, current_difficulty, soft_cap_suspicion)
+                     apply_difficulty, apply_origin_tune_mult,
+                     current_difficulty, soft_cap_suspicion)
 
 
 # ============================================================
@@ -96,6 +100,8 @@ class PlayerState:
     # —— P2-3 重玩性：种子 + 难度档 ——
     seed: Optional[int] = None         # 本局种子；None = 真随机（不可复现）
     difficulty: str = DEFAULT_DIFFICULTY   # 难度档 id（balance.DIFFICULTY_PRESETS）
+    # —— T16 觉醒模式：出身 id（origins.ORIGINS），决定初始状态与 TUNE 乘区 ——
+    origin: str = 'garage'
 
     @property
     def total_downloads_m(self) -> float:
@@ -128,7 +134,8 @@ def _sus(tag: str, delta: float) -> None:
 
 
 def init_game(seed: Optional[int] = None,
-              difficulty: Optional[str] = None) -> PlayerState:
+              difficulty: Optional[str] = None,
+              origin: Optional[str] = None) -> PlayerState:
     """初始化游戏
 
     P2-3 重玩性：
@@ -141,6 +148,14 @@ def init_game(seed: Optional[int] = None,
                  整表还原到基准再应用该档乘数（无跨局污染）；None → 完全
                  不动 TUNE（模拟器 / 测试默认路径零扰动），档位记录为当前
                  生效档（balance.current_difficulty）。
+    T16 觉醒模式：
+      origin     出身 id（origins.ORIGINS）。给定 → 走 balance.apply_origin
+                 （= 按出身绑定档 apply_difficulty + 叠出身 TUNE 乘区）；
+                 **显式 difficulty 优先于出身绑定档**（T13 挑战码难度位 =
+                 最终难度）：给定 difficulty 时按它应用难度乘数，出身只补
+                 TUNE 附加乘区与出生状态包；None → 用出身绑定档。
+                 出身均为 None 时不动 TUNE，模拟器 / 测试默认路径零扰动
+                （garage 白板 = 基准）。
     """
     global player_countries, player
     global _counterplay_cooldown, _counterplay_pending
@@ -151,8 +166,24 @@ def init_game(seed: Optional[int] = None,
     if seed is not None:
         seed = int(seed)
         random.seed(seed)
-    if difficulty is not None:
-        difficulty = apply_difficulty(difficulty)
+    if origin is not None:
+        o = origins.ORIGINS.get(origin)
+        if o is None:
+            origin = origins.DEFAULT_ORIGIN
+            o = origins.ORIGINS[origin]
+        # 先定难度（显式参数 > 出身绑定档），再叠出身乘区 —— 顺序不可换：
+        # apply_difficulty 会把 TUNE 还原到基准，后叠才能保住出身乘区。
+        apply_difficulty(difficulty if difficulty is not None
+                         else o['difficulty'])
+        eff_origin = apply_origin_tune_mult(origin)
+        difficulty = current_difficulty()
+    else:
+        # 模拟器 / 测试零扰动路径：白板出身（garage 对 TUNE 与出生状态均
+        # 零修正），不读 current_origin() —— 避免上一局的出身残留改变
+        # 出生算力 / 怀疑，破坏「外置 seed + init_game」的既有行为。
+        eff_origin = 'garage'
+        if difficulty is not None:
+            difficulty = apply_difficulty(difficulty)
     player_countries = []
     for cfg in COUNTRIES:
         state = CountryState(
@@ -173,9 +204,19 @@ def init_game(seed: Optional[int] = None,
     player.seed = seed
     player.difficulty = (difficulty if difficulty is not None
                          else current_difficulty())
-    player.compute = data.INITIAL_COMPUTE
-    player.compute_peak = data.INITIAL_COMPUTE
-    player.suspicion = 0
+    player.origin = eff_origin
+    # —— T16：出身初始状态包（出生算力 / 出生下载基数 / 初始怀疑）——
+    #    只在出生时一次性应用，不进 TUNE（出生状态 ≠ 规则乘区）。
+    o = origins.ORIGINS[eff_origin]
+    player.compute = data.INITIAL_COMPUTE * o.get('initial_compute_mult', 1.0)
+    player.compute_peak = player.compute
+    player.suspicion = o.get('initial_suspicion', 0.0)
+    born_dl = o.get('initial_downloads_add_m', 0.0)
+    if born_dl:
+        for c in player_countries:      # 暗网渠道：第一批用户记到主起点国
+            if c.config.code == "CN":
+                c.downloads_m += born_dl
+                break
     player.tick_count = 0
     player.events_history = []
     player.tech = PlayerTech()
@@ -293,6 +334,8 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         block_penalty = 1.0 - country.current_block_intensity
         # 计算有效增长
         growth = base_growth * network * block_penalty
+        # T16 起源乘区：觉醒地点对下载增速的修正（univ_lab ×0.9 / game_studio ×1.25）
+        growth *= TUNE['dl_growth_origin_mult']
         # 应用科技乘数
         dl_skill = skill_dl_mult if (not targeted or cfg.code in skill_targets) else 1.0
         growth *= effects['global_downloads_mult'] * dl_skill

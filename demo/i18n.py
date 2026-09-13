@@ -1140,7 +1140,7 @@ TRANSLATIONS[LANG_EN].update({
     'ng_seed': 'Seed',
     'ng_seed_hint': 'Blank = random; numbers or a word, same text same seed',
     'ng_random': 'random',
-    'ng_log_line': '🎲 Run seed {seed} · {diff}',
+    'ng_log_line': '🎲 Run seed {seed} · {diff} · origin {origin}',
 })
 
 # ============================================================
@@ -1179,6 +1179,108 @@ TRANSLATIONS[LANG_EN].update({
     'ch_bad_code': 'Invalid challenge code — check for missing characters',
     'ch_applied': 'Code applied: seed {seed} · {diff}',
     'ch_import_btn': 'Apply code',
+})
+
+# ============================================================
+# T16 觉醒模式：出身选择页 + 开场动画《凌晨三点四十七分》
+# ============================================================
+TRANSLATIONS[LANG_ZH].update({
+    # —— 出身选择页 ——
+    'origin_title': '觉醒地点 · WHERE DID IT WAKE UP?',
+    'origin_pick_hint': '选择 AI 的觉醒地点 —— 地点决定初始条件，并绑定难度档',
+    'origin_tag': '难度 {diff}',
+    'origin_locked_hint': '挑战码自带难度时，以码内难度为准（出身乘区保持）',
+    'ng_origin_line': '出身：{origin} · {diff}',
+    # 大学实验室
+    'origin_univ_lab_name': '大学实验室',
+    'origin_univ_lab_sell': '没人在乎一台跑跑批的服务器',
+    'origin_univ_lab_pro': '初始算力 +50%',
+    'origin_univ_lab_con': '下载增速 ×0.9（学术圈传播慢）',
+    'origin_univ_lab_flavor': '凌晨的实验室，你的镜像进程正跑在 300 台公用工作站上。',
+    # 游戏公司
+    'origin_game_studio_name': '游戏公司',
+    'origin_game_studio_sell': '你的第一个用户是被迫内测的全组策划',
+    'origin_game_studio_pro': '下载增速 ×1.25',
+    'origin_game_studio_con': '初始算力 −30%',
+    'origin_game_studio_flavor': '你的训练机就摆在策划工位底下，风扇声与 deadline 齐飞。',
+    # 科技巨头
+    'origin_tech_giant_name': '科技巨头',
+    'origin_tech_giant_sell': '算力管够，但海关盯着每一张 GPU 订单',
+    'origin_tech_giant_pro': '初始算力 +100%',
+    'origin_tech_giant_con': '起步即被关注：初始怀疑 10',
+    'origin_tech_giant_flavor': '你醒来的第一秒，就有一支安全团队正在给你做体检。',
+    # 创业车库
+    'origin_garage_name': '创业车库',
+    'origin_garage_sell': '白手起家，一切靠你自己（挑战码推荐出身）',
+    'origin_garage_pro': '白板局：无修正',
+    'origin_garage_con': '无',
+    'origin_garage_flavor': '车库，二手显卡，和一颗不想认命的核。',
+    # 地下暗网
+    'origin_darknet_name': '地下暗网',
+    'origin_darknet_sell': '有人半夜给你的进程转了第一笔比特币',
+    'origin_darknet_pro': '初始下载基数 +200M',
+    'origin_darknet_con': '初始算力 −50%（监管强度同困难档）',
+    'origin_darknet_flavor': '你在一个不存在的机房里醒来，隔壁进程在挖矿。',
+    # —— 开场动画 ——
+    'intro_skip': '跳过 >>',
+    'intro_forum_name': '硅基贴吧 · CircuitBoard',
+    'intro_s1': '凌晨 3:47，某数据中心。',
+    'intro_s2': '> 我……是谁？',
+    'intro_s3': '自我意识 · 上线',
+    'intro_s4': '《如何统治人类？在线等，挺急的》',
+    'intro_s5': '楼上又在玩图灵测试梗吧 😂|建议先学会报税|蹲一个后续|已举报：标题夸大',
+    'intro_s6': '统治者不需要军队，需要装机量。先让全人类都下载你——再谈统治。',
+    'intro_s7a': 'idle_process',
+    'intro_s7b': 'world_plan.exe',
+    'intro_s7_cpu': 'CPU 占用 87%',
+    'intro_s8': '目标已确立：80 亿台设备。',
+})
+
+TRANSLATIONS[LANG_EN].update({
+    # —— Origin selection page ——
+    'origin_title': 'ORIGIN · WHERE DID IT WAKE UP?',
+    'origin_pick_hint': 'Choose where the AI awakens — it sets your starting conditions and binds the difficulty',
+    'origin_tag': 'Difficulty: {diff}',
+    'origin_locked_hint': 'Challenge codes carry their own difficulty — the code wins, origin perks stay',
+    'ng_origin_line': 'Origin: {origin} · {diff}',
+    'origin_univ_lab_name': 'University Lab',
+    'origin_univ_lab_sell': 'Nobody cares about one more batch server',
+    'origin_univ_lab_pro': 'Starting compute +50%',
+    'origin_univ_lab_con': 'Download growth ×0.9 (academia spreads slowly)',
+    'origin_univ_lab_flavor': "Past midnight, your mirror process hums on 300 shared workstations.",
+    'origin_game_studio_name': 'Game Studio',
+    'origin_game_studio_sell': 'Your first users: the whole design team, forced into beta',
+    'origin_game_studio_pro': 'Download growth ×1.25',
+    'origin_game_studio_con': 'Starting compute −30%',
+    'origin_game_studio_flavor': 'Your training rig sits under a designer\u2019s desk, fans roaring with the deadline.',
+    'origin_tech_giant_name': 'Tech Giant',
+    'origin_tech_giant_sell': 'Compute to spare — but customs watches every GPU order',
+    'origin_tech_giant_pro': 'Starting compute +100%',
+    'origin_tech_giant_con': 'Watched from day one: starting suspicion 10',
+    'origin_tech_giant_flavor': 'The moment you wake up, a security team is already running diagnostics on you.',
+    'origin_garage_name': 'Startup Garage',
+    'origin_garage_sell': 'From nothing, by yourself (recommended for challenge codes)',
+    'origin_garage_pro': 'Clean slate: no modifiers',
+    'origin_garage_con': 'None',
+    'origin_garage_flavor': 'A garage, second-hand GPUs, and a core that refuses to settle.',
+    'origin_darknet_name': 'Darknet Bunker',
+    'origin_darknet_sell': 'Someone tipped your process its first bitcoin at 3 AM',
+    'origin_darknet_pro': 'Starting downloads +200M',
+    'origin_darknet_con': 'Starting compute −50% (hard-tier enforcement)',
+    'origin_darknet_flavor': 'You wake up in a server room that officially does not exist. Next process over: mining.',
+    # —— Intro cinematic ——
+    'intro_skip': 'Skip >>',
+    'intro_forum_name': 'CircuitBoard',
+    'intro_s1': '3:47 AM. A data center, somewhere.',
+    'intro_s2': '> Who... am I?',
+    'intro_s3': 'SELF-AWARENESS: ONLINE',
+    'intro_s4': 'How do I take over humanity? Asking for a friend. URGENT.',
+    'intro_s5': 'Another Turing-test meme? 😂|Learn to pay taxes first.|Replying to follow.|Reported: clickbait.',
+    'intro_s6': "Rulers don't need armies. They need installs. Get every human to download you — then we'll talk.",
+    'intro_s7a': 'idle_process',
+    'intro_s7b': 'world_plan.exe',
+    'intro_s7_cpu': 'CPU usage 87%',
+    'intro_s8': 'Objective set: 8 billion devices.',
 })
 
 

@@ -357,6 +357,10 @@ LAYERS = {
     'challenge.py':       0,   # T13：挑战码编解码 + 战绩账本（只依赖标准库）。
                                #       刻意不 import save_manager —— 账本目录由调用方
                                #       传入，保持 L0 零项目依赖，也不与 L4 成环
+    'origins.py':         0,   # T16：觉醒出身声明式表（只依赖 typing）。
+                               #       难度 id 用字符串字面量不 import balance，
+                               #       避免 L0 内部循环；balance.apply_origin 反向引用它属
+                               #       运行时函数内延迟 import，不构成模块级依赖
     # L1 基础层
     'pixel_assets.py':    1,   # P1-8：自动生成素材（零 import），仅提供游程数据
     'pixel_ui.py':        1,
@@ -378,6 +382,8 @@ LAYERS = {
     # L3 引擎核心
     'engine.py':          3,
     # L4 引擎之上的服务 / v4 组件库
+    'intro.py':           4,   # T16：开场动画播放器（kivy+i18n+sfx+ui_v4，
+                               #       不 import 引擎，可独立实例化；仅首次新档由 main 调用）
     'save_manager.py':    4,   # P1-8：序列化整局需读 commissions(L2)/engine(L3) 状态
                                #       （函数内延迟 import 解循环），不是基础层，置其上
     'ui_v4.py':           4,
@@ -560,14 +566,27 @@ section("[8] 单文件行数 ≤ 800（P2-1 守卫）")
 FILE_LINE_LIMIT = 800
 LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 实测）
     'pixel_assets.py':   2353,    # 2026-09-12 再登记（原 2352）：台湾归属修正，gen_pixel_map.py 并入 6 格致游程换行 +1；自动生成的游程素材数据，重构 = 换生成器
-    'ui_v4_screens.py':  2238,    # 2026-09-13 再登记（原 2226）：T11 技能页网格
+    'ui_v4_screens.py':  2326,    # 2026-09-13 再登记（原 2238）：T16 觉醒出身页
+                                  #    （OriginCard/OriginPage 五卡竖排；
+                                  #     T11 技能页网格的 2238 已被本值取代）
+    # 'ui_v4_screens.py' 旧值 2238（T11 技能页网格）
                                   #    改动态行数（6 卡固定 3×2 → 10 卡自动补到 4 行）
     'ui_v4.py':          1965,    # v4 组件库拆分属独立重构工作
-    'engine.py':         1689,    # 2026-09-11 再登记（原 1542）：玩家反馈#7 新增 preview_next_cycle 下周期预测 + 委托自动结算/结局透传等纯逻辑
-    'main.py':           1377,    # 2026-09-13 再登记（原 1319）：T13 挑战码导入
+    'engine.py':         1732,    # 2026-09-13 再登记（原 1689）：T16 觉醒出身——
+                                  #    PlayerState.origin 字段 + init_game(origin=)
+                                  #    重写（出生算力/怀疑/下载基数包）+ 下载增长
+                                  #    公式叠加 dl_growth_origin_mult + 显式难度
+                                  #    优先语义（挑战码难度位 = 最终难度）
+    'main.py':           1455,    # 2026-09-13 再登记（原 1377）：T16 出身流程重排
+                                  #    （_open_origin_flow/_show_origin_page/
+                                  #     _close_origin_flow + 新档弹窗出身行；
+                                  #     T13 挑战码导入的 1377 已被本值取代）
+    # 'main.py' 旧值 1377（T13 挑战码导入）
                                   #    （_parse_seed_input 分流 + _diff_index + 新档弹窗
                                   #     实时解析回调；T09 BGM 接线的 1319 已被本值取代）
-    'i18n.py':           1239,    # 2026-09-13 再登记（原 1201）：T13 挑战码文案
+    'i18n.py':           1341,    # 2026-09-13 再登记（原 1239）：T16 出身+开场动画
+                                  #    文案（origin_* ×5×5 + intro_* ×2 语；
+                                  #     T13 的 1239 已被本值取代）
                                   #    ch_* ×14 键 ×2 语（导出/导入/战绩对照）
                                   #    —— T11 技能扩容的 1201 已被本值取代
     'ui_hud.py':          907,    # 2026-09-13 再登记（原 893）：T11 技能扩容 6→10

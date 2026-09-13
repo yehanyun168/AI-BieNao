@@ -621,6 +621,96 @@ assert '_challenge_block(p, ending)' in _pop_src, "结算弹窗未挂载挑战�
 print("   ✅ 21) T13 挑战码（往返 ×21 / 校验位逐位抓错 / 容错四种 / 战绩账本"
       "最佳判定 + 损坏容错 / L0 零项目依赖 / ch_* ×14 ×2 语 / 导入导出接线）")
 
+# ---- 22) T16 觉醒出身：表一致性 / 难度映射 / 出生包 / 存档往返 / 文案接线 ----
+import json as _json
+import engine as _engine
+import save_manager as _save_manager
+import intro as _intro_mod
+_orig = __import__('origins')
+import balance as _bal
+
+# 表结构：ORIGIN_ORDER 覆盖全表且无重复；DEFAULT_ORIGIN 在表内
+assert set(_orig.ORIGIN_ORDER) == set(_orig.ORIGINS), "ORIGIN_ORDER 与 ORIGINS 不一致"
+assert len(_orig.ORIGIN_ORDER) == len(set(_orig.ORIGIN_ORDER)) == 5, "出身应为 5 个"
+assert _orig.DEFAULT_ORIGIN in _orig.ORIGINS
+# 难度映射合法（硬绑定档必须是 DIFFICULTY_PRESETS 的 key 的字面量）
+for _oid, _o in _orig.ORIGINS.items():
+    assert _o['difficulty'] in ('easy', 'normal', 'hard'), f"{_oid} 难度档非法"
+    for _k in ('initial_compute_mult', 'initial_downloads_add_m',
+               'initial_suspicion'):
+        assert isinstance(_o[_k], (int, float)), f"{_oid}.{_k} 应为数值"
+    for _tk in _o['tune_mult']:
+        assert _tk in _bal.TUNE, f"{_oid} tune_mult 引用了不存在的 TUNE 键 {_tk}"
+    assert _orig.get_origin(_oid) is _o
+assert _orig.get_origin('bogus') is None and _orig.get_origin(42) is None
+
+# 出身即难度（默认路径）+ 显式难度覆盖（挑战码语义）+ 白板零扰动
+_p = _engine.init_game(seed=42, origin='univ_lab')
+assert _p.difficulty == 'easy' and _p.origin == 'univ_lab'
+assert abs(_p.compute - _bal.TUNE['initial_compute'] * 1.5) < 1e-6
+_p = _engine.init_game(seed=42, origin='univ_lab', difficulty='hard')
+assert _p.difficulty == 'hard', "显式难度应覆盖出身绑定档"
+assert abs(_bal.TUNE['dl_growth_origin_mult'] - 0.9) < 1e-9, "出身乘区应保持"
+_p = _engine.init_game(seed=42, origin='tech_giant')
+assert abs(_p.suspicion - 10.0) < 1e-9, "tech_giant 应带初始怀疑 10"
+_p = _engine.init_game(seed=42, origin='darknet')
+_cn = _engine.player_countries[0]
+assert _cn.unlocked, "darknet 出生基数应记在 CN"
+assert abs(_p.compute - _bal.TUNE['initial_compute'] * 0.5) < 1e-6
+_p = _engine.init_game(seed=42)
+assert _p.origin == 'garage' and _p.suspicion == 0.0, "无参路径必须 garage 白板"
+
+# 出身乘区切换后必须复位（无跨局污染）
+for _oid in _orig.ORIGIN_ORDER:
+    _bal.apply_origin(_oid)
+_bal.apply_origin(_orig.DEFAULT_ORIGIN)
+assert abs(_bal.TUNE['dl_growth_origin_mult'] - 1.0) < 1e-9, "白板出身乘区应复位"
+
+# 存档 v2→v3 迁移 + v3 往返
+_tmp = os.path.join(_HERE, '_t22.json')
+_engine.init_game(seed=7, origin='game_studio')
+_save_manager.save(_tmp)
+_raw = _json.load(open(_tmp, encoding='utf-8'))
+assert _raw['player']['origin'] == 'game_studio'
+_ok = _save_manager.load(_tmp)
+assert _ok and _engine.player.origin == 'game_studio'
+_raw['version'] = 2
+_raw['player'].pop('origin', None)
+_json.dump(_raw, open(_tmp, 'w', encoding='utf-8'), ensure_ascii=False)
+_ok2 = _save_manager.load(_tmp)
+assert _ok2 and _engine.player.origin == 'garage', "v2 档应迁移为白板出身"
+os.remove(_tmp)
+
+# 开场动画表：8 镜、最后一镜 finale（跳过保留标题仪式感）
+assert len(_intro_mod.INTRO_SHOTS) == 8
+assert _intro_mod.INTRO_SHOTS[-1]['kind'] == 'finale'
+assert sum(_s['dur'] for _s in _intro_mod.INTRO_SHOTS) >= 50.0
+
+# i18n：origin_*/intro_* 键双语齐全 + 出身页/流程接线
+_ORG_KEYS = ['origin_title', 'origin_pick_hint', 'origin_tag', 'ng_origin_line']
+for _oid in _orig.ORIGIN_ORDER:
+    _ORG_KEYS += ['origin_%s_%s' % (_oid, _f) for _f in
+                  ('name', 'sell', 'pro', 'con', 'flavor')]
+_ORG_KEYS += ['intro_skip', 'intro_forum_name', 'intro_s1', 'intro_s2',
+              'intro_s3', 'intro_s4', 'intro_s5', 'intro_s6', 'intro_s7a',
+              'intro_s7b', 'intro_s7_cpu', 'intro_s8']
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    _miss = [k for k in _ORG_KEYS if k not in i18n_mod.TRANSLATIONS[_lang]]
+    assert not _miss, f"i18n[{_lang}] 缺 T16 键: {_miss}"
+_scr = open(os.path.join(_HERE, 'ui_v4_screens.py'), encoding='utf-8').read()
+for _needle in ('class OriginCard', 'class OriginPage', 'origins.ORIGIN_ORDER',
+                'origin_%s_name'):
+    assert _needle in _scr, f"ui_v4_screens.py 缺出身页接线: {_needle}"
+_main_src = open(os.path.join(_HERE, 'main.py'), encoding='utf-8').read()
+for _needle in ('import intro', 'import origins', 'def _open_origin_flow',
+                'def _show_origin_page', 'def _close_origin_flow',
+                'intro.IntroPlayer', 'S.OriginPage',
+                "os.path.exists(target)"):
+    assert _needle in _main_src, f"main.py 缺出身流程接线: {_needle}"
+print("   ✅ 22) T16 觉醒出身（表一致性 / 难度映射 / 出生包 ×5 / 乘区复位 /"
+      "存档 v2→v3 迁移与往返 / 动画 8 镜 finale 收尾 / origin_*·intro_* 双语 /"
+      "出身页与流程接线）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

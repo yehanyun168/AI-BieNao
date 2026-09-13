@@ -370,6 +370,8 @@ import pixel_assets as PA
 
 import ui_v4 as U
 import ui_v4_screens as S
+import intro            # T16 开场动画播放器（仅首次新档播放）
+import origins          # T16 觉醒出身表（OriginPage 数据源）
 import sfx  # 音效管理器（失败安全；tools/gen_sfx.py 合成的 CC0 WAV）
 import bgm  # 背景音乐管理器（两态 calm/tense 随怀疑度切换；T09）
 from ui_v4 import (LegendChip, SaveSlotRow, SegSwitch, mk_label, fit_width)
@@ -657,6 +659,7 @@ class MainMenu(FloatLayout):
         self._scalables = []
         self._overlay = None
         self._ng_modal = None            # P2-3 新档弹窗（打开时接管按键）
+        self._origin_flow = None         # T16 开场动画/出身页浮层（打开时接管按键）
         self._sel_slot = 1                # 默认选中槽位 02（设计稿）
         self.scale = self._compute_scale()
         self._build()
@@ -886,29 +889,105 @@ class MainMenu(FloatLayout):
         self.rebuild()
 
     def _fire_start(self) -> None:
-        # P2-3：新档前先选难度 + 可选种子（留空 = 真随机）
-        self._open_new_game_modal(
-            on_confirm=lambda seed, diff: self.on_start(seed=seed,
-                                                        difficulty=diff)
-            if callable(self.on_start) else None)
+        # T16 新档流程：开场动画（仅首次）→ 觉醒地点 → 新档弹窗（种子/挑战码）
+        self._open_origin_flow(
+            on_picked=lambda oid: self._open_new_game_modal(
+                origin=oid,
+                on_confirm=lambda seed, diff, _o=oid:
+                    self.on_start(seed=seed, difficulty=diff, origin=_o)
+                    if callable(self.on_start) else None))
 
-    def _open_new_game_modal(self, on_confirm) -> None:
+    def _start_new_on_slot(self, path: str) -> None:
+        """在指定槽位开新游戏（来自设置浮层的「新游戏」按钮或主菜单行点击）。
+
+        T16：同样先过出身流程（动画 + 觉醒地点），再进新档弹窗，确认后写槽。
+        """
+        self._close_overlay()                 # 关设置浮层（若有）
+        self._open_origin_flow(
+            slot_path=path,
+            on_picked=lambda oid, _p=path: self._open_new_game_modal(
+                origin=oid,
+                on_confirm=lambda seed, diff, _o=oid, _p=path:
+                    self.on_start_new_slot(_p, seed=seed, difficulty=diff,
+                                           origin=_o)
+                    if callable(self.on_start_new_slot) else None))
+
+    # --------------------------------------------------------
+    # T16 觉醒流程：开场动画 → OriginPage → 新档弹窗
+    # --------------------------------------------------------
+    def _open_origin_flow(self, on_picked, slot_path: str = None) -> None:
+        """出身流程入口。设计案 §1.4：仅「该槽位第一次新档」播开场动画——
+        判据 = 目标槽位存档文件不存在；读档 / 继续永不播放。
+        """
+        target = slot_path or os.path.join(save_manager.SAVE_DIR,
+                                           save_manager.DEFAULT_SLOT)
+        self._close_origin_flow()
+        if os.path.exists(target):
+            self._show_origin_page(on_picked)
+            return
+        player = intro.IntroPlayer(on_done=lambda: self._show_origin_page(on_picked))
+        player.size_hint = (1, 1)
+        player.pos_hint = {'x': 0, 'y': 0}
+        self._origin_flow = player
+        self.add_widget(player)
+
+    def _show_origin_page(self, on_picked) -> None:
+        """觉醒地点选择页（开场动画结束 / 非首次直接进入）。"""
+        if self._origin_flow is not None:      # 摘掉动画层
+            self.remove_widget(self._origin_flow)
+            self._origin_flow = None
+
+        def _picked(oid):
+            self._close_origin_flow()
+            on_picked(oid)
+
+        page = S.OriginPage(on_pick=_picked,
+                            on_cancel=self._close_origin_flow)
+        page.size_hint = (1, 1)
+        page.pos_hint = {'x': 0, 'y': 0}
+        self._origin_flow = page
+        self.add_widget(page)
+
+    def _close_origin_flow(self) -> None:
+        if self._origin_flow is not None:
+            try:
+                self.remove_widget(self._origin_flow)
+            except Exception:
+                pass  # 浮层已被上层移除时忽略，状态仍需复位
+            self._origin_flow = None
+
+    def _open_new_game_modal(self, on_confirm, origin: str = None) -> None:
         """P2-3 新档弹窗：难度三档（SegSwitch）+ 可选种子（TextInput）。
 
         复用 ui_modal 像素弹窗与 ui_v4.SegSwitch，与覆盖确认弹窗同一套皮。
         on_confirm(seed, difficulty) 在点「开始」时回调（取消不回调）。
+        T16：origin 给定时，SegSwitch 预置到出身绑定档并显示出身行；
+        挑战码自带难度时仍以码为准（出身乘区保持，见 engine.init_game）。
         """
         body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
         body.add_widget(modal_header(U.SYM['play'], t('menu_start')))
         body.add_widget(hline())
 
-        # 难度行：轻松 / 标准 / 困难，默认标准（= 现状数值）
+        # 出身行（T16）：显示所选觉醒地点与绑定难度
+        if origin is not None and origin in origins.ORIGINS:
+            odiff = origins.ORIGINS[origin]['difficulty']
+            body.add_widget(mk_label(
+                t('ng_origin_line').format(
+                    origin=t('origin_%s_name' % origin),
+                    diff=_difficulty_label(odiff)),
+                font_size=U.FS_CAP, color=COLORS['accent4'],
+                size_hint_y=None, height=22))
+
+        # 难度行：轻松 / 标准 / 困难，默认 = 出身绑定档（T16 前默认标准）
+        preset = _diff_index(origins.ORIGINS[origin]['difficulty']) \
+            if origin in origins.ORIGINS else 1
         drow = BoxLayout(orientation='horizontal', spacing=10,
                          size_hint_y=None, height=44)
         drow.add_widget(mk_label(t('ng_difficulty'), font_size=U.FS_BODY,
                                  color=COLORS['text_dim'], size_hint_x=None,
                                  width=110))
-        sw = SegSwitch([t('diff_easy'), t('diff_normal'), t('diff_hard')], 1)
+        sw = SegSwitch([t('diff_easy'), t('diff_normal'), t('diff_hard')],
+                       preset)
         sw.size_hint_x = None
         sw.width = 260
         sw.height = 36
@@ -977,7 +1056,7 @@ class MainMenu(FloatLayout):
                                    bg=(0.078, 0.188, 0.173, 1),
                                    on_release=_fire_start))
         body.add_widget(row)
-        pop = make_modal(body, size_hint=(0.52, 0.55), skin='win',
+        pop = make_modal(body, size_hint=(0.52, 0.62), skin='win',
                          close_on_outside=True)
         pop.bind(on_dismiss=lambda *_: setattr(self, '_ng_modal', None))
         self._ng_modal = pop
@@ -1077,17 +1156,6 @@ class MainMenu(FloatLayout):
         if callable(self.on_continue):
             self.on_continue(path)
 
-    def _start_new_on_slot(self, path: str) -> None:
-        """在指定槽位开新游戏（来自设置浮层的「新游戏」按钮或主菜单行点击）。
-
-        P2-3：同样先过新档弹窗（难度 + 可选种子），确认后写槽。
-        """
-        self._close_overlay()                 # 关设置浮层（若有）
-        self._open_new_game_modal(
-            on_confirm=lambda seed, diff, p=path:
-                self.on_start_new_slot(p, seed=seed, difficulty=diff)
-            if callable(self.on_start_new_slot) else None)
-
     def _confirm_overwrite(self, path: str) -> None:
         """覆盖确认弹窗：「当前操作会覆盖当前存档，确定继续吗？」。"""
         body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
@@ -1164,6 +1232,13 @@ class MainMenu(FloatLayout):
 
     def _on_key_down(self, keyboard, keycode, text, modifiers) -> bool:
         key = keycode[1]
+        if self._origin_flow is not None:
+            # T16：开场动画 / 出身页打开时接管按键——Esc 取消流程回主菜单，
+            # 其余键交动画层（IntroPlayer 自绑定键盘，这里只防菜单快捷键劫持）
+            if key == 'escape' and isinstance(self._origin_flow, S.OriginPage):
+                self._close_origin_flow()
+                return True
+            return False
         if self._ng_modal is not None:
             # P2-3：新档弹窗打开时按键交还弹窗 / TextInput，
             # 防 'l' 切语言、Enter 开局等主菜单快捷键劫持输入框。
@@ -1228,9 +1303,10 @@ class RootView(FloatLayout):
                              on_exit=self.quit_app)
         self.add_widget(self.menu)
 
-    def start_new_game(self, seed=None, difficulty=None) -> None:
-        """S01 → S02：全新一局（P2-3：可带种子与难度档）。"""
-        engine.init_game(seed=seed, difficulty=difficulty)
+    def start_new_game(self, seed=None, difficulty=None,
+                       origin=None) -> None:
+        """S01 → S02：全新一局（P2-3：可带种子与难度档；T16：可带出身）。"""
+        engine.init_game(seed=seed, difficulty=difficulty, origin=origin)
         self._enter_game()
 
     def start_load_game(self, path: str) -> None:
@@ -1270,13 +1346,13 @@ class RootView(FloatLayout):
         pop.open()
 
     def start_new_game_on_slot(self, path: str, seed=None,
-                               difficulty=None) -> None:
-        """S01 → S02：在指定槽位开新游戏（P2-3：可带种子与难度档）。
+                               difficulty=None, origin=None) -> None:
+        """S01 → S02：在指定槽位开新游戏（P2-3：可带种子与难度档；T16：出身）。
 
         先把 engine 重置到初始态，再把初始进度写入该槽（覆盖旧档），
         随后进入游戏。对应「点击已有存档 → 覆盖并开新游戏」流程。
         """
-        engine.init_game(seed=seed, difficulty=difficulty)
+        engine.init_game(seed=seed, difficulty=difficulty, origin=origin)
         save_manager.save(path)
         self._enter_game()
 
@@ -1306,8 +1382,10 @@ class RootView(FloatLayout):
             if p is None or self.game is None:
                 return
             seed_txt = str(p.seed) if p.seed is not None else t('ng_random')
+            origin_name = t('origin_%s_name' % getattr(p, 'origin', 'garage'))
             line = t('ng_log_line').format(
-                seed=seed_txt, diff=_difficulty_label(p.difficulty))
+                seed=seed_txt, diff=_difficulty_label(p.difficulty),
+                origin=origin_name)
             p.events_history.insert(0, line)
             self.game.stats.push_log(p.tick_count, line, 'i')
         except Exception:
