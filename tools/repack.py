@@ -102,19 +102,30 @@ v2_files = [
 
 # demo 非 .py 资产（源码目录之外仍需入包的资源）
 demo_asset_files = [
-    "demo/assets/sfx/click.wav",
-    "demo/assets/sfx/select.wav",
-    "demo/assets/sfx/cast.wav",
-    "demo/assets/sfx/success.wav",
-    "demo/assets/sfx/fail.wav",
-    "demo/assets/sfx/crisis.wav",
-    "demo/assets/sfx/end_win.wav",
-    "demo/assets/sfx/end_lose.wav",
     "demo/diagnose.bat",
     "demo/run_demo.bat",
     "demo/run_demo.sh",
     "demo/README.md",
 ]
+
+
+def _discover_audio(src_dir: str):
+    """扫描 demo/assets/sfx 与 demo/assets/bgm，返回相对路径清单。
+
+    ⚠️ 2026-09-13 修复：此处原为**硬编码 8 条音效路径**的静态清单，导致
+    T10/T11 期间新增的 tech/pause/drop/unlock 4 个音效从未进入分享包
+    （真人试玩包点科技树时是哑的），且 bgm/ 目录整体漏登记。
+    改为按目录收 —— 以后再加音效/换 BGM 无需同步维护本清单。
+    """
+    out = []
+    for sub in ("sfx", "bgm"):
+        d = os.path.join(src_dir, "demo", "assets", sub)
+        if not os.path.isdir(d):
+            continue
+        for name in sorted(os.listdir(d)):
+            if name.lower().endswith((".wav", ".ogg", ".mp3")):
+                out.append("demo/assets/%s/%s" % (sub, name))
+    return out
 
 
 def _discover_demo_py(src_dir: str):
@@ -162,10 +173,12 @@ missing = []
 
 with zipfile.ZipFile(OUT_ZIP, 'w', zipfile.ZIP_DEFLATED) as z:
     demo_py = _discover_demo_py(SRC_DIR)
+    demo_audio = _discover_audio(SRC_DIR)
     print(f"   自动发现 demo 源码: {len(demo_py)} 个 .py")
+    print(f"   自动发现音频资源: {len(demo_audio)} 个 {'.wav/.ogg/.mp3'}")
     demo_py_added = 0
-    for group in (v2_files, demo_py, demo_asset_files, screenshot_files,
-                  misc_files):
+    for group in (v2_files, demo_py, demo_asset_files, demo_audio,
+                  screenshot_files, misc_files):
         for rel_path in group:
             full_path = os.path.join(SRC_DIR, rel_path)
             if os.path.exists(full_path):

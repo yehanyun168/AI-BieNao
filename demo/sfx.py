@@ -3,7 +3,11 @@
 sfx.py —— 《AI 别闹》音效管理器（失败安全，绝不因缺音频后端而崩）。
 
 设计要点：
-- 全部音效为本地合成的 CC0 WAV（tools/gen_sfx.py 生成到 demo/assets/sfx/）。
+- 音效分两批来源，Kivy 对两者都能直接加载（实测 44.1kHz 立体声 OGG/WAV 均 OK）：
+    1. 本地合成 CC0 WAV（tools/gen_sfx.py 生成到 demo/assets/sfx/）—— 波表音色；
+    2. Kenney CC0 OGG / Atelier Magicae 像素 WAV（demo/assets/sfx/）—— 拟音音色。
+  因此本模块按**候选后缀依次探测**（.wav → .ogg），同名时优先 .wav，
+  保持「合成音为基线、外部素材为可选覆盖」的可回退性。
 - 打包后走 sys._MEIPASS 解析路径（与 v2_events 同款多候选解析）。
 - 任何一步出错都静默降级为 no-op：无音频后端 / 文件缺失 / 播放异常都不影响游戏。
 
@@ -18,9 +22,16 @@ import sys
 
 from kivy.core.audio import SoundLoader
 
-# 音效名（与 gen_sfx.py 输出一一对应）
+# 音效名（与 tools/gen_sfx.py / demo/assets/sfx 目录内容对应）
+# 前 12 个为合成基线；其后为「语义补充分层」（2026-09-13 新增，源自 Kenney
+# interface-sounds CC0），用于区分原本共用同一个 click 的各类交互。
 NAMES = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
-        'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock')
+        'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock',
+        # —— 语义补充分层 ——
+        'hover', 'page', 'toggle', 'error', 'confirm', 'scroll')
+
+# 候选后缀（按优先级；同名多后缀时取靠前者）
+SUFFIXES = ('.wav', '.ogg')
 
 SFX_ON = True
 _LOADED = False
@@ -35,6 +46,15 @@ def _base_dir() -> str:
     return os.path.join(here, 'assets', 'sfx')
 
 
+def _resolve(d: str, name: str):
+    """按 SUFFIXES 优先级找第一个存在的文件；找不到返回 None。"""
+    for suf in SUFFIXES:
+        p = os.path.join(d, name + suf)
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def load_all() -> None:
     """加载全部音效（幂等；失败的单条置 None，不影响其它）。"""
     global _LOADED
@@ -43,16 +63,17 @@ def load_all() -> None:
     for name in NAMES:
         if name in _SOUNDS and _SOUNDS[name] is not None:
             continue
-        p = os.path.join(d, name + '.wav')
         try:
-            if os.path.exists(p):
+            p = _resolve(d, name)
+            if p is not None:
                 _SOUNDS[name] = SoundLoader.load(p)
             else:
                 _SOUNDS[name] = None
-                print('[sfx] 警告：音效缺失 %s.wav，已静音跳过（查找目录: %s）' % (name, d))
+                print('[sfx] 警告：音效缺失 %s{.wav/.ogg}，已静音跳过（查找目录: %s）'
+                      % (name, d))
         except Exception as e:
             _SOUNDS[name] = None
-            print('[sfx] 警告：音效加载失败 %s.wav，已静音跳过：%s' % (name, e))
+            print('[sfx] 警告：音效加载失败 %s，已静音跳过：%s' % (name, e))
 
 
 def set_enabled(on: bool) -> None:
