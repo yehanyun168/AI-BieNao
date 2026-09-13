@@ -446,76 +446,57 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     # === 阶段 3.5: 政府反制（P0-3，紧跟阻止结算；设计稿 §2）===
     report["counterplay"] = _tick_counterplay(effects)
 
-    # === 阶段4: 通用事件触发 ===
-    evt = _tick_event_trigger(effects)
-    if evt:
-        _apply_event(evt)
-        player.events_history.insert(0, f"[周期 {player.tick_count}] {evt.icon} {evt.message}")
-        if len(player.events_history) > 20:
-            player.events_history = player.events_history[:20]
-        report["events"].append((evt, {}))
-
-    # === 阶段 4.5: 国家专属事件触发 ===
-    country_evt = _tick_country_event_trigger()
-    if country_evt:
-        _apply_country_event(country_evt)
-        msg = ce.get_event_message(country_evt, i18n.get_lang())
-        player.events_history.insert(0, f"[周期 {player.tick_count}] {country_evt.id} {msg}")
-        if len(player.events_history) > 20:
-            player.events_history = player.events_history[:20]
-        report["events"].append((country_evt, {}))
-
-    # === 阶段5: 危机（每局只首次触发一次弹窗，之后静默惩罚）===
-    if player.suspicion >= data.SUSPICION_CRISIS:
-        if not player.crisis_triggered:
-            player.crisis_triggered = True
-            report["crisis"] = True
-            report["events"].append(
-                ("CRISIS", {"message": "[CRISIS] 怀疑度超过 80%！各国开始封禁 AI 服务"}))
-        for c in player_countries:
-            c.downloads_m *= data.CRISIS_DOWNLOAD_DECAY
-
-    # === 阶段5.1: 收网压力（玩家反馈 #6 大修）===
+    # === 阶段4: 收网压力（玩家反馈 #6 大修）===
     # 怀疑度越过收网线后，每周期叠加固定增量（balance.TUNE 收网参数）。
     #   旧问题：危机期下载衰减 → 偷算力基数萎缩 → 怀疑增速 < 事件抽水，
     #   怀疑度在 95-99 反复横跳、对局拖到天荒地老（玩家实测卡死主因）。
     #   现在收网区是单向阀：要么主动自救（危机选项 / 深度伪装），要么
     #   在数个周期内被推到 100 触发关停 —— 对局必在预计周期内结束。
-    # 注意放在衰减之后、事件之前：本周期压力立即参与结局判定（阶段 7）。
+    # 在边界事件判定前结算，本周期压力可立即触发最高优先级的危机。
     _sus_pressure = TUNE['sus_pressure_per_tick']
     if (_sus_pressure > 0
             and player.suspicion >= TUNE['sus_pressure_threshold']):
         _sus('crisis_pressure', _sus_pressure)
         player.suspicion = min(100.0, player.suspicion + _sus_pressure)
 
-    # === 阶段6: 冷却递减（按周期，与 tick 墙钟时长解耦）===
+    # === 阶段5: 冷却递减（按周期，与 tick 墙钟时长解耦）===
     # 技能冷却单位是「周期」（data.SKILLS.cooldown），每推进一个周期减 1。
     # 不能用 dt_seconds 递减：base_tick_seconds=30，会把 cooldown=3 一步扣成负数。
     player.skill_cooldowns = {
         k: v - 1 for k, v in player.skill_cooldowns.items() if v > 1
     }
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
-    # === 阶段6.5: v2 事件库（37 条选择型事件）===
-    if (not onboarding.in_tutorial_silence(TUNE, player.tick_count)
-            and v2_events.EVENTS and random.random() < TUNE['event_prob_v2']):
-        v2_ctx = {
-            'penetration': player.global_penetration,
-            'suspicion': player.suspicion,
-            'tech': player.tech,
-            'countries': {c.config.code: c for c in player_countries},
-            'seen_events': player.v2_seen,
-        }
-        picked = v2_events.pick_event(v2_ctx, player.v2_cooldowns)
-        if picked is not None:
-            player.v2_seen.add(picked.id)
-            if auto_choice:
-                # 无 UI（自测 / 平衡模拟）：默认选第一个选项
-                resolve_choice(picked, 0)
-                report["v2_event"] = (picked, 0)
-            else:
-                report["choice_event"] = picked
+    # === 阶段6: 回合边界事件（危机 > V2 > 国家 > 通用；至多一个）===
+    crisis_active = player.suspicion >= data.SUSPICION_CRISIS
+    event_kind, evt = _pick_boundary_event(effects)
+    if event_kind == 'crisis':
+        player.crisis_triggered = True
+        report["crisis"] = True
+        report["events"].append(
+            ("CRISIS", {"message": "[CRISIS] 怀疑度超过 80%！各国开始封禁 AI 服务"}))
+    elif event_kind == 'v2':
+        player.v2_seen.add(evt.id)
+        if auto_choice:
+            resolve_choice(evt, 0)
+            report["v2_event"] = (evt, 0)
+        else:
+            report["choice_event"] = evt
+    elif event_kind == 'country':
+        _apply_country_event(evt)
+        msg = ce.get_event_message(evt, i18n.get_lang())
+        player.events_history.insert(0, f"[周期 {player.tick_count}] {evt.id} {msg}")
+        report["events"].append((evt, {}))
+    elif event_kind == 'global':
+        _apply_event(evt)
+        player.events_history.insert(0, f"[周期 {player.tick_count}] {evt.icon} {evt.message}")
+        report["events"].append((evt, {}))
+    if crisis_active:
+        for c in player_countries:
+            c.downloads_m *= data.CRISIS_DOWNLOAD_DECAY
+    if len(player.events_history) > 20:
+        player.events_history = player.events_history[:20]
 
-    # === 阶段6.6: 动态委托（P0-3；危机挂起新单，在场单照常走表）===
+    # === 阶段6.5: 动态委托（P0-3；危机挂起新单，在场单照常走表）===
     offered, com_done, com_failed = _tick_commissions(report["crisis"])
     report["commission_offered"] = offered
     report["commission_done"] = com_done
@@ -618,6 +599,25 @@ def check_achievements():
     return achievements_mod.check_new(build_achievement_context(),
                                       player.achievements)
 
+
+def _pick_boundary_event(effects: dict):
+    """按固定优先级选择一个回合边界事件；命中后不再检查低优先级。"""
+    if player.suspicion >= data.SUSPICION_CRISIS and not player.crisis_triggered:
+        return 'crisis', None
+    if (not onboarding.in_tutorial_silence(TUNE, player.tick_count)
+            and v2_events.EVENTS and random.random() < TUNE['event_prob_v2']):
+        ctx = {'penetration': player.global_penetration,
+            'suspicion': player.suspicion, 'tech': player.tech,
+            'countries': {c.config.code: c for c in player_countries},
+            'seen_events': player.v2_seen}
+        evt = v2_events.pick_event(ctx, player.v2_cooldowns)
+        if evt is not None:
+            return 'v2', evt
+    evt = _tick_country_event_trigger()
+    if evt is not None: return 'country', evt
+    evt = _tick_event_trigger(effects)
+    if evt is not None: return 'global', evt
+    return None, None
 
 def _tick_event_trigger(effects: dict) -> Optional[data.GameEvent]:
     """加权事件触发"""
