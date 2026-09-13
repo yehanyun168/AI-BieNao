@@ -404,9 +404,32 @@ import ui_v4_screens as _screens_m
 
 assert _bgm.STATES == ('calm', 'tense'), f"BGM 态定义变了: {_bgm.STATES}"
 _bgm_dir = _bgm._base_dir()
+# 两态 × 全部变体都必须有实体文件（2026-09-13 换 CC0 OGG 后改为按
+# bgm.SUFFIXES 探测，不再硬编码 .wav）。缺任何一个 → bgm.py 静默降级，
+# 玩家只会觉得「音乐没了」，因此这里必须硬断言。
 for _st in _bgm.STATES:
-    _p = os.path.join(_bgm_dir, _st + '.wav')
-    assert os.path.exists(_p), f"BGM 资源缺失: {_p}（打包时须 add-data assets/bgm）"
+    for _vi, _stem in enumerate(_bgm.VARIANTS.get(_st, (_st,))):
+        assert _bgm._resolve(_bgm_dir, _stem) is not None, (
+            f"BGM 资源缺失: {_stem}{_bgm.SUFFIXES}（打包时须 add-data assets/bgm）")
+assert os.path.exists(os.path.join(_bgm_dir, 'CREDITS.md')), \
+    "demo/assets/bgm/CREDITS.md 缺失（素材授权声明必须入库）"
+# 变体切换接口与语义（各态候选数可不同：calm 3 / tense 2）
+assert _bgm.get_track_variant() == 0, "默认应变体 0（主选）"
+_bgm.set_track_variant(1)
+assert _bgm.get_track_variant() == 1, "set_track_variant(1) 未生效"
+assert _bgm.get_sound('calm', 1) is not _bgm.get_sound('calm', 0), \
+    "主选/备选应加载为两个不同音频对象"
+assert _bgm.variant_count('calm') >= 2, "calm 应有多首候选"
+# 越界取音频必须回落主选（否则切到不存在的变体会静音）
+for _st in _bgm.STATES:
+    assert _bgm.get_sound(_st, 99) is _bgm.get_sound(_st, 0), \
+        f"{_st} 变体越界应回落主选（返回 None 会静音）"
+    for _vi in range(_bgm.variant_count(_st)):
+        assert _bgm.get_track_label(_st, _vi), f"{_st}#{_vi} 标签为空"
+_bgm.set_track_variant(_bgm.variant_count('calm') - 1)
+assert _bgm.get_track_variant() == _bgm.variant_count('calm') - 1, \
+    "应能切到 calm 最后一首（各态独立钳位，不能按 min 锁死）"
+_bgm.set_track_variant(0)
 
 # 两态映射：70% 危机线为阈值（低于→calm，达到/超过→tense）
 assert _bgm.state_for_suspicion(0.0, 50.0) == 'calm'
@@ -430,8 +453,9 @@ _main_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 for _needle in ('import bgm', 'bgm.load_all()', 'on_music=self._set_music_idx',
                 'def _set_music_idx'):
     assert _needle in _main_src, f"main.py 缺 BGM 接线: {_needle}"
-print("   ■ 18) T09 背景音乐（calm/tense 两态 WAV / 70% 阈值映射 / "
-      "设置页开关 ×2 语 / main 接线四连）")
+_n_tracks = sum(_bgm.variant_count(_s) for _s in _bgm.STATES)
+print(f"   ■ 18) T09 背景音乐（calm/tense 两态 × {_n_tracks} 首 CC0 OGG / "
+      "70% 阈值映射 / 变体热切换 + 越界回落 / 设置页开关 ×2 语 / main 接线四连）")
 
 # ---- 19) T10 地图渗透热力层：同心环几何 + 图例语义 + 图层互斥 ----
 import world_map as _wm
@@ -745,16 +769,19 @@ _semantic = ('hover', 'page', 'toggle', 'error', 'confirm', 'scroll')
 for _n in _semantic:
     assert _n in _sfx_mod.NAMES, f"sfx.NAMES 缺语义分层音效: {_n}"
 
-# BGM 两态必须存在（bgm.py 同样静默降级）
+# BGM 两态 × 变体必须存在（bgm.py 同样静默降级）
+import bgm as _bgm_mod
 _bgm_dir = os.path.join(_HERE, 'assets', 'bgm')
-for _st in ('calm', 'tense'):
-    assert os.path.exists(os.path.join(_bgm_dir, _st + '.wav')) or \
-        os.path.exists(os.path.join(_bgm_dir, _st + '.ogg')), \
-        f"demo/assets/bgm 缺 BGM: {_st}"
+for _st in _bgm_mod.STATES:
+    for _stem in _bgm_mod.VARIANTS.get(_st, (_st,)):
+        assert _bgm_mod._resolve(_bgm_dir, _stem) is not None, \
+            f"demo/assets/bgm 缺 BGM: {_stem}"
 
 # 授权声明必须随源码走（素材合规留痕）
 assert os.path.exists(os.path.join(_sfx_dir, 'CREDITS.md')), \
     "demo/assets/sfx/CREDITS.md 缺失（素材授权声明必须入库）"
+assert os.path.exists(os.path.join(_bgm_dir, 'CREDITS.md')), \
+    "demo/assets/bgm/CREDITS.md 缺失（素材授权声明必须入库）"
 
 # 接线断言：新增语义音效必须真的被用上，否则等于没集成
 _src_all = ''
@@ -762,8 +789,9 @@ for _f in ('ui_pages.py', 'ui_session.py', 'ui_input.py', 'ui_drop.py'):
     _src_all += open(os.path.join(_HERE, _f), encoding='utf-8').read()
 for _needle in ("sfx.play('error')", "sfx.play('page')", "sfx.play('toggle')"):
     assert _needle in _src_all, f"语义音效未接线: {_needle}"
-print("   ■ 23) 音效资源完整性（18 个音效文件齐备 / 合成基线 12 + 语义分层 6 /"
-      " BGM 两态齐全 / 授权声明入库 / 语义音效接线已生效）")
+_n_bgm = sum(_bgm_mod.variant_count(_s) for _s in _bgm_mod.STATES)
+print(f"   ■ 23) 音效资源完整性（18 个音效文件齐备 / 合成基线 12 + 语义分层 6 /"
+      f" BGM 两态 ×{_n_bgm} 首曲目 / 授权声明入库 / 语义音效接线已生效）")
 
 print("\n 全部通过 - demo 可以正常启动")
 print()
