@@ -44,14 +44,20 @@ STATES = ('calm', 'tense', 'menu')
 SUFFIXES = ('.ogg', '.wav', '.mp3')
 
 # 各曲池的曲目（文件名去掉后缀）。同一池内随机播放、互不重复直到轮完。
+# 池子大小的判据是「**单局内总重复次数**」，不是「够不够多」：
+# 单局 30-50 周期 × 30s ≈ 15-25 分钟，若某池总时长只有 2-3 分钟，
+# 一局内每首要响 8-13 遍，随机打乱也救不回重复感（它只消除相邻重复）。
+# 故 calm 池特意混入 HydroGene 的长曲（83-111s），拉高总时长。
 POOLS = {
-    # calm（正常经营）：Penguin Town（最顽皮）/ Rabbit Town / I am not clumsy
-    'calm':  ('calm', 'calm_alt', 'calm_alt2'),
+    # calm（正常经营）：顽皮向 3 短曲 + 沉稳向 2 长曲，总时长约 312s ≈ 5.2 分钟
+    'calm':  ('calm', 'calm_alt', 'calm_alt2', 'calm_alt3', 'calm_alt4'),
     # tense（被封锁被抵制）：Rumble at the Gates（更富希望）/ Save the City（压迫感强）
     'tense': ('tense', 'tense_alt'),
-    # menu（主菜单）：复用 calm 池 —— 主菜单氛围与正常经营一致（轻松、无压迫），
-    # 且不额外占体积。若日后有专属菜单曲，只需在此加名并放入 assets/bgm/。
-    'menu':  ('calm', 'calm_alt', 'calm_alt2'),
+    # menu（主菜单）：**专属曲**，不与对局池共用 ——
+    # 这是听觉上的「状态边界」：菜单是上帝视角谋划，局内是执行扩张。
+    # 若 menu 复用 calm 池，玩家进菜单听到的是对局里那首，就分不清
+    # 「我在配置」还是「我在打」。（The Quiet Spy：冷感谍战，贴合谋划视角）
+    'menu':  ('menu',),
 }
 
 # 曲目结束后到下曲开始的停顿（秒）。用户指定 1 秒。
@@ -303,9 +309,17 @@ def set_volume(v: float) -> None:
 
 
 def _fade_out(snd) -> None:
-    """旧曲 0.6s 内音量降到 0 再停（切池用，避免硬切）。"""
+    """旧曲 0.6s 内音量降到 0 再停（切池用，避免硬切）。
+
+    ⚠️ 已停的 Sound 直接跳过：若旧曲恰好刚播完（state='stop'），
+    对它做 0.6s 淡出是「对着空气调音量」—— 听起来不是过渡，
+    而是「旧曲早就没了、新曲却还在慢慢淡入」，反而比硬切更突兀。
+    这种情况直接让新曲起播（fade=False 的观感）。
+    """
     if snd is None:
         return
+    if getattr(snd, 'state', 'stop') != 'play':
+        return                    # 已经不在播了，没有可淡出的对象
     try:
         steps = [6, 5, 4, 3, 2, 1, 0]
 
@@ -369,14 +383,32 @@ def stop() -> None:
     _playing = None
 
 
+# 上行 / 下行双阈值（滞回窗口）：
+# 只用一个 70% 阈值会出大事 —— 怀疑度是**每周期**重算并调 update() 的，
+# 当它恰好在 70% 线上下抖动（策略游戏里极常见：这周期放个降疑技能、
+# 下周期又涨回去），update() 会 calm→tense→calm→tense 每周期切一次；
+# 每次切池都 _cancel_timers + _shuffle + 淡入淡出，结果是 BGM
+# **永远只播得出开头 0.6 秒**，听感像「音乐一直在抽搐」。
+# 所以必须留滞回带：上穿 70% 才进 tense，要跌回 55% 以下才回 calm。
+_TENSE_ENTER = 0.70
+_TENSE_EXIT = 0.55
+
+
 def state_for_suspicion(suspicion: float, crisis_line: float) -> str:
     """把怀疑度映射到 BGM 池（供游戏侧一行调用）。
 
-    阈值取危机线的 70% —— 比危机线早一步开始紧张，玩家有「预警感」，
-    但不会一有怀疑度就全程紧张（那会让切换失去信息量）。
+    阈值取危机线的 70%（上行）—— 比危机线早一步开始紧张，玩家有
+    「预警感」，但不会一有怀疑度就全程紧张（那会让切换失去信息量）。
+
+    ⚠️ 带滞回：当前态是 tense 时要跌破 55% 才回 calm。判据用 `_current`，
+    所以本函数不是纯函数 —— 但调用方（每周期一次）正是希望它记住上一态。
     """
     try:
-        if float(suspicion) >= float(crisis_line) * 0.7:
+        line = float(crisis_line)
+        sus = float(suspicion)
+        if _current == 'tense':
+            return 'calm' if sus < line * _TENSE_EXIT else 'tense'
+        if sus >= line * _TENSE_ENTER:
             return 'tense'
     except Exception:
         pass

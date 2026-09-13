@@ -23,16 +23,22 @@ import sys
 from kivy.core.audio import SoundLoader
 
 # 音效名（与 tools/gen_sfx.py / demo/assets/sfx 目录内容对应）
-# 前 12 个为合成基线；其后为「语义补充分层」——2026-09-13 分两批加入：
+# 前 12 个为合成基线；其后为「语义补充分层」——2026-09-13 分三批加入：
 #   第 1 批（Kenney interface-sounds CC0）：区分原本共用 click 的各类交互；
 #   第 2 批（同上，同批素材）：补齐「技能投放」与「科技分支升级」的缺口，
 #     并把过短的 hover 换成听感更清晰的版本。
+#   第 3 批（Kenney sci-fi-sounds + interface-sounds CC0）：补**系统层反馈**——
+#     原实现把 UI 层做得不错（hover/page/toggle/…），但游戏世界「对玩家回话」
+#     的时刻几乎全静默：敌人反制没声、成就解锁没声、委托接拒没声。
+#     这批专治这个结构性失衡。
 NAMES = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
         'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock',
         # —— 语义补充分层（第 1 批）——
-        'hover', 'page', 'toggle', 'error', 'confirm', 'scroll',
+        'hover', 'page', 'toggle', 'error', 'confirm',
         # —— 语义补充分层（第 2 批：投放/分支）——
-        'deploy', 'branch', 'confirm_cast')
+        'deploy', 'branch', 'confirm_cast',
+        # —— 系统层反馈（第 3 批）——
+        'counter_warn', 'counter_hit', 'achieve', 'commission')
 
 # 候选后缀（按优先级；同名多后缀时取靠前者）
 SUFFIXES = ('.wav', '.ogg')

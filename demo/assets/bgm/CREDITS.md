@@ -5,32 +5,43 @@
 
 ---
 
-## 一、曲目登记（2026-09-13 · 真人试听裁决定版）
+## 一、曲目登记（2026-09-13 · 随机曲池改造后）
 
-| 文件 | 原始曲名 | 用途 | 时长 | 来源包 |
+| 文件 | 原始曲名 | 所属曲池 | 时长 | 来源包 |
 |---|---|---|---|---|
-| `calm.ogg` | Penguin Town | **主选** · 正常经营态 | 35.3s | Tallbeard |
-| `calm_alt.ogg` | Rabbit Town | 备选 · 正常经营态 | 45.5s | Tallbeard |
-| `calm_alt2.ogg` | I am not clumsy | 备选二 · 正常经营态 | 39.3s | HydroGene |
-| `tense.ogg` | Rumble at the Gates | **主选** · 被封锁/被抵制态 | 90.9s | Tallbeard |
-| `tense_alt.ogg` | Save the City | 备选 · 被封锁/被抵制态 | 102.4s | Tallbeard |
+| `calm.ogg` | Penguin Town | calm（正常经营 · 最顽皮） | 35.3s | Tallbeard |
+| `calm_alt.ogg` | Rabbit Town | calm（正常经营） | 45.5s | Tallbeard |
+| `calm_alt2.ogg` | I am not clumsy | calm（正常经营） | 39.3s | HydroGene |
+| `calm_alt3.ogg` | Truth | calm（正常经营 · 沉稳） | 110.8s | HydroGene |
+| `calm_alt4.ogg` | Space Adventure | calm（正常经营 · 沉稳） | 82.3s | HydroGene |
+| `tense.ogg` | Rumble at the Gates | tense（被封锁/被抵制 · 更富希望） | 90.9s | Tallbeard |
+| `tense_alt.ogg` | Save the City | tense（被封锁/被抵制 · 压迫感强） | 102.4s | Tallbeard |
+| `menu.ogg` | The Quiet Spy | **menu（主菜单专属）** | 101.8s | HydroGene |
 
-各态候选数不要求一致（calm 3 首 / tense 2 首）：`bgm.get_sound()` 在变体
-越界时自动回落该态主选，不会静音。设置页曲目切换范围为 **0 ~ 2**。
+> **menu 池为专属曲，不与 calm 池共用。** 这是听觉上的「状态边界」：
+> 菜单是上帝视角谋划、局内是执行扩张；若共用，玩家进菜单听到对局那首，
+> 就分不清自己处在哪个状态。
+
+各态候选数不要求一致（calm 5 首 / tense 2 首 / menu 1 首）。`bgm.py` 采用
+**播放列表式随机循环**：同池曲目打乱成队列逐首播放，队列空后重新打乱；
+单曲缺失时跳过该曲、不静音。**已取消手动切曲机制**（原 `set_track_variant`
+与设置页曲目切换控件已移除）—— 曲目由随机池自动轮播，玩家无需干预。
 
 > 听感裁决（用户原话转录）：`penguin town` 与 `rabbit town` 适合正常情况，
 > **前者更顽皮**；被封锁被抵制时用 `rumble at the gates` 与 `save the city`，
 > **前者更富希望，后者压迫感更强**。
-> 后续追加采纳 `i am not clumsy`（HydroGene）作为 calm 第三候选。
-> 据此：calm 主选 Penguin Town、tense 主选 Rumble at the Gates；
-> 其余保留在目录内，经 `bgm.set_track_variant(n)` 可热切换。
+> 后续追加采纳 `i am not clumsy` / `Truth` / `Space Adventure`（HydroGene）
+> 扩容 calm 池 —— 前两首用于拉高池总时长（原 3 首仅约 120s，单局 15-25 分钟
+> 内每首要响 8 次以上，重复感明显；加入后总时长约 312s，压缩到每首 2-3 次）。
+> `The Quiet Spy` 单独作为主菜单曲。
 
 ### 音量归一化
 
-5 首曲目峰值已统一到 **−0.1 ~ −0.5 dBFS**（原始素材极差 2.9 dB）。
+8 首曲目峰值已统一到 **−0.1 ~ −0.7 dBFS**（原始素材极差 2.9 dB）。
 统一是为避免切歌/切态时响度突变 —— `bgm.VOLUME` 是全局统一增益，
 若素材本身响度差异大，玩家会感到「切到紧张态突然变小声」。
-其中 `calm_alt2.ogg` 由 MP3 转码得来，原始峰值 −2.9 dBFS，已增益补偿。
+其中 `calm_alt2.ogg` / `calm_alt3.ogg` 由 MP3 转码得来，原始峰值偏低，
+已增益补偿。
 
 ### 选择 OGG 而非 MP3 的原因
 
@@ -39,11 +50,12 @@
 > MP3 files will often NOT loop seamlessly... It is recommended to use these
 > songs as OGG files.
 
-本项目 BGM 是 `loop=True` 循环播放，MP3 的循环缝隙会每轮暴露一次，
-故一律取 OGG 版。HydroGene 包**只发布 MP3**，因此其曲目经
-`tools/mp3_to_ogg.py` 转码（含首尾静音裁剪 + 10ms 等功率交叉淡化，
-消除循环接缝的咔哒声）后入库。原始 MP3 保留在
-`assets_library/audio/bgm/hydrogene-8bit/`（该目录不入库）。
+早期本项目的 BGM 是 `loop=True` 循环播放，MP3 的循环缝隙会每轮暴露一次，
+故一律取 OGG 版。**现在改为播放列表式随机循环后，无缝循环不再是硬需求**
+（每首只播一遍就换曲），但 OGG 仍保留：体积更小、且尾端不会有 MP3 的
+编码器补零噪声。HydroGene 包**只发布 MP3**，其曲目经
+`tools/mp3_to_ogg.py` 转码（含首尾静音裁剪 + 10ms 等功率交叉淡化）后入库。
+原始 MP3 保留在 `assets_library/audio/bgm/hydrogene-8bit/`（该目录不入库）。
 
 ---
 
@@ -92,7 +104,7 @@ by Abstraction (tallbeard.itch.io/music-loop-bundle) — CC0
 ⚠️ 注意授权中「不背书用于 NFT / AI 机器学习」一句属**作者意愿表达**，
 CC0 本身无此限制；本项目为普通像素策略游戏，无冲突。
 
-### 3.2 HydroGene（calm_alt2 = "I am not clumsy"）
+### 3.2 HydroGene（calm_alt2 / calm_alt3 / calm_alt4 / menu）
 
 授权登记见 `assets_library/_licenses/README.md`：
 
@@ -102,7 +114,8 @@ CC0 本身无此限制；本项目为普通像素策略游戏，无冲突。
 授权信息来自 itch.io 商店页（下载时确认）。若正式发布，建议一并署名：
 
 ```
-Music: "I am not clumsy" by HydroGene (hydrogene.itch.io/high-quality-8-bit-musics) — CC0
+Music: "I am not clumsy" / "Truth" / "Space Adventure" / "The Quiet Spy"
+by HydroGene (hydrogene.itch.io/high-quality-8-bit-musics) — CC0
 ```
 
 ⚠️ **补强建议**：目前该曲唯一授权凭据是 `_licenses/README.md` 里的一行表格

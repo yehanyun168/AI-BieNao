@@ -14,15 +14,14 @@ from balance import TUNE
 from tech_tree import SLOT_MAP
 from data import SKILLS, SKILL_ORDER
 # ⚠️ P1-10 快照治理：SUSPICION_CRISIS 是 data 的 PEP 562 动态代理常量，
-#    不能 from-import（一次性快照），改 data.SUSPICION_CRISIS 属性访问。
+# 不能 from-import（一次性快照），改 data.SUSPICION_CRISIS 属性访问。
 import data
 import achievements as achievements_mod
-import sfx  # 个性化音效（解锁科技等）
-import bgm  # T09 背景音乐管理器（calm/tense 两态，随怀疑度切换）
+import sfx   # 个性化音效（解锁科技等）
+import bgm   # T09 背景音乐（calm/tense 两态，随怀疑度切换）
 import ui_v4 as U
 import ui_v4_screens as S
 from ui_commissions import _name_of as _com_name, _goal_text as _com_goal
-
 
 # ============================================================
 # InputMixin —— GameUI 的键盘 / 主循环 / 刷新
@@ -87,7 +86,6 @@ class InputMixin:
     # ========================================================
     # 缩放
     # ========================================================
-
 
     # ========================================================
     # P1-2 技能预览（悬停技能卡 → 预览条显示"会怎样"）
@@ -561,7 +559,6 @@ class InputMixin:
     # 弹窗
     # ========================================================
 
-
     def game_tick(self, dt) -> None:
         # 引导进行中：冻结回合推进（即使误触空格取消暂停也不推进）
         if self.tutorial is not None and self.tutorial.overlay is not None:
@@ -599,6 +596,9 @@ class InputMixin:
                     ach_name = a.name(get_lang()) if a else str(item)
                 self.stats.push_log(engine.player.tick_count,
                                     f"{t('log_tone_g')}: {ach_name}", 'g')
+                # 成就墙已上线但解锁瞬间原先是完全静默的，正向反馈的
+                # 最高峰被浪费。在 UI 层播（engine 不得 import UI）。
+                sfx.play('achieve')
 
         # --- P0-3 委托事件（toast + 日志；芯片条随 refresh_all 重建）---
         offered = report.get("commission_offered")
@@ -622,14 +622,18 @@ class InputMixin:
                        f"+{done.reward:.0f}{t('com_reward_unit')}")
             self._notify(f"{t('com_done_toast')}: {_com_name(done)} "
                          f"+{done.reward:.0f}{t('com_reward_unit')}")
+            sfx.play('commission')   # 与通用 success 区分（契约闭环）
         failed = report.get("commission_failed")
         if failed is not None:
             self.show_top_toast(
                 f"{t('com_failed_toast')} · {_com_name(failed)}", tone='dn',
                 detail=_com_goal(failed))
             self._notify(f"{t('com_failed_toast')}: {_com_name(failed)}")
+            sfx.play('fail')
 
         # --- P0-3 政府反制（ardot_ui S06 ⚠ 预警样式）---
+        # ⚠️ 玩法里最需要听觉警报的时刻：反制是「敌人对我出手」，1 周期预警后
+        # 结算。原先只有视觉 toast，玩家盯地图时极易错过，后果却是实数损失。
         cp_events = report.get("counterplay")
         if cp_events:
             for ev in cp_events:
@@ -639,6 +643,7 @@ class InputMixin:
                     self.show_top_toast(
                         t('cp_warn_toast').format(name=cname), tone='cost')
                     self._notify(t('cp_warn_log').format(name=cname))
+                    sfx.play('counter_warn')     # 预警：玩家还有 1 周期可应对
                 elif ev.get('phase') == 'strike':
                     body = t(f"cp_type_{ev.get('type', '')}").format(
                         detail=ev.get('detail', ''))
@@ -647,6 +652,7 @@ class InputMixin:
                         tone='dn')
                     self._notify(
                         f"{t('cp_strike_toast').format(name=cname)} {body}")
+                    sfx.play('counter_hit')      # 结算：损失已发生
 
         # --- 怀疑度来源拆解（玩家反馈 #5：26%→95% 看不懂为什么）---
         # 当本周期怀疑度净变化较大时，把来源逐条写进日志，
@@ -792,5 +798,3 @@ class InputMixin:
                 self.exit_to_menu()
             return True
         return False
-
-
