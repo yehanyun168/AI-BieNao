@@ -416,7 +416,9 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
 
     DESIGN_HEIGHT = 980.0
     TOP_H = 64          # 52 → 64：内嵌 44px 可交互控件 + 上下内边距
-    SKILLBAR_H = 104
+    # 104 → 126：技能卡三段式（主行 24 + 效果 2×21.6 + 状态 22 + 内边距），
+    # 效果说明两行完整显示不再裁切（用户反馈"显示半截"）
+    SKILLBAR_H = 126
 
     def __init__(self, on_exit=None, **kwargs):
         super().__init__(**kwargs)
@@ -916,15 +918,12 @@ class MainMenu(FloatLayout):
     # T16 觉醒流程：开场动画 → OriginPage → 新档弹窗
     # --------------------------------------------------------
     def _open_origin_flow(self, on_picked, slot_path: str = None) -> None:
-        """出身流程入口。设计案 §1.4：仅「该槽位第一次新档」播开场动画——
-        判据 = 目标槽位存档文件不存在；读档 / 继续永不播放。
+        """出身流程入口（2026-09-13：每次开始新游戏都播开场动画）。
+
+        不再判存档是否存在——开场动画是「进入新游戏」的固定仪式。
+        IntroPlayer 全屏覆盖主菜单并吞掉触摸，播完由 on_done 无缝接 OriginPage。
         """
-        target = slot_path or os.path.join(save_manager.SAVE_DIR,
-                                           save_manager.DEFAULT_SLOT)
         self._close_origin_flow()
-        if os.path.exists(target):
-            self._show_origin_page(on_picked)
-            return
         player = intro.IntroPlayer(on_done=lambda: self._show_origin_page(on_picked))
         player.size_hint = (1, 1)
         player.pos_hint = {'x': 0, 'y': 0}

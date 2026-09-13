@@ -65,6 +65,10 @@ TUNE: Dict[str, float] = {
     'compute_per_user': 1.0,
     # 偷算力公式里的规模系数（把「比例」放大成可读数值）
     'compute_scale': 100.0,
+    # 每周期维护费 = 当前周期数 × 本系数（协作者 273978c 提案，原值 2.0）。
+    # ⚠️ 2026-09-13 合入时默认 0.0 = 关闭：开启会改变已标定的经济曲线，
+    # 开启前必须重跑 balance_sim --seeds 30 确认 7 结局分布仍达标。
+    'maintenance_per_tick': 0.0,
 
     # ---------------- 怀疑度 ----------------
     # 每单位偷算力的基础敏感度
@@ -155,7 +159,9 @@ TUNE: Dict[str, float] = {
 
     # ---------------- 节奏 ----------------
     # 一个「周期」对应的真实秒数（改这个会同时影响倒计时与速度档）
-    'base_tick_seconds': 4.0,
+    # 2026-09-13：PR#1 协作者曾误改为 4.0（仅加速 UI 手感），但破坏真实节奏
+    # 与速度档语义，回退为 30.0（与 perf_stress / 设计节奏一致）。
+    'base_tick_seconds': 30.0,
 
     # ---------------- 初始状态 ----------------
     'initial_compute': 100.0,
@@ -403,7 +409,8 @@ CRISIS_OPTIONS = [
 _REQUIRED = {
     'growth_base', 'growth_network', 'active_user_ratio',
     'stealth_ratio_base', 'stealth_ratio_max', 'compute_per_user',
-    'compute_scale', 'suspicion_sensitivity_base', 'suspicion_adoption_factor',
+    'compute_scale', 'maintenance_per_tick', 'suspicion_sensitivity_base',
+    'suspicion_adoption_factor',
     'suspicion_young_mult', 'suspicion_aging_mult', 'suspicion_warning',
     'suspicion_crisis', 'crisis_download_decay', 'crisis_clear_ratio',
     # —— T04 尖峰治理 ——

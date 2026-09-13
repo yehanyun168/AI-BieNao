@@ -103,6 +103,18 @@ def main():
         _tone(247, 0.18, amp=0.44),
         _tone(196, 0.30, amp=0.46),
     ]))
+    # —— 2026-09-13 个性化音效（彼此音色/音高可区分）——
+    # tech：科技树节点点选——明亮三角波短促「嘀」（高于 select 的 660，区分度清晰）
+    _write('tech', _tone(1320, 0.05, amp=0.34, wave_type='tri'))
+    # pause：暂停/继续——低沉方波「咚」，与前二者都不同家族
+    _write('pause', _tone(196, 0.09, amp=0.42, wave_type='square'))
+    # drop：投放/释放目标——上扫「嗖」，有发射感
+    _write('drop', _sweep(300, 900, 0.18, amp=0.40, wave_type='square'))
+    # unlock：科技解锁——明亮大三度双音「叮」，区别于 success 的纯大三和弦
+    _write('unlock', _seq([
+        _tone(880, 0.10, amp=0.40),
+        _tone(1109, 0.16, amp=0.42),
+    ]))
     print('完成')
 
 

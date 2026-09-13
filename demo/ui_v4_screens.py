@@ -1615,6 +1615,7 @@ class TechPage(U.PageScreen):
     # ---------------- 节点选中 ----------------
     def _on_node_pick(self, key: str) -> None:
         self.selected_key = key
+        sfx.play('tech')                  # 点击科技树节点的个性化音效
         # 点选回灌给 main：重算该节点 desc/state 并刷新整图与详情面板
         if callable(self.on_select):
             self.on_select(key)

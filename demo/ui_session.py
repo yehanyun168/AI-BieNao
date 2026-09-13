@@ -186,6 +186,7 @@ class SessionMixin:
         现在：暂停时把「剩余秒数」冻结进 _paused_remaining；恢复时按这个
         剩余量重建一次性计时，周期进度从暂停处接着走。
         """
+        sfx.play('pause')                 # 点击暂停/继续的个性化音效
         if self.paused:
             self.paused = False
             self._resume_from_pause()

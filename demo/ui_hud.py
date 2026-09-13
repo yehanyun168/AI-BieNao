@@ -758,16 +758,18 @@ class HudMixin:
     }
     SKILL_DESC = {
         'push_song': {'zh': '下载量 +10%', 'en': 'DL +10%'},
-        'algo_top':  {'zh': '下载量 +30% · 怀疑 +3%', 'en': 'DL +30% · susp +3%'},
-        'stealth':   {'zh': '偷算力 ×2 · 怀疑增速 −50%', 'en': 'Steal ×2 · susp −50%'},
-        'hit_maker': {'zh': '下载量 +50% · 怀疑 +5%', 'en': 'DL +50% · susp +5%'},
+        # 2026-09-13 技能带改两行排版后，效果文案收窄到 ≤2 行
+        #（窄卡 88px 内容宽 × 2 行 ≈ 176px @FS_TINY），完整数值仍见技能页。
+        'algo_top':  {'zh': '下载 +30% 怀疑 +3%', 'en': 'DL +30% · susp +3%'},
+        'stealth':   {'zh': '偷算力 ×2 怀疑 −50%', 'en': 'Steal ×2 · susp −50%'},
+        'hit_maker': {'zh': '下载 +50% 怀疑 +5%', 'en': 'DL +50% · susp +5%'},
         'bypass':    {'zh': '本周期偷算力 +40%', 'en': 'Steal +40% this tick'},
-        'take_cut':  {'zh': '偷算力比 +8% · 怀疑 +6%', 'en': 'Steal +8% · susp +6%'},
+        'take_cut':  {'zh': '抽成 +8% 怀疑 +6%', 'en': 'Steal +8% · susp +6%'},
         # T11 扩容
-        'anon_cdn':  {'zh': '怀疑增速 ×0.55 · 持续 3 周期', 'en': 'Susp ×0.55 · 3 ticks'},
-        'bot_farm':  {'zh': '下载量 +35% · 怀疑 +6%', 'en': 'DL +35% · susp +6%'},
-        'open_bait': {'zh': '算力 +150 · 怀疑 +8%', 'en': 'Compute +150 · susp +8%'},
-        'arbitrage': {'zh': '偷算力 +60% · 怀疑增速 ×1.6', 'en': 'Steal +60% · susp ×1.6'},
+        'anon_cdn':  {'zh': '怀疑 ×0.55 · 3周期', 'en': 'Susp ×0.55 · 3 ticks'},
+        'bot_farm':  {'zh': '下载 +35% 怀疑 +6%', 'en': 'DL +35% · susp +6%'},
+        'open_bait': {'zh': '算力 +150 怀疑 +8%', 'en': 'Compute +150 · susp +8%'},
+        'arbitrage': {'zh': '偷算力 +60% 怀疑 ×1.6', 'en': 'Steal +60% · susp ×1.6'},
     }
     SKILL_ICON = {'push_song': '↑↑', 'algo_top': '~', 'stealth': '●',
                   'hit_maker': '★', 'bypass': '↔', 'take_cut': '％',

@@ -20,7 +20,7 @@ from kivy.core.audio import SoundLoader
 
 # 音效名（与 gen_sfx.py 输出一一对应）
 NAMES = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
-        'end_win', 'end_lose')
+        'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock')
 
 SFX_ON = True
 _LOADED = False

@@ -17,6 +17,7 @@ from data import SKILLS, SKILL_ORDER
 #    不能 from-import（一次性快照），改 data.SUSPICION_CRISIS 属性访问。
 import data
 import achievements as achievements_mod
+import sfx  # 个性化音效（解锁科技等）
 import bgm  # T09 背景音乐管理器（calm/tense 两态，随怀疑度切换）
 import ui_v4 as U
 import ui_v4_screens as S
@@ -239,6 +240,7 @@ class InputMixin:
 
     def on_unlock_t0(self, slot_id: str) -> None:
         if engine.unlock_t0(slot_id):
+            sfx.play('unlock')            # 解锁科技的成功音
             self.refresh_all()
             if isinstance(self._page, S.TechPage):
                 self._page.selected_key = f"t0:{slot_id}"

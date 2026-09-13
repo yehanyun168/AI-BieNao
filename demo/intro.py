@@ -9,11 +9,12 @@ intro.py - T16 开场动画播放器《凌晨三点四十七分》
 文案 i18n 键 / 音效键全部收敛为声明式表 INTRO_SHOTS，便于日后加
 「新模式专属开场」变奏。
 
-播放规则（设计案 §1.4）：
-  · 仅首次新档播放（由调用方 main.MainMenu 判定槽位文件是否存在）；
-  · 从第 3 秒起右下角出现「跳过 >>」，点击直达最后一镜（标题亮相保留——
-    它是「进入游戏」的仪式感）；
-  · 任意键 / 点击也可提前解锁跳过按钮；
+播放规则（2026-09-13 修订）：
+  · 每次开始新游戏都播放（调用方 main._open_origin_flow 不再判存档存在）；
+  · 右下角「跳过 >>」醒目按钮：约 1s 后淡入，点击立即结束动画进入出身页；
+  · 任意键也可跳过（动画自绑定键盘）；
+  · 播放期间吞掉所有鼠标触摸（on_touch_down 返回 True），避免穿透到主菜单
+    误触「成就 / 设置」等热键；
   · 动画结束不回主菜单，on_done 回调由调用方接 OriginPage（无缝一条流）。
 
 分层：L4 组件层（kivy + i18n(L0) + sfx(L1) + ui_v4(L4)），不 import 引擎，
@@ -28,7 +29,7 @@ from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.widget import Widget
-from kivy.graphics import Color, Rectangle
+from kivy.graphics import Color, Rectangle, Line
 
 import i18n
 import sfx
@@ -56,8 +57,8 @@ INTRO_SHOTS = [
     {'kind': 'variation', 'dur': 10.0, 'keys': ('intro_var',), 'sfx': 'select'},
     {'kind': 'finale',  'dur': 7.0,  'keys': ('intro_s8',), 'sfx': 'success'},
 ]
-SKIP_UNLOCK_AT = 3.0          # 第 3 秒起出现跳过按钮（设计案 §1.4）
-TYPEWRITER_CPS = 14.0         # 打字机速度（字符/秒）
+SKIP_UNLOCK_AT = 1.0          # 约 1s 后淡入醒目「跳过」按钮（用户要求立刻可跳过）
+TYPEWRITER_CPS = 16.0         # 打字机速度（字符/秒，略快让长文案在镜内打完）
 
 
 class IntroPlayer(FloatLayout):
@@ -82,16 +83,21 @@ class IntroPlayer(FloatLayout):
         self.content = FloatLayout()
         self.add_widget(self.content)
 
-        # —— 跳过按钮：初始隐藏，SKIP_UNLOCK_AT 秒后淡入 ——
-        self.skip_btn = Button(text=t('intro_skip'), font_size=13,
-                               size_hint=(None, None), size=(110, 36),
-                               pos_hint={'right': 0.985, 'y': 0.02},
+        # —— 跳过按钮：醒目（大号 + 青色高亮边框 + 轻微呼吸），SKIP_UNLOCK_AT 秒后淡入 ——
+        # ⚠️ 不要加 '⏭' 等符号：MicrosoftYaHei 缺该字形（见 ui_v4 SYM 表踩坑记录）
+        self.skip_btn = Button(text='» ' + t('intro_skip'), font_size=15,
+                               bold=True,
+                               size_hint=(None, None), size=(150, 46),
+                               pos_hint={'right': 0.985, 'y': 0.025},
                                opacity=0, disabled=True,
-                               background_normal='', background_color=(0.08, 0.10, 0.10, 1),
-                               color=COLORS['text_dim'])
-        add_pixel_border(self.skip_btn, color=COLORS['border_2'])
+                               background_normal='', background_color=(0.10, 0.16, 0.16, 1),
+                               color=COLORS['cyan'])
+        add_pixel_border(self.skip_btn, color=COLORS['cyan'], width=2)
         self.skip_btn.bind(on_release=lambda *_: self._skip())
         self.add_widget(self.skip_btn)
+        # 呼吸动效：吸引注意（用户要求「清晰醒目」）
+        self._skip_pulse = Animation(opacity=0.55, d=0.7) + Animation(opacity=1.0, d=0.7)
+        self._skip_pulse.repeat = True
         self._clocks.append(Clock.schedule_once(self._unlock_skip, SKIP_UNLOCK_AT))
 
         # 任意输入提前解锁跳过（设计案：任意键/点击跳过）
@@ -111,6 +117,7 @@ class IntroPlayer(FloatLayout):
     def _unlock_skip(self, *_a):
         self.skip_btn.disabled = False
         Animation(opacity=1, d=0.3).start(self.skip_btn)
+        self._skip_pulse.start(self.skip_btn)
 
     def _on_key_down(self, *_a):
         if not self.skip_btn.disabled:
@@ -119,6 +126,14 @@ class IntroPlayer(FloatLayout):
 
     def _on_kb_closed(self):
         self._kb = None
+
+    def on_touch_down(self, touch):
+        """吞掉动画期间所有鼠标触摸，防止穿透到主菜单误触成就/设置等热键。
+
+        跳过按钮是子控件，会先于本方法收到触摸并自行消费（Button 返回
+        True），故点击「跳过」依然有效；其余区域一律拦截。
+        """
+        return True
 
     def _clear_shot_clocks(self):
         for c in self._clocks:
@@ -141,14 +156,9 @@ class IntroPlayer(FloatLayout):
             cb()
 
     def _skip(self):
-        """跳过：跳主片但保留变奏尾声（设计案 §2.4：变奏是选择前的情绪铺垫，
-        不可跳过这层仪式感）。直达变奏镜，变奏播完自然进 finale。"""
+        """跳过：用户要求「点击后立即跳过」——直接收尾进入出身页（不再保留变奏）。"""
         sfx.play('click')
-        self._clear_shot_clocks()
-        var_idx = next((i for i, s in enumerate(INTRO_SHOTS)
-                        if s['kind'] == 'variation'),
-                       len(INTRO_SHOTS) - 1)
-        self._play_shot(var_idx)
+        self._finish()
 
     def _next_shot(self, *_a):
         idx = self._shot_idx + 1
@@ -198,8 +208,16 @@ class IntroPlayer(FloatLayout):
         self._clocks.append(ev)
 
     def _shot_narr(self, shot):
-        # 镜1：深夜数据中心——字幕淡入 + 机柜指示灯呼吸（闪烁小方块）
+        # 镜1：深夜数据中心——字幕淡入 + 3:47 数字钟（与文案同步出现）+ 机柜指示灯呼吸
         self._center_label(t(shot['keys'][0]), 20, COLORS['text_dim'])
+        # 数字钟「3:47」：直接呼应文案的「凌晨 3:47」，强化场景真实感
+        clock = mk_label('3:47', font_size=42, color=COLORS['cyan'],
+                         size_hint=(None, None), size=(150, 54),
+                         pos_hint={'center_x': 0.5, 'y': 0.70},
+                         halign='center')
+        clock.opacity = 0
+        self.content.add_widget(clock)
+        Animation(opacity=1, d=0.6).start(clock)
         grid = BoxLayout(orientation='horizontal', spacing=18,
                          size_hint=(None, None), size=(420, 8),
                          pos_hint={'center_x': 0.5, 'y': 0.18})
@@ -216,9 +234,37 @@ class IntroPlayer(FloatLayout):
             anim.start(dot)
 
     def _shot_term(self, shot):
-        # 镜2：主控台日志静止——终端面板内打字机问句
-        lbl = self._center_label('', 22, COLORS['cyan'], width_frac=0.7)
+        # 镜2：主控台——青色终端框（与问句同帧淡入）+ 问句打字机 + 闪烁光标
+        term = FloatLayout(size_hint=(0.64, 0.30),
+                           pos_hint={'center_x': 0.5, 'center_y': 0.50})
+        term.opacity = 0
+        self.content.add_widget(term)
+        Animation(opacity=1, d=0.4).start(term)
+        self._rebind_term(term)
+        term.bind(pos=self._rebind_term, size=self._rebind_term)
+        lbl = mk_label('', font_size=22, color=COLORS['cyan'],
+                       size_hint=(0.92, None), halign='left', valign='top')
+        lbl.pos_hint = {'x': 0.05, 'center_y': 0.62}
+        term.add_widget(lbl)
+        cursor = mk_label('_', font_size=22, color=COLORS['cyan'],
+                          size_hint=(None, None), size=(14, 30),
+                          pos_hint={'x': 0.05, 'y': 0.22})
+        term.add_widget(cursor)
         self._typewriter(lbl, t(shot['keys'][0]))
+        # 闪烁光标：打字期间与文字节奏同步呼吸
+        self._clocks.append(Clock.schedule_interval(
+            lambda dt: setattr(cursor, 'opacity', 1 - cursor.opacity), 0.5))
+
+    def _rebind_term(self, term, *_a):
+        term.canvas.before.clear()
+        with term.canvas.before:
+            Color(0.04, 0.08, 0.08, 1)
+            Rectangle(pos=term.pos, size=term.size)
+            Color(*COLORS['cyan'])
+            Line(points=[term.x, term.y, term.x + term.width, term.y,
+                        term.x + term.width, term.y + term.height,
+                        term.x, term.y + term.height],
+                 close=True, width=2)
 
     def _shot_alert(self, shot):
         # 镜3：红字砸出——先放大后回落
@@ -285,8 +331,8 @@ class IntroPlayer(FloatLayout):
                       size=(panel.width - 6, panel.height - 6))
         panel.bind(pos=self._rebind_gold, size=self._rebind_gold)
         self.content.add_widget(panel)
-        likes = mk_label('▲ 0', font_size=15, color=(0.95, 0.80, 0.35, 1),
-                         size_hint=(None, None), size=(120, 26),
+        likes = mk_label('下载 0', font_size=15, color=COLORS['cyan'],
+                         size_hint=(None, None), size=(140, 26),
                          pos_hint={'right': 0.96, 'top': 0.94})
         panel.add_widget(likes)
         body = mk_label('', font_size=17, color=COLORS['text'],
@@ -308,10 +354,11 @@ class IntroPlayer(FloatLayout):
                       size=(panel.width - 6, panel.height - 6))
 
     def _tick_likes(self, lbl):
-        v = min(42000, int(getattr(lbl, '_likes', 0) + 620))
+        # 装机量从 0 涨到 8.0 亿（与文案「让全人类都下载你」呼应）
+        v = min(8.0e8, getattr(lbl, '_likes', 0) + 1.4e7)
         lbl._likes = v
-        lbl.text = '▲ %.1fk' % (v / 1000.0)
-        return v < 42000
+        lbl.text = '下载 %.2f亿' % (v / 1e8)
+        return v < 8.0e8
 
     def _shot_proc(self, shot):
         # 镜7：任务管理器——idle_process 改名 world_plan.exe，CPU 87%

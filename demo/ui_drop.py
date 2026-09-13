@@ -53,6 +53,7 @@ class DropMixin:
         self.reason_hud.opacity = 1
         self.rail.set_active('drop')
         self._ensure_reticle_layer()
+        sfx.play('drop')                  # 进入投放模式的发射音
         # 投放模式下右上角提示(drop_hud)与图层HUD(layer_hud)同锚'tr'，
         # 让 layer_hud 下沉避开，消除右上角两层 HUD 叠在一起（问题 #5）。
         # 写 _base_top_inset（LayerHud._sync 会在此基础上再加 TOP_GAP）。
@@ -360,6 +361,7 @@ class DropMixin:
     def _cast_skill_direct(self, sid: str) -> None:
         """全局技能（偷算力类）直接释放"""
         if engine.use_skill(sid, None):
+            sfx.play('cast')
             self.stats.mark_skill(sid, 0.0)
             self.selected_skill = sid
             self._notify(f"{self._skill_name(sid)}")

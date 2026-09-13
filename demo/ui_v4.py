@@ -1202,8 +1202,11 @@ class SkillBarCard(Widget):
         self.lbl_cost = mk_label(str(int(cost)) if cost else '0',
                                  font_size=FS_CAP, color=COLORS['text_dim'],
                                  halign='right', size_hint=(None, None))
-        self.lbl_fx = mk_label(effect, font_size=FS_CAP, color=COLORS['text_mute'])
-        self.lbl_state = mk_label('', font_size=FS_CAP, color=COLORS['text_dim'],
+        # ⚠️ 效果说明 / 状态行用 FS_TINY：此前误用 FS_CAP(16px)，而 _layout 只给
+        # FS_TINY*1.35≈15px 的行高 → 字形上下被裁（玩家看到"半截字/像错别字"，
+        # 例：'楚' 裁后视觉上像别的字），且长说明换行后必然溢出裁切。
+        self.lbl_fx = mk_label(effect, font_size=FS_TINY, color=COLORS['text_mute'])
+        self.lbl_state = mk_label('', font_size=FS_TINY, color=COLORS['text_dim'],
                                   halign='right', size_hint=(None, None))
         for w in (self.lbl_key, self.lbl_name, self.lbl_cost,
                   self.lbl_fx, self.lbl_state):
@@ -1238,9 +1241,12 @@ class SkillBarCard(Widget):
     def refresh_scale(self, scale: float) -> None:
         """F12 自适应：技能卡内部字号与间距随全局缩放走。"""
         self.scale = scale
-        for lbl in (self.lbl_key, self.lbl_name, self.lbl_cost,
-                    self.lbl_fx, self.lbl_state):
-            lbl.font_size = FS_CAP * scale
+        # 效果/状态行与主行不同字号族（FS_TINY），与 __init__ 保持一致
+        self.lbl_key.font_size = FS_CAP * scale
+        self.lbl_name.font_size = FS_CAP * scale
+        self.lbl_cost.font_size = FS_CAP * scale
+        self.lbl_fx.font_size = FS_TINY * scale
+        self.lbl_state.font_size = FS_TINY * scale
         self._layout()
 
     def _layout(self, *_args) -> None:
@@ -1254,26 +1260,35 @@ class SkillBarCard(Widget):
         # 写死行高会把文字挤成两行/被裁切。
         row_h = FS_CAP * 1.35 * s
         top = y + h - pad
+        # 顶行：键位 + 名称 + 消耗。名称宽度由「消耗左边界 − 名称左边界」
+        # 反推，任何卡宽下都与消耗框严格不相交（旧公式 `w - kw - 46` 在
+        # 窄卡上会让名称框伸进消耗区，视觉上文字相互遮挡）。
         self.lbl_key.pos = (x + pad, top - row_h)
         self.lbl_key.size = (FS_CAP * 1.1 * s, row_h)
         self.lbl_key.text_size = self.lbl_key.size
         kw = max(self.lbl_key.width, 10)
-        self.lbl_name.pos = (x + pad + kw + 4 * s, top - row_h)
-        self.lbl_name.size = (max(w - kw - 46 * s, 1), row_h)
+        fs_w = FS_CAP * 2.6 * s               # 消耗数字宽（按 4 位数字预估）
+        cost_left = x + w - pad - fs_w
+        name_left = x + pad + kw + 4 * s
+        self.lbl_name.pos = (name_left, top - row_h)
+        self.lbl_name.size = (max(cost_left - name_left - 4 * s, 1), row_h)
         self.lbl_name.text_size = self.lbl_name.size
-        # 消耗数字右对齐：宽度按 4 位数字预估（字号放大后 30px 不够）
-        fs_w = FS_CAP * 2.6 * s
-        self.lbl_cost.pos = (x + w - pad - fs_w, top - row_h)
+        self.lbl_cost.pos = (cost_left, top - row_h)
         self.lbl_cost.size = (fs_w, row_h)
         self.lbl_cost.text_size = (fs_w, row_h)
-        # 底部两行：效果说明 + 状态。高度取 FS_TINY 的 1.35 倍行距。
+        # 底行：状态（1 行 FS_TINY）
         small_h = FS_TINY * 1.35 * s
-        self.lbl_fx.pos = (x + pad, y + pad + small_h)
-        self.lbl_fx.size = (max(w - pad * 2, 1), small_h)
-        self.lbl_fx.text_size = self.lbl_fx.size
         self.lbl_state.pos = (x + pad, y + pad)
         self.lbl_state.size = (max(w - pad * 2, 1), small_h)
         self.lbl_state.text_size = self.lbl_state.size
+        # 中部：效果说明。吃掉顶行与状态行之间的全部剩余空间（约 2 行
+        # FS_TINY），文字在此区内自动换行，既不裁字也不与上下行重叠。
+        fx_top = top - row_h - 4 * s
+        fx_bottom = y + pad + small_h + 4 * s
+        fx_h = max(fx_top - fx_bottom, small_h)
+        self.lbl_fx.pos = (x + pad, fx_bottom)
+        self.lbl_fx.size = (max(w - pad * 2, 1), fx_h)
+        self.lbl_fx.text_size = self.lbl_fx.size
         self._redraw()
 
     def _redraw(self, *_args) -> None:

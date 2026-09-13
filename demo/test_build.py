@@ -705,9 +705,15 @@ for _needle in ('class OriginCard', 'class OriginPage', 'origins.ORIGIN_ORDER',
 _main_src = open(os.path.join(_HERE, 'main.py'), encoding='utf-8').read()
 for _needle in ('import intro', 'import origins', 'def _open_origin_flow',
                 'def _show_origin_page', 'def _close_origin_flow',
-                'intro.IntroPlayer', 'S.OriginPage',
-                "os.path.exists(target)"):
+                'intro.IntroPlayer', 'S.OriginPage'):
     assert _needle in _main_src, f"main.py 缺出身流程接线: {_needle}"
+# 2026-09-13：每次新游戏都播开场动画——main.py 不得再有「仅首次播放」的
+# 存档存在判定；intro.py 必须有触摸吞掉（防误触主菜单）与立即跳过。
+assert "os.path.exists(target)" not in _main_src, \
+    "main.py 仍保留仅首次播放的存档判定（应每次新游戏都播动画）"
+for _needle in ('def on_touch_down', 'self._finish()'):
+    assert _needle in open(os.path.join(_HERE, 'intro.py'),
+                           encoding='utf-8').read(), f"intro.py 缺 { _needle }"
 print("   ■ 22) T16 觉醒出身（表一致性 / 难度映射 / 出生包 ×5 / 乘区复位 /"
       "存档 v2→v3 迁移与往返 / 动画 9 镜含变奏尾声 / origin_*·intro_* 双语 /"
       "出身页与流程接线）")
