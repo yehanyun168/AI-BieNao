@@ -354,6 +354,9 @@ LAYERS = {
     'onboarding.py':      0,   # T03：首局节奏开关（纯 TUNE 读取，零项目依赖）
     'i18n.py':            0,   # P1-8：文案表，零项目依赖；engine(L3) 引用属合法
                                #       逻辑依赖（此前不在白名单导致违规漏报，现按定级放行）
+    'challenge.py':       0,   # T13：挑战码编解码 + 战绩账本（只依赖标准库）。
+                               #       刻意不 import save_manager —— 账本目录由调用方
+                               #       传入，保持 L0 零项目依赖，也不与 L4 成环
     # L1 基础层
     'pixel_assets.py':    1,   # P1-8：自动生成素材（零 import），仅提供游程数据
     'pixel_ui.py':        1,
@@ -561,11 +564,12 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #    改动态行数（6 卡固定 3×2 → 10 卡自动补到 4 行）
     'ui_v4.py':          1965,    # v4 组件库拆分属独立重构工作
     'engine.py':         1689,    # 2026-09-11 再登记（原 1542）：玩家反馈#7 新增 preview_next_cycle 下周期预测 + 委托自动结算/结局透传等纯逻辑
-    'main.py':           1319,    # 2026-09-12 再登记（原 1314）：T09 BGM 接线
-                                  #    （import bgm + GameUI 内 load_all + on_music 回调）
-    'i18n.py':           1201,    # 2026-09-13 再登记（原 1191）：T11 技能扩容 6→10
-                                  #    新增 sk_detail_{anon_cdn,bot_farm,open_bait,arbitrage}
-                                  #    ×2 语共 8 行文案
+    'main.py':           1377,    # 2026-09-13 再登记（原 1319）：T13 挑战码导入
+                                  #    （_parse_seed_input 分流 + _diff_index + 新档弹窗
+                                  #     实时解析回调；T09 BGM 接线的 1319 已被本值取代）
+    'i18n.py':           1239,    # 2026-09-13 再登记（原 1201）：T13 挑战码文案
+                                  #    ch_* ×14 键 ×2 语（导出/导入/战绩对照）
+                                  #    —— T11 技能扩容的 1201 已被本值取代
     'ui_hud.py':          907,    # 2026-09-13 再登记（原 893）：T11 技能扩容 6→10
                                   #    （SKILL_I18N/SKILL_DESC/SKILL_ICON 各 +4 条 + 键位
                                   #     hint 从 str(i+1) 改为第 10 个用 '0' 兜底）

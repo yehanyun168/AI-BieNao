@@ -1143,6 +1143,44 @@ TRANSLATIONS[LANG_EN].update({
     'ng_log_line': '🎲 Run seed {seed} · {diff}',
 })
 
+# ============================================================
+# T13 挑战码（种子分享）：导出 / 导入 / 战绩对照
+# ============================================================
+TRANSLATIONS[LANG_ZH].update({
+    'ch_title': '挑战码',
+    'ch_hint': '把这个码发给朋友，同一颗种子、同一难度，看谁打得好',
+    'ch_copy': '复制',
+    'ch_copied': '挑战码已复制到剪贴板',
+    'ch_copy_fail': '复制失败，请手动抄写',
+    'ch_first': '此码第 1 次挑战',
+    'ch_nth': '此码第 {n} 次挑战',
+    'ch_vs': '本次渗透 {a} vs 最佳 {b}（{d}）',
+    'ch_new_best': '新纪录',
+    'ch_tie': '打平',
+    'ch_import_hint': '可粘贴挑战码（AINB-…），自动填入种子与难度',
+    'ch_bad_code': '挑战码无效，请检查是否漏抄字符',
+    'ch_applied': '已套用挑战码：种子 {seed} · {diff}',
+    'ch_import_btn': '套用挑战码',
+})
+
+TRANSLATIONS[LANG_EN].update({
+    'ch_title': 'Challenge code',
+    'ch_hint': 'Send this code to a friend — same seed, same difficulty, '
+               'compare your runs',
+    'ch_copy': 'Copy',
+    'ch_copied': 'Challenge code copied',
+    'ch_copy_fail': 'Copy failed — please write it down manually',
+    'ch_first': 'First run on this code',
+    'ch_nth': 'Run #{n} on this code',
+    'ch_vs': 'This run {a} vs best {b} ({d})',
+    'ch_new_best': 'new best',
+    'ch_tie': 'tied',
+    'ch_import_hint': 'Paste a challenge code (AINB-…) to fill seed + difficulty',
+    'ch_bad_code': 'Invalid challenge code — check for missing characters',
+    'ch_applied': 'Code applied: seed {seed} · {diff}',
+    'ch_import_btn': 'Apply code',
+})
+
 
 # ============================================================
 # 翻译函数

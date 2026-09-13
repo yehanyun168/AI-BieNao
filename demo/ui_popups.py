@@ -14,6 +14,8 @@ from kivy.animation import Animation
 from i18n import t, get_lang
 import engine
 import sfx
+import challenge
+import save_manager
 import achievements as achievements_mod
 import endings as endings_mod
 import ui_v4 as U
@@ -209,6 +211,76 @@ class PopupsMixin:
         content.add_widget(ft)
         popup.open()
 
+    # --------------------------------------------------------
+    # T13 挑战码（种子分享）
+    # --------------------------------------------------------
+    def _copy_text(self, text: str, ok_key: str = 'ch_copied') -> None:
+        """写系统剪贴板；无剪贴板后端时降级为提示（不抛异常打断结算弹窗）。"""
+        try:
+            from kivy.core.clipboard import Clipboard
+            Clipboard.copy(text)
+            self._notify(t(ok_key))
+        except Exception:
+            self._notify(t('ch_copy_fail'))
+
+    def _challenge_line(self, cmp_: dict, summary: dict) -> str:
+        """战绩对照文案：首次 / 第 N 次 + 本次 vs 最佳。"""
+        if cmp_.get('is_first'):
+            return t('ch_first')
+        head = t('ch_nth').format(n=cmp_.get('plays', 1))
+        best = cmp_.get('best') or {}
+        d_pen = cmp_.get('d_pen')
+        if d_pen is None:
+            return head
+        tag = t('ch_new_best') if cmp_.get('is_best') else (
+            t('ch_tie') if abs(d_pen) < 1e-6 else '')
+        vs = t('ch_vs').format(a=f"{summary.get('pen', 0) * 100:.1f}%",
+                               b=f"{best.get('pen', 0) * 100:.1f}%",
+                               d=f"{d_pen * 100:+.1f}%")
+        return f"{head} · {vs}" + (f" · {tag}" if tag else '')
+
+    def _challenge_block(self, p, ending):
+        """T13 挑战码区块：本局码 + 复制 + 战绩对照。
+
+        真随机局（seed=None）或种子越界时返回 None —— 不可复现的对局
+        分享出去是无效码，宁可不显示也不误导玩家。
+        """
+        diff = getattr(p, 'difficulty', 'normal')
+        code = challenge.encode(getattr(p, 'seed', None), diff)
+        if not code:
+            return None
+        kind = getattr(ending, 'kind', 'neutral')
+        summary = challenge.summarize(p, getattr(ending, 'id', None), kind)
+        # 对照必须用「登记本局之前」的账 —— 所以先 compare 再 record
+        prev = challenge.load_log(save_manager.SAVE_DIR).get(code)
+        cmp_ = challenge.compare(prev, summary)
+        # 幂等：同一局（码 + 周期 + 结局）只登记一次，避免重复打开结算弹窗刷战绩
+        key = (code, summary.get('ticks'), summary.get('ending'))
+        if getattr(self, '_chal_key', None) != key:
+            self._chal_key = key
+            challenge.record(save_manager.SAVE_DIR, code, p.seed, diff, summary)
+
+        box = BoxLayout(orientation='vertical', spacing=4, size_hint_y=None)
+        box.bind(minimum_height=box.setter('height'))
+        box.add_widget(mk_label(t('ch_title'), font_size=U.FS_SM,
+                                color=COLORS['cyan'], size_hint_y=None,
+                                height=18))
+        row = BoxLayout(orientation='horizontal', spacing=8,
+                        size_hint_y=None, height=32)
+        row.add_widget(mk_label(f"[b]{code}[/b]", font_size=U.FS_BODY,
+                                markup=True, color=COLORS['accent3'],
+                                valign='middle'))
+        row.add_widget(Widget())
+        row.add_widget(S.small_btn(t('ch_copy'), 'plain',
+                                   lambda c=code: self._copy_text(c),
+                                   height=30, font_size=U.FS_CAP))
+        box.add_widget(row)
+        box.add_widget(auto_h_label(t('ch_hint'), U.FS_CAP,
+                                    color=COLORS['text_mute']))
+        box.add_widget(auto_h_label(self._challenge_line(cmp_, summary),
+                                    U.FS_CAP, color=COLORS['text_dim']))
+        return box
+
     def show_ending_popup(self, ending) -> None:
         """S09 结局弹窗（三色皮肤 + 8 格数据回顾 + 7 结局对照）
 
@@ -259,6 +331,10 @@ class PopupsMixin:
              else t('end_crisis_no'), 'green' if p.crisis_triggered else None),
         ])
         body.add_widget(grid)
+
+        chal = self._challenge_block(p, ending)      # T13：挑战码 + 战绩对照
+        if chal is not None:
+            body.add_widget(chal)
 
         if getattr(ending, 'hint_zh', ''):
             hint = StrokePanel(bg=COLORS['panel_2'], border=COLORS['orange'],

@@ -519,6 +519,108 @@ assert "'0'" in _ui_input_src and '9 if key' in _ui_input_src, \
 print("   ✅ 20) T11 技能扩容 6→10（表一致 / 4 项科技挂载 / 文案 ×4 ×2 语 / "
       "新战术轴 cdelta+sus_up / 键位兜底 + _key_hint 同源）")
 
+# ---- 21) T13 挑战码：编解码往返 + 校验位 + 容错 + 战绩账本 + 三处接线 ----
+import re as _re
+import tempfile as _tempfile
+import balance
+import challenge as _ch
+
+# 往返：0 / 小值 / 边界 / 32bit 口令哈希上限 / 满量程，三种难度全跑
+for _seed in (0, 1, 31, 32, 12345, 4294967295, _ch.SEED_MAX - 1):
+    for _d in balance.DIFFICULTY_ORDER:
+        _code = _ch.encode(_seed, _d)
+        assert _code and _ch.decode(_code) == (_seed, _d), \
+            f"挑战码往返失败: {_seed}/{_d} → {_code}"
+
+# 三种「不可编码」输入：真随机（无种子）/ 越界 / 未知难度
+assert _ch.encode(None, 'normal') is None, "真随机局不该生成挑战码"
+assert _ch.encode(_ch.SEED_MAX, 'normal') is None, "越界种子应拒绝"
+assert _ch.encode(7, 'lunatic') is None, "未知难度应拒绝"
+
+# 校验位：码体（含校验位自身）逐字符变异必须全部被拒 —— 抓漏抄/错位
+_code = _ch.encode(1234567890, 'normal')
+_body = _code.split('-', 1)[1].replace('-', '')
+assert len(_body) == _ch.SEED_DIGITS + 2, f"码体应为 9 字符: {_body}"
+for _i in range(_ch.SEED_DIGITS + 1):
+    _mut = (_body[:_i] + _ch.ALPHABET[(_ch.ALPHABET.index(_body[_i]) + 1) % 32]
+            + _body[_i + 1:])
+    assert _ch.decode(_mut) is None, f"校验位漏检（第 {_i} 位变异）"
+
+# 容错：大小写 / 空格替分隔符 / 省略前缀 / 夹在一段文字里
+assert _ch.decode(_code.lower().replace('-', ' ')) == (1234567890, 'normal')
+assert _ch.decode(_body) == (1234567890, 'normal'), "省略 AINB 前缀应可解"
+assert _ch.decode(f'我的码是 {_code} 快来玩') == (1234567890, 'normal'), \
+    "夹在文字里应能链出码"
+assert _ch.decode('1234567890') is None and _ch.decode('') is None
+assert _ch.looks_like_code(_code) and not _ch.looks_like_code('1234567890')
+
+# L0 约束：challenge 只许依赖标准库（import 了任何 demo 内模块即违规）
+_ch_src = open(os.path.join(_HERE, 'challenge.py'), encoding='utf-8').read()
+_ch_deps = [m for m in _re.findall(r'^\s*(?:from|import)\s+([A-Za-z_]\w*)',
+                                   _ch_src, _re.M)
+            if f'{m}.py' in os.listdir(_HERE)]
+assert not _ch_deps, f"challenge.py 应保持 L0 零项目依赖，却依赖了 {_ch_deps}"
+
+# 战绩账本：首次 → 更低档位 → 破纪录 → 同档位比渗透（含落盘与损坏容错）
+_tmp = _tempfile.mkdtemp()
+_code = _ch.encode(4242, 'hard')
+
+def _mk(ending, kind, pen, dl, ticks):
+    return {'ending': ending, 'kind': kind, 'pen': pen, 'dl_m': dl,
+            'ticks': ticks, 'crisis': False}
+
+_c1 = _ch.compare(_ch.load_log(_tmp).get(_code),
+                  _mk('regulated', 'neutral', 0.20, 30000, 90))
+assert _c1['is_first'] and _c1['is_best'] and _c1['plays'] == 1
+_ch.record(_tmp, _code, 4242, 'hard', _mk('regulated', 'neutral', 0.20, 30000, 90))
+
+_c2 = _ch.compare(_ch.load_log(_tmp).get(_code),
+                  _mk('shutdown', 'lose', 0.55, 90000, 140))
+assert not _c2['is_first'] and not _c2['is_best'], \
+    "结局档位更低时不该算最佳（渗透更高也不行）"
+assert _c2['plays'] == 2 and abs(_c2['d_pen'] - 0.35) < 1e-9, _c2
+_e2 = _ch.record(_tmp, _code, 4242, 'hard',
+                 _mk('shutdown', 'lose', 0.55, 90000, 140))
+assert _e2['best']['ending'] == 'regulated' and _e2['plays'] == 2
+
+_c3 = _ch.compare(_ch.load_log(_tmp).get(_code),
+                  _mk('ultimate', 'win', 0.41, 45000, 120))
+assert _c3['is_best'], "win 应压过 neutral"
+
+with open(_ch.log_path(_tmp), 'w', encoding='utf-8') as _fh:
+    _fh.write('{ 坏 json')
+assert _ch.load_log(_tmp) == {}, "账本损坏应回空账而不是抛异常"
+
+# i18n：ch_* 键 zh/en 全对称
+_CH_KEYS = ('ch_title', 'ch_hint', 'ch_copy', 'ch_copied', 'ch_copy_fail',
+            'ch_first', 'ch_nth', 'ch_vs', 'ch_new_best', 'ch_tie',
+            'ch_import_hint', 'ch_bad_code', 'ch_applied', 'ch_import_btn')
+for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
+    _miss = [k for k in _CH_KEYS if k not in i18n_mod.TRANSLATIONS[_lang]]
+    assert not _miss, f"i18n[{_lang}] 缺挑战码键: {_miss}"
+
+# 导入接线：种子框分流（码带难度覆盖 / 坏码报错 / 普通文字走口令哈希）
+assert main_module._parse_seed_input(_code) == (4242, 'hard', None)
+_bad = _code[:-1] + ('X' if _code[-1] == 'X' else 'Y')
+assert main_module._parse_seed_input(_bad)[2] == 'ch_bad_code', \
+    "抄错的码应报 ch_bad_code，而不是被当成口令静默哈希"
+assert main_module._parse_seed_input('') == (None, None, None)
+assert main_module._parse_seed_input('hello')[1] is None
+_main_src = open(os.path.join(_HERE, 'main.py'), encoding='utf-8').read()
+for _needle in ('import challenge', 'def _parse_seed_input', 'def _diff_index',
+                "t('ch_import_hint')", 'ti.bind(text=_on_seed_text)'):
+    assert _needle in _main_src, f"main.py 缺挑战码接线: {_needle}"
+
+# 导出接线：结算弹窗的挑战码区块 + 剪贴板 + 账本落盘
+_pop_src = open(os.path.join(_HERE, 'ui_popups.py'), encoding='utf-8').read()
+for _needle in ('import challenge', 'def _challenge_block', 'def _copy_text',
+                'Clipboard.copy', 'challenge.record', 'challenge.compare',
+                'save_manager.SAVE_DIR'):
+    assert _needle in _pop_src, f"ui_popups.py 缺挑战码接线: {_needle}"
+assert '_challenge_block(p, ending)' in _pop_src, "结算弹窗未挂载挑战码区块"
+print("   ✅ 21) T13 挑战码（往返 ×21 / 校验位逐位抓错 / 容错四种 / 战绩账本"
+      "最佳判定 + 损坏容错 / L0 零项目依赖 / ch_* ×14 ×2 语 / 导入导出接线）")
+
 print("\n 全部通过 - demo 可以正常启动")
 print()
 print(" 在你的本地 Windows 双击 run_demo.bat 即可运行")

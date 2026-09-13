@@ -364,6 +364,7 @@ from pixel_ui import add_pixel_border   # P2-5：hex_rgba 已随 '#0d1117' 收�
 import engine
 import save_manager
 import balance          # P2-3 难度档（DIFFICULTY_ORDER / DIFFICULTY_PRESETS）
+import challenge        # T13 挑战码（种子分享）：新档弹窗可粘贴挑战码
 import achievements as achievements_mod
 import pixel_assets as PA
 
@@ -574,6 +575,38 @@ def _parse_seed(text: str):
 def _difficulty_label(pid: str) -> str:
     """难度档 id → 当前语言的显示名（i18n 键 diff_<id>）。"""
     return t(f"diff_{pid}")
+
+
+def _diff_index(pid: str, default: int = 1) -> int:
+    """难度档 id → SegSwitch 下标；未知档回退默认（标准）。"""
+    try:
+        return balance.DIFFICULTY_ORDER.index(pid)
+    except ValueError:
+        return default
+
+
+def _parse_seed_input(text: str):
+    """T13：解析新档弹窗的种子输入框（同时接受挑战码）。
+
+    返回 ``(seed, diff_override, err_key)``：
+      · 挑战码合法            → (seed, 'easy'/'normal'/'hard', None)  难度随码切换
+      · 长得像码但校验不过    → (None, None, 'ch_bad_code')           提示「码无效」
+      · 普通数字 / 文字口令   → (seed, None, None)                    难度用弹窗当前档
+      · 空                    → (None, None, None)                    真随机
+
+    分流先看 ``looks_like_code`` 再解码：这样玩家贴了个抄漏一位的码时，
+    得到的是「码无效」而不是被当成口令静默哈希成另一个种子 ——
+    后者是最伤信任的失败方式（玩家以为自己复现了朋友的局，其实没有）。
+    """
+    raw = (text or '').strip()
+    if not raw:
+        return None, None, None
+    if challenge.looks_like_code(raw):
+        got = challenge.decode(raw)
+        if got is None:
+            return None, None, 'ch_bad_code'
+        return got[0], got[1], None
+    return _parse_seed(raw), None, None
 
 
 # ============================================================
@@ -883,7 +916,7 @@ class MainMenu(FloatLayout):
         drow.add_widget(Widget())
         body.add_widget(drow)
 
-        # 种子行：可选；留空 = 真随机
+        # 种子行：可选；留空 = 真随机；也可直接粘贴挑战码（T13）
         srow = BoxLayout(orientation='horizontal', spacing=10,
                          size_hint_y=None, height=44)
         srow.add_widget(mk_label(t('ng_seed'), font_size=U.FS_BODY,
@@ -891,7 +924,7 @@ class MainMenu(FloatLayout):
                                  width=110))
         ti = TextInput(multiline=False, write_tab=False, size_hint_x=None,
                        width=260, height=36, font_size=U.FS_BODY,
-                       hint_text=t('ng_seed_hint'), background_normal='',
+                       hint_text=t('ch_import_hint'), background_normal='',
                        background_color=COLORS['panel_2'],
                        foreground_color=COLORS['text'],
                        cursor_color=COLORS['cyan'],
@@ -901,8 +934,28 @@ class MainMenu(FloatLayout):
         srow.add_widget(ti)
         srow.add_widget(Widget())
         body.add_widget(srow)
-        body.add_widget(auto_h_label(t('ng_seed_hint'), U.FS_CAP,
-                                     color=COLORS['text_mute']))
+
+        hint_lbl = mk_label(t('ng_seed_hint'), font_size=U.FS_CAP,
+                            color=COLORS['text_mute'], size_hint_y=None,
+                            height=U.FS_CAP * 1.9)
+
+        def _on_seed_text(_inst, value, _sw=sw, _lbl=hint_lbl):
+            """T13 实时解析：贴入挑战码即切难度并回显；抄错则标红。"""
+            seed, diff, err = _parse_seed_input(value)
+            if err:
+                _lbl.text = '⚠ ' + t(err)
+                _lbl.color = COLORS['warning']
+            elif diff:
+                _sw.set_current(_diff_index(diff))
+                _lbl.text = t('ch_applied').format(
+                    seed=seed, diff=_difficulty_label(diff))
+                _lbl.color = COLORS['accent4']
+            else:
+                _lbl.text = t('ng_seed_hint')
+                _lbl.color = COLORS['text_mute']
+
+        ti.bind(text=_on_seed_text)
+        body.add_widget(hint_lbl)
 
         row = BoxLayout(orientation='horizontal', spacing=12,
                         size_hint_y=None, height=50)
@@ -910,14 +963,19 @@ class MainMenu(FloatLayout):
                                    font_size=U.FS_BODY, height=50,
                                    bg=COLORS['panel_light'],
                                    on_release=lambda *_: pop.dismiss()))
+
+        def _fire_start(*_a):
+            """点「开始」：挑战码抄错时拦下不关弹窗（提示已由实时解析标红）。"""
+            seed, _diff, err = _parse_seed_input(ti.text)
+            if err:
+                return
+            pop.dismiss()
+            on_confirm(seed, balance.DIFFICULTY_ORDER[sw.current])
+
         row.add_widget(make_button(t('menu_start'), font_size=U.FS_BODY,
                                    height=50,
                                    bg=(0.078, 0.188, 0.173, 1),
-                                   on_release=lambda *_: (
-                                       pop.dismiss(),
-                                       on_confirm(_parse_seed(ti.text),
-                                                  balance.DIFFICULTY_ORDER[
-                                                      sw.current]))))
+                                   on_release=_fire_start))
         body.add_widget(row)
         pop = make_modal(body, size_hint=(0.52, 0.55), skin='win',
                          close_on_outside=True)
