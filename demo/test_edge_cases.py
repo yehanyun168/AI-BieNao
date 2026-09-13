@@ -37,6 +37,7 @@ os.environ.setdefault('KIVY_NO_ARGS', '1')
 os.environ.setdefault('KIVY_NO_FILELOG', '1')
 
 import engine
+import endings
 import i18n
 import save_manager
 import commissions
@@ -523,10 +524,11 @@ def main() -> int:
 
     # ---- 11. 极端数值 ----
     def _extreme_values():
-        """现状语义（若未来改语义需同步改这里）：
+        """现状语义（T04 软饱和后；若未来改语义需同步改这里）：
         float 范围内的极端值（1e300）经 tick：
-          · 怀疑度被 engine.py:339 收口到 [0, 100]（1e300 → 恰好 100，
-            -1e300 → 恰好 0），危机/关停链路正常判定，不崩；
+          · 单 tick 偷算力怀疑增量经 soft_cap_suspicion 软饱和，渐近封顶
+            TUNE['suspicion_growth_cap']（24）——1e300 不再一击致死；
+            连续 tick 推进仍走 危机→关停 链路正常判定，不崩；
           · 下载增长的网络效应放大后仍是有限数（无 inf）；
           · 存档 JSON 不出现 NaN / Infinity 字面量（json.dump 的
             allow_nan 默认开着，一旦有污染就会写进文件，本断言能抓住），
@@ -545,10 +547,19 @@ def main() -> int:
             bad = [v for v in vals if not math.isfinite(v)]
             if bad:
                 return False, f"tick 后出现非有限值：{bad[:3]}"
-            if p.suspicion != 100.0:
-                return False, f"1e300 怀疑增长应被钳到 100，实际 {p.suspicion}"
-            if not (p.game_over and p.ending_id == 'shutdown'):
-                return False, (f"极端局应走关停结局，实际 game_over={p.game_over} "
+            cap = TUNE['suspicion_growth_cap']
+            if not (0.0 < p.suspicion <= cap):
+                return False, (f"1e300 单 tick 怀疑应被软饱和到 ≤{cap}，"
+                               f"实际 {p.suspicion}")
+            # T04 后不再一击致死：连续 tick 推进，渗透满格经正常结局判定收束
+            #（1e300 下载 → 渗透 100% + 算力峰值爆表 → 命中元结局 meta）
+            for _ in range(10):
+                if p.game_over:
+                    break
+                engine.tick_one_round()
+            if not (p.game_over and p.ending_id in endings.ENDING_MAP):
+                return False, (f"极端局连续 tick 应经结局判定收束，实际 "
+                               f"game_over={p.game_over} "
                                f"ending={p.ending_id}")
             path = os.path.join(tmp, 'extreme.json')
             save_manager.save(path)
@@ -561,17 +572,29 @@ def main() -> int:
             if not (ok and reason == save_manager.LOAD_OK):
                 return False, f"极端数值存档读回失败 ({ok}, {reason})"
             p2 = engine.player
-            if not (p2.game_over and p2.ending_id == 'shutdown'
+            if not (p2.game_over and p2.ending_id == p.ending_id
                     and p2.tick_count == p.tick_count):
                 return False, "读回的结局状态与存档前不一致"
-            # 负向极端：-1e300 → 钳到 0
+            # 怀疑侧极端：直接灌注 1e300 怀疑 → [0,100] 收口 → 关停链路
             p3 = _fresh(13)
-            p3.suspicion = -1e300
+            p3.suspicion = 1e300
             engine.tick_one_round()
-            if p3.suspicion != 0.0:
-                return False, f"-1e300 应被钳到 0，实际 {p3.suspicion}"
-        return True, (f"1e300 全链路 finite、sus 钳 100 → 关停；存档无 "
-                      f"NaN/Infinity 且原样读回；-1e300 → 0")
+            if p3.suspicion != 100.0:
+                return False, f"1e300 怀疑应被钳到 100，实际 {p3.suspicion}"
+            if not (p3.game_over and p3.ending_id == 'shutdown'):
+                return False, (f"灌注极端怀疑应走关停结局，实际 "
+                               f"game_over={p3.game_over} "
+                               f"ending={p3.ending_id}")
+            # 负向极端：-1e300 → 钳到 0
+            p4 = _fresh(13)
+            p4.suspicion = -1e300
+            engine.tick_one_round()
+            if p4.suspicion != 0.0:
+                return False, f"-1e300 应被钳到 0，实际 {p4.suspicion}"
+        return True, (f"1e300 全链路 finite、单 tick 怀疑软饱和 ≤"
+                      f"{TUNE['suspicion_growth_cap']}、连续 tick 经结局判定"
+                      f"收束；存档无 NaN/Infinity 且原样读回；"
+                      f"怀疑 1e300→100 关停、-1e300→0")
 
     check('11. 极端数值 1e300 → 不崩、无 inf/nan 污染存档', _extreme_values)
 
