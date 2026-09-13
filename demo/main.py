@@ -1297,6 +1297,8 @@ class RootView(FloatLayout):
                              on_start_new_slot=self.start_new_game_on_slot,
                              on_exit=self.quit_app)
         self.add_widget(self.menu)
+        # BGM：主菜单专属曲池（轻松氛围，与对局紧张态分离）
+        bgm.update('menu')
 
     def start_new_game(self, seed=None, difficulty=None,
                        origin=None) -> None:
@@ -1361,6 +1363,8 @@ class RootView(FloatLayout):
         self.menu = None
         self.game = GameUI(on_exit=self.show_menu)
         self.add_widget(self.game)
+        # BGM：主菜单池 → 对局池（开局一律 calm，之后每周期按怀疑度自动切）
+        bgm.update('calm')
         self._log_run_info()
         # 新游戏进入后延迟触发新手引导（等首帧布局完成，to_window 才有正确坐标）
         Clock.schedule_once(lambda dt: self.game.tutorial.maybe_start(), 0.3)

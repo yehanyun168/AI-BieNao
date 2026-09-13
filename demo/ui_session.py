@@ -301,7 +301,10 @@ class SessionMixin:
 
     def exit_to_menu(self) -> None:
         self.stop_ticking()
-        bgm.stop()   # T09：离开对局即停 BGM，避免主菜单还在放紧张曲
+        # BGM：**不再 stop()**。原先停播是为了「避免主菜单还在放紧张曲」，
+        # 现在主菜单有自己的 menu 曲池（RootView.show_menu 会切过去），
+        # 若这里仍 stop()，会出现「静音一拍 → 菜单曲淡入」的空档，
+        # 听感上像音乐被掐断。交给 show_menu 做池间交叉淡出即可。
         if callable(self.on_exit):
             self.on_exit()
 
@@ -316,6 +319,10 @@ class SessionMixin:
         self._close_log()
         self.close_page()
         self.refresh_all()
+        # BGM：重开一局怀疑度归零，从 tense 池切回 calm。
+        # bgm.update 幂等，已是 calm 时无开销；若上局结束在 tense 态，
+        # 这里若不切，新局会带着「上局的紧张音乐」开局。
+        bgm.update('calm')
         self._reschedule_tick()
 
     # ========================================================

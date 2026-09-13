@@ -233,6 +233,10 @@ class InputMixin:
         if self.drop_mode and self.drop_skill == sid:
             self._cancel_drop()
             return
+        # 技能选中音：点卡片本身即应有反馈（原路径只在真正「投放模式开启」
+        # 或「技能释放」时才有声，而点卡片到那一步之间的手感是空的）。
+        # 放在两处 return 之后，保证只有「确实要执行该技能」时才响。
+        sfx.play('select')
         if self._skill_needs_target(sid):
             self.start_drop(sid, None)
         else:
@@ -249,6 +253,10 @@ class InputMixin:
 
     def on_upgrade_branch(self, slot_id: str, branch_id: str, level: int = None) -> None:
         if engine.upgrade_branch(slot_id, branch_id):
+            # 分支升级音：原先此路径**完全静默**，玩家升完听不到任何反馈，
+            # 只能靠自己看数字变化确认。与解锁 T0 的 unlock 区分开
+            # （解锁是「开新枝」，升级是「加深已有枝」，两者听感应有别）。
+            sfx.play('branch')
             self.refresh_all()
             if isinstance(self._page, S.TechPage):
                 self._page.selected_key = f"br:{branch_id}"

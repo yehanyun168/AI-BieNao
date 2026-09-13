@@ -398,64 +398,62 @@ for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
 print(f"   ■ 17) 可视化/引导/节奏（顶栏火花×4 / 引导 {len(_steps)} 步 / "
       f"里程碑分档 / i18n ×{len(_pace_keys)} 键）")
 
-# ---- 18) T09 背景音乐：资源 / 两态映射 / 设置页开关接线 ----
+# ---- 18) T09 背景音乐：曲池 / 随机播放列表 / 主菜单覆盖 / 设置页接线 ----
 import bgm as _bgm
 import ui_v4_screens as _screens_m
 
-assert _bgm.STATES == ('calm', 'tense'), f"BGM 态定义变了: {_bgm.STATES}"
+assert _bgm.STATES == ('calm', 'tense', 'menu'), f"BGM 曲池定义变了: {_bgm.STATES}"
 _bgm_dir = _bgm._base_dir()
-# 两态 × 全部变体都必须有实体文件（2026-09-13 换 CC0 OGG 后改为按
-# bgm.SUFFIXES 探测，不再硬编码 .wav）。缺任何一个 → bgm.py 静默降级，
-# 玩家只会觉得「音乐没了」，因此这里必须硬断言。
+# 每个曲池每首曲目必须有实体文件（按 SUFFIXES 探测）；缺任何一个 bgm.py 都会
+# 静默降级，玩家只会觉得「音乐没了」，故必须硬断言。
 for _st in _bgm.STATES:
-    for _vi, _stem in enumerate(_bgm.VARIANTS.get(_st, (_st,))):
+    assert _bgm.pool_stems(_st), f"曲池 {_st} 为空"
+    for _stem in _bgm.pool_stems(_st):
         assert _bgm._resolve(_bgm_dir, _stem) is not None, (
             f"BGM 资源缺失: {_stem}{_bgm.SUFFIXES}（打包时须 add-data assets/bgm）")
 assert os.path.exists(os.path.join(_bgm_dir, 'CREDITS.md')), \
     "demo/assets/bgm/CREDITS.md 缺失（素材授权声明必须入库）"
-# 变体切换接口与语义（各态候选数可不同：calm 3 / tense 2）
-assert _bgm.get_track_variant() == 0, "默认应变体 0（主选）"
-_bgm.set_track_variant(1)
-assert _bgm.get_track_variant() == 1, "set_track_variant(1) 未生效"
-assert _bgm.get_sound('calm', 1) is not _bgm.get_sound('calm', 0), \
-    "主选/备选应加载为两个不同音频对象"
-assert _bgm.variant_count('calm') >= 2, "calm 应有多首候选"
-# 越界取音频必须回落主选（否则切到不存在的变体会静音）
-for _st in _bgm.STATES:
-    assert _bgm.get_sound(_st, 99) is _bgm.get_sound(_st, 0), \
-        f"{_st} 变体越界应回落主选（返回 None 会静音）"
-    for _vi in range(_bgm.variant_count(_st)):
-        assert _bgm.get_track_label(_st, _vi), f"{_st}#{_vi} 标签为空"
-_bgm.set_track_variant(_bgm.variant_count('calm') - 1)
-assert _bgm.get_track_variant() == _bgm.variant_count('calm') - 1, \
-    "应能切到 calm 最后一首（各态独立钳位，不能按 min 锁死）"
-_bgm.set_track_variant(0)
-
+# 主菜单必须有独立曲池（用户要求「BGM 全面覆盖主菜单界面」）
+assert 'menu' in _bgm.POOLS and _bgm.pool_count('menu') >= 1, \
+    "缺 menu 曲池或为空 → 主菜单无 BGM"
+# 随机播放列表语义：打乱后同一轮内不重复、不丢曲目
+_shuf = _bgm._shuffle('calm')
+assert set(_shuf) == set(_bgm.pool_stems('calm')) and \
+    len(set(_shuf)) == len(_shuf) == _bgm.pool_count('calm'), "打乱丢曲目或重复"
+assert len({tuple(_bgm._shuffle('calm')) for _ in range(8)}) > 1, "随机失效"
+assert abs(_bgm.GAP_SECONDS - 1.0) < 1e-6, "曲目间停顿应为 1 秒"
 # 两态映射：70% 危机线为阈值（低于→calm，达到/超过→tense）
-assert _bgm.state_for_suspicion(0.0, 50.0) == 'calm'
-assert _bgm.state_for_suspicion(34.9, 50.0) == 'calm'
-assert _bgm.state_for_suspicion(35.0, 50.0) == 'tense', "70% 危机线应切 tense"
-assert _bgm.state_for_suspicion(80.0, 50.0) == 'tense'
-assert _bgm.state_for_suspicion('bad', 50.0) == 'calm', "脏输入应降级为 calm"
+for _sus, _want in ((0.0, 'calm'), (34.9, 'calm'), (35.0, 'tense'),
+                    (80.0, 'tense'), ('bad', 'calm')):
+    assert _bgm.state_for_suspicion(_sus, 50.0) == _want, \
+        f"怀疑度 {_sus} 应映射到 {_want}"
+
+# 主菜单覆盖接线：show_menu 切 menu 池、_enter_game 切回对局池、
+# exit_to_menu 不得 stop()（否则菜单曲起播前有一拍静音断点）
+_HERE_D = os.path.dirname(os.path.abspath(__file__))
+_src = lambda f: open(os.path.join(_HERE_D, f), encoding='utf-8').read()
+_rv_src = _src('main.py')
+for _needle in ("bgm.update('menu')", "bgm.update('calm')"):
+    assert _needle in _rv_src, f"main.py 缺 BGM 曲池接线: {_needle}"
+_us_src2 = _src('ui_session.py')
+assert 'bgm.stop()' not in _us_src2 and 'bgm.update' in _us_src2, \
+    "ui_session 应删 exit_to_menu 的 bgm.stop()，并在 restart_game 重置 calm"
 
 # 设置页开关：on_music 是 SettingsPage 的合法形参，且实际构造出 sw_music
 _sp = _screens_m.SettingsPage(on_music=lambda i: None)
 assert hasattr(_sp, 'sw_music'), "设置页缺音乐开关控件"
-
 # i18n 键 zh/en 对称
 for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
     for _k in ('set_music', 'set_music_hint'):
         assert _k in i18n_mod.TRANSLATIONS[_lang], f"i18n[{_lang}] 缺 {_k}"
-
-# main.py 接线点存在（import bgm / load_all / on_music 回调）
-_main_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              'main.py'), encoding='utf-8').read()
+# main.py 接线点（复用上面的 _src）
 for _needle in ('import bgm', 'bgm.load_all()', 'on_music=self._set_music_idx',
                 'def _set_music_idx'):
-    assert _needle in _main_src, f"main.py 缺 BGM 接线: {_needle}"
-_n_tracks = sum(_bgm.variant_count(_s) for _s in _bgm.STATES)
-print(f"   ■ 18) T09 背景音乐（calm/tense 两态 × {_n_tracks} 首 CC0 OGG / "
-      "70% 阈值映射 / 变体热切换 + 越界回落 / 设置页开关 ×2 语 / main 接线四连）")
+    assert _needle in _rv_src, f"main.py 缺 BGM 接线: {_needle}"
+_n_tracks = sum(_bgm.pool_count(_s) for _s in _bgm.STATES)
+print(f"   ■ 18) T09 背景音乐（{len(_bgm.STATES)} 曲池 × {_n_tracks} 首 CC0 OGG / "
+      "随机不重复播放列表 / 曲末停 1s / 70% 阈值映射 / 主菜单独立池覆盖 / "
+      "设置页开关 ×2 语 / main 接线四连）")
 
 # ---- 19) T10 地图渗透热力层：同心环几何 + 图例语义 + 图层互斥 ----
 import world_map as _wm
@@ -764,8 +762,10 @@ _base12 = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
 _miss_base = [n for n in _base12 if n not in _sfx_mod.NAMES]
 assert not _miss_base, f"sfx.NAMES 丢了合成基线音效: {_miss_base}"
 
-# 语义分层 6 个（2026-09-13 新增）必须都在 NAMES 里，且各有文件
-_semantic = ('hover', 'page', 'toggle', 'error', 'confirm', 'scroll')
+# 语义分层音效必须都在 NAMES 里（第 1 批 6 个：基础交互）
+_semantic = ('hover', 'page', 'toggle', 'error', 'confirm', 'scroll',
+             # 第 2 批 3 个：投放 / 分支升级缺口
+             'deploy', 'branch', 'confirm_cast')
 for _n in _semantic:
     assert _n in _sfx_mod.NAMES, f"sfx.NAMES 缺语义分层音效: {_n}"
 
@@ -773,7 +773,7 @@ for _n in _semantic:
 import bgm as _bgm_mod
 _bgm_dir = os.path.join(_HERE, 'assets', 'bgm')
 for _st in _bgm_mod.STATES:
-    for _stem in _bgm_mod.VARIANTS.get(_st, (_st,)):
+    for _stem in _bgm_mod.pool_stems(_st):
         assert _bgm_mod._resolve(_bgm_dir, _stem) is not None, \
             f"demo/assets/bgm 缺 BGM: {_stem}"
 
@@ -787,11 +787,13 @@ assert os.path.exists(os.path.join(_bgm_dir, 'CREDITS.md')), \
 _src_all = ''
 for _f in ('ui_pages.py', 'ui_session.py', 'ui_input.py', 'ui_drop.py'):
     _src_all += open(os.path.join(_HERE, _f), encoding='utf-8').read()
-for _needle in ("sfx.play('error')", "sfx.play('page')", "sfx.play('toggle')"):
+for _needle in ("sfx.play('error')", "sfx.play('page')", "sfx.play('toggle')",
+                "sfx.play('deploy' if ok else 'error')", "sfx.play('branch')"):
     assert _needle in _src_all, f"语义音效未接线: {_needle}"
-_n_bgm = sum(_bgm_mod.variant_count(_s) for _s in _bgm_mod.STATES)
-print(f"   ■ 23) 音效资源完整性（18 个音效文件齐备 / 合成基线 12 + 语义分层 6 /"
-      f" BGM 两态 ×{_n_bgm} 首曲目 / 授权声明入库 / 语义音效接线已生效）")
+_n_bgm = sum(_bgm_mod.pool_count(_s) for _s in _bgm_mod.STATES)
+_n_sfx = len(_sfx_mod.NAMES) - len(_base12)
+print(f"   ■ 23) 音效资源完整（{len(_sfx_mod.NAMES)} 个文件 / 合成基线 12 + 语义分层 {_n_sfx} /"
+      f" BGM {len(_bgm_mod.STATES)} 曲池 ×{_n_bgm} 首 / 双 CREDITS 入库 / 接线已生效）")
 
 print("\n 全部通过 - demo 可以正常启动")
 print()

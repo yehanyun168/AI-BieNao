@@ -1,56 +1,79 @@
 # -*- coding: utf-8 -*-
 """bgm.py —— 《AI 别闹》背景音乐管理器（失败安全，绝不因缺音频后端而崩）。
 
-与 sfx.py 的关系：同一套「多后缀探测 + 打包路径解析 + 静默降级」
-范式，但 BGM 有四点不同：
-  1. **循环播放**（loop=True），不是一次性音效；
-  2. **两态切换**：calm（平稳）/ tense（紧张），由怀疑度驱动 ——
-     BGM 本身即压力反馈设计（任务清单 T09），玩家不用管数字就能听出
-     「快出事了」；
-  3. 切换采用**交叉淡出**（旧曲音量降到 0 再停、新曲淡入），避免硬切；
-  4. 每态有**主选 + 备选**两首（风格同源、听感微调），可在设置页切换。
+与 sfx.py 的关系：同一套「多后缀探测 + 打包路径解析 + 静默降级」范式，
+但 BGM 有几点不同：
+  1. **播放列表式随机循环**：不再是单曲 `loop=True` 无限重复，而是把
+     同一曲池的曲目**随机排序、逐首播放**，每首放完停顿 `GAP_SECONDS`
+     秒再放下一首（见 `_advance`）。单曲无限循环听久了会有明显疲劳感，
+     换曲能维持长时间游玩的新鲜度。
+  2. **三态曲池**：calm（平稳）/ tense（紧张）/ menu（主菜单）——
+     calm 与 tense 由怀疑度驱动，BGM 本身即压力反馈设计（任务清单 T09），
+     玩家不用管数字就能听出「快出事了」；menu 是主菜单专属的轻松池，
+     与对局池分离，避免主菜单响起紧张曲。
+  3. **池间切换用交叉淡出**（旧曲音量降到 0 再停、新曲淡入），避免硬切；
+     池内换曲则走「自然放完 → 停 1 秒 → 下一首」。
+  4. 每态的曲目由**真人试听裁决**选定，见 `POOLS` 与 `assets/bgm/CREDITS.md`。
 
-素材来源（2026-09-13 更新）：Abstraction / Tallbeard Studios 的
-*Free Music Loop Bundle*（CC0 公有领域，可商用可修改，署名非强制）。
-现用曲目由**真人试听裁决**选定，弃用了早期 tools/gen_bgm.py 的 12 秒
-合成片段（过短、循环痕迹重，仅作离线备份保留生成脚本）。
+素材来源（2026-09-13）：Abstraction / Tallbeard Studios 的 *Free Music
+Loop Bundle* 与 HydroGene 的 8-bit 曲集，**均为 CC0 公有领域**，可商用、
+可修改、署名非强制。已弃用早期 tools/gen_bgm.py 的 12 秒合成片段
+（过短、循环痕迹重；生成脚本保留作无素材时的兜底）。
 
 使用：
     import bgm
-    bgm.load_all()            # 启动时一次
-    bgm.update('calm')        # 每周期按当前怀疑度调用（内部判重，无重复开销）
-    bgm.set_enabled(False)    # 设置页「音乐」开关
-    bgm.set_track_variant(1)  # 设置页「曲目」主选/备选切换
-    bgm.stop()                # 返回主菜单 / 退出对局
+    bgm.load_all()          # 启动时一次
+    bgm.update('menu')      # 主菜单：进菜单时调一次
+    bgm.update('calm')      # 对局中：每周期按怀疑度调（内部判重，无重复开销）
+    bgm.set_enabled(False)  # 设置页「音乐」开关
+    bgm.stop()              # 彻底停播（退出游戏）
 """
 import os
+import random
 import sys
 
 from kivy.clock import Clock
 from kivy.core.audio import SoundLoader
 
-# 两态名（主选文件 calm.ogg / tense.ogg）
-STATES = ('calm', 'tense')
+# 三个曲池名：calm / tense 为对局态（怀疑度驱动），menu 为主菜单态
+STATES = ('calm', 'tense', 'menu')
 
 # 候选后缀（按优先级）。⚠️ 顺序**不能**沿用 sfx 的 (.wav, .ogg)：
 # BGM 已由真人试听换成 CC0 OGG 长曲，目录里不再有同名 wav；若日后有人
 # 误留同名 wav，让它盖掉长曲会瞬间退化回 12 秒合成片段。故 BGM 优先 .ogg。
 SUFFIXES = ('.ogg', '.wav', '.mp3')
 
-# 每态的候选曲目（真人试听裁决，可在设置页切换）
-VARIANTS = {
-    # calm（正常经营）：Penguin Town（主·最顽皮）/ Rabbit Town（备）/ I am not clumsy（备2）
+# 各曲池的曲目（文件名去掉后缀）。同一池内随机播放、互不重复直到轮完。
+POOLS = {
+    # calm（正常经营）：Penguin Town（最顽皮）/ Rabbit Town / I am not clumsy
     'calm':  ('calm', 'calm_alt', 'calm_alt2'),
-    # tense（被封锁被抵制）：Rumble at the Gates（主·更富希望）/ Save the City（备·压迫感强）
+    # tense（被封锁被抵制）：Rumble at the Gates（更富希望）/ Save the City（压迫感强）
     'tense': ('tense', 'tense_alt'),
+    # menu（主菜单）：复用 calm 池 —— 主菜单氛围与正常经营一致（轻松、无压迫），
+    # 且不额外占体积。若日后有专属菜单曲，只需在此加名并放入 assets/bgm/。
+    'menu':  ('calm', 'calm_alt', 'calm_alt2'),
 }
+
+# 曲目结束后到下曲开始的停顿（秒）。用户指定 1 秒。
+GAP_SECONDS = 1.0
 
 BGM_ON = True
 VOLUME = 0.45
 _LOADED = False
-_SOUNDS = {}
-_current = None            # 当前正在播放的态名（None = 未播放）
-_variant = 0               # 当前曲目变体（0=主选，1=备选）
+_SOUNDS = {}               # stem -> Sound 对象（None = 缺失/加载失败）
+_current = None            # 当前曲池名（None = 未播放）
+_order = {}                # 池名 -> 打乱后的待播队列（stem 列表）
+_playing = None            # 当前正在播放的 stem
+_advance_ev = None         # 下一次换曲的 Clock 事件
+_gap_ev = None             # 停顿期间的 Clock 事件
+
+
+def _base_dir() -> str:
+    """BGM 目录：打包态走 _MEIPASS，开发态走 demo/assets/bgm。"""
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, 'assets', 'bgm')
+    here = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(here, 'assets', 'bgm')
 
 
 def _resolve(d: str, name: str):
@@ -62,135 +85,199 @@ def _resolve(d: str, name: str):
     return None
 
 
-def _base_dir() -> str:
-    """BGM 目录：打包态走 _MEIPASS，开发态走 demo/assets/bgm。"""
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, 'assets', 'bgm')
-    here = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(here, 'assets', 'bgm')
+def pool_stems(state: str):
+    """某曲池的曲目名元组（去重后的，供外部查询/测试）。"""
+    seen, out = set(), []
+    for stem in POOLS.get(state, (state,)):
+        if stem not in seen:
+            seen.add(stem)
+            out.append(stem)
+    return tuple(out)
 
 
-# 变体序号 → 显示名（设置页「曲目」标签用；改曲目时同步维护这里）
-TRACK_LABELS = {
-    0: 'A · 主选',
-    1: 'B · 备选',
-    2: 'C · 备选二',
-}
-
-
-def get_track_label(state: str, variant=None) -> str:
-    """某态当前曲目的可读标签（供设置页/调试显示）。
-
-    越界时显示实际生效的主选（与 `get_sound` 的回落行为保持一致，
-    否则界面会显示一个并不存在的档位）。
-    """
-    v = _variant if variant is None else variant
-    names = VARIANTS.get(state, (state,))
-    if not (0 <= v < len(names)):
-        v = 0
-    return '%s [%s]' % (TRACK_LABELS.get(v, str(v)), names[v])
-
-
-def variant_count(state: str) -> int:
-    """某态的候选曲目数量（设置页判断是否显示切换控件）。"""
-    return len(VARIANTS.get(state, (state,)))
-
-
-def _key(state: str, variant: int) -> str:
-    """内部加载表的键：态名 + 变体序号（同一态的主选/备选共存不冲突）。"""
-    return '%s#%d' % (state, variant)
+def pool_count(state: str) -> int:
+    """某曲池可用曲目数。"""
+    return len(pool_stems(state))
 
 
 def load_all() -> None:
-    """加载两态 × 全部变体的 BGM（幂等；失败的单条置 None，不影响其它）。
+    """加载全部曲池的曲目（幂等；失败的单条置 None，不影响其它）。
 
-    一次性把主选与备选都载入，是为了让设置页切换曲目时**零等待、零卡顿**
-    ——若切的时候才去解码几十 MB 的 OGG，游戏会明显卡一下。
+    一次性把三个池的曲目都载入，是为了换池/换曲时**零等待、零卡顿**
+    —— 若换的时候才去解码几十 MB 的 OGG，游戏会明显卡一下。
+    ⚠️ 注意载入的音效**不设 loop=True**：本项目是播放列表式换曲，
+    靠 `_advance` 在曲末调度下一首，而不是让单曲无限重复。
     """
     global _LOADED
     _LOADED = True
     d = _base_dir()
+    stems = []
     for state in STATES:
-        names = VARIANTS.get(state, (state,))
-        for vi, stem in enumerate(names):
-            key = _key(state, vi)
-            if key in _SOUNDS and _SOUNDS[key] is not None:
+        for stem in pool_stems(state):
+            if stem not in stems:
+                stems.append(stem)
+    for stem in stems:
+        if stem in _SOUNDS and _SOUNDS[stem] is not None:
+            continue
+        try:
+            p = _resolve(d, stem)
+            if p is None:
+                _SOUNDS[stem] = None
+                print('[bgm] 警告：BGM 缺失 %s{.ogg/.wav/.mp3}，已静音跳过'
+                      '（查找目录: %s）' % (stem, d))
                 continue
+            snd = SoundLoader.load(p)
+            if snd is not None:
+                snd.loop = False          # 播放列表模式：不单曲循环
+                try:
+                    snd.volume = VOLUME
+                except Exception:
+                    pass
+            _SOUNDS[stem] = snd
+        except Exception as e:
+            _SOUNDS[stem] = None
+            print('[bgm] 警告：BGM 加载失败 %s，已静音跳过：%s' % (stem, e))
+
+
+def _available(state: str):
+    """某池中真正可用（加载成功）的曲目名列表，按池序返回。"""
+    return [s for s in pool_stems(state) if _SOUNDS.get(s) is not None]
+
+
+def _shuffle(state: str):
+    """生成该池的随机播放队列并存入 `_order[state]`。
+
+    ⚠️ 只在池刚被激活时打乱一次，之后按队列顺序依次播完再重打乱 ——
+    这样能保证同一池的曲目在一轮内**不重复**（纯 `random.choice` 每首独立
+    抽取，可能出现连放两首同曲，听感上像卡带）。
+    """
+    q = _available(state)
+    random.shuffle(q)
+    _order[state] = q
+    return q
+
+
+def _cancel_timers() -> None:
+    """取消所有待触发的换曲/停顿定时器（切池、关音乐、停止时必调）。"""
+    global _advance_ev, _gap_ev
+    for attr in ('_advance_ev', '_gap_ev'):
+        ev = globals()[attr]
+        if ev is not None:
             try:
-                p = _resolve(d, stem)
-                if p is None:
-                    _SOUNDS[key] = None
-                    print('[bgm] 警告：BGM 缺失 %s{.ogg/.wav/.mp3}，已静音跳过'
-                          '（查找目录: %s）' % (stem, d))
-                    continue
-                snd = SoundLoader.load(p)
-                if snd is not None:
-                    snd.loop = True
-                    try:
-                        snd.volume = VOLUME
-                    except Exception:
-                        pass
-                _SOUNDS[key] = snd
-            except Exception as e:
-                _SOUNDS[key] = None
-                print('[bgm] 警告：BGM 加载失败 %s，已静音跳过：%s' % (stem, e))
+                ev.cancel()
+            except Exception:
+                pass
+            globals()[attr] = None
 
 
-def get_sound(state: str, variant=None):
-    """取某态当前生效的音频对象（variant 为 None 时用全局当前变体）。
+def _start_stem(stem: str, fade: bool) -> None:
+    """开始播放某曲，并调度「曲末 → 停顿 → 下一首」。
 
-    ⚠️ 越界必须回落主选，不能返回 None：各态候选数不同（calm 3 / tense 2），
-    当玩家把变体切到 2 再进入 tense 态时，`tense#2` 不存在 —— 若返回 None，
-    `_fade_in(None)` 会静默跳过，玩家会听到「切到紧张态后音乐没了」。
+    Args:
+        stem: 曲目名（必须已在 _SOUNDS 中且可用）
+        fade: True = 淡入（切池用）；False = 直接起播（池内换曲用，
+              因为前一首已经放完并静止，再淡入反而听感突兀）
     """
-    v = _variant if variant is None else variant
-    snd = _SOUNDS.get(_key(state, v))
-    if snd is None and v != 0:
-        snd = _SOUNDS.get(_key(state, 0))
-    return snd
-
-
-def set_track_variant(vi: int) -> None:
-    """设置页「曲目」切换：0=主选，1=备选，2=备选二…（超界自动钳位）。
-
-    正在播放时立即热切：旧曲淡出、同态另一变体淡入，**不打断当前情绪态**。
-
-    ⚠️ 钳位必须以**该态自己的候选数**为准，不能取各态最小值：
-    calm 有 3 首、tense 有 2 首，若按 min 钳，calm 的第三首永远切不到。
-    各态候选数不一致是**允许且有意**的（用户听感裁决只给了 2 首 tense
-    候选），越界时 `get_sound()` 会自动回落到该态主选，不会静音。
-    """
-    global _variant
-    vi = max(0, int(vi))
-    if vi == _variant:
+    global _playing, _advance_ev
+    snd = _SOUNDS.get(stem)
+    if snd is None:
         return
-    old = get_sound(_current) if _current else None
-    _variant = vi
-    if _current and BGM_ON:
+    _playing = stem
+    if fade:
+        _fade_in(snd)
+    else:
+        try:
+            if getattr(snd, 'state', 'stop') != 'play':
+                snd.play()
+            snd.volume = VOLUME
+        except Exception:
+            pass
+    # 曲末调度：用音频真实 length 算，而不是固定延时
+    try:
+        length = float(getattr(snd, 'length', 0.0) or 0.0)
+    except Exception:
+        length = 0.0
+    if length <= 0:
+        length = 30.0            # 取不到时长时的兜底（避免定时器永不触发）
+    # 留一点余量，确保 settle 在音频真正播完之后
+    delay = max(1.0, length - float(getattr(snd, 'position', 0.0) or 0.0) + 0.3)
+    _advance_ev = Clock.schedule_once(lambda _dt: _on_track_end(), delay)
+
+
+def _on_track_end() -> None:
+    """曲目播完：停 1 秒（GAP_SECONDS）再播下一首。"""
+    global _gap_ev, _advance_ev
+    _advance_ev = None
+    # ⚠️ 停顿期间必须显式 stop() 当前曲：Kivy 音频播完后 state 会自动变
+    # 'stop'，但为防后端在边界上仍持有声道，这里统一收干净，保证「停 1 秒」
+    # 是真的静音，而不是听起来还在响。
+    snd = _SOUNDS.get(_playing)
+    if snd is not None:
+        try:
+            snd.stop()
+        except Exception:
+            pass
+    _gap_ev = Clock.schedule_once(lambda _dt: _advance(), GAP_SECONDS)
+
+
+def _advance() -> None:
+    """播下一首：取池内队列的下一项，队列空则重新打乱。"""
+    global _gap_ev
+    _gap_ev = None
+    if not BGM_ON or not _current:
+        return
+    q = _order.get(_current) or []
+    if not q:
+        q = _shuffle(_current)
+    if not q:
+        return                    # 该池无可用曲目（全缺失）：静默等待
+    stem = q.pop(0)
+    _start_stem(stem, fade=False)
+
+
+def update(state: str) -> None:
+    """切换曲池（幂等：同池重复调用无开销）。
+
+    切池时若正在放另一池的曲，交叉淡出；若同池，什么都不做
+    （池内换曲由 `_advance` 自动负责，不受本函数影响）。
+
+    Args:
+        state: 'calm' / 'tense' / 'menu'（非法值静默忽略）
+    """
+    global _current
+    if state not in STATES:
+        return
+    if not BGM_ON or not _LOADED:
+        _current = state          # 记住状态，等开关打开时补播
+        return
+    if state == _current:
+        return
+    old_stem = _playing
+    old = _SOUNDS.get(old_stem) if old_stem else None
+    _cancel_timers()
+    _current = state
+    if old is not None:
         _fade_out(old)
-        _fade_in(get_sound(_current))
-
-
-def get_track_variant() -> int:
-    """当前曲目变体（设置页回显用）。"""
-    return _variant
+    q = _shuffle(state)
+    if q:
+        _start_stem(q.pop(0), fade=True)
 
 
 def set_enabled(on: bool) -> None:
     """设置页「音乐」开关。关闭时立即停播，开启时按需恢复。
 
-    !️ 关闭时用 _pause()（保留 _current）而不用 stop()（清空 _current）——
-    否则一旦关过音乐，再打开时就不知道「此刻该放哪一态」，
-    要等下一个 tick 才会重新出声（等于开关失效一次）。
+    ⚠️ 关闭时保留 `_current`，这样再打开时能立刻回到该放的池；
+    否则一旦关过音乐，要等下一个周期才会重新出声（等于开关失效一次）。
     """
     global BGM_ON
     BGM_ON = bool(on)
     if not BGM_ON:
+        _cancel_timers()
         _pause()
     elif _current:
-        name = _current           # 记住该放的态，然后强制重播
+        state = _current
         globals()['_current'] = None
-        update(name)
+        update(state)
 
 
 def _pause() -> None:
@@ -210,41 +297,13 @@ def set_volume(v: float) -> None:
     for snd in _SOUNDS.values():
         if snd is not None:
             try:
-                snd.volume = VOLUME * _state_gain(globals()['_current'])
+                snd.volume = VOLUME
             except Exception:
                 pass
 
 
-def _state_gain(state) -> float:
-    """该态当前应有的音量系数（交叉淡入淡出用）。"""
-    if state == globals()['_current']:
-        return 1.0
-    return 0.0
-
-
-def update(state: str) -> None:
-    """按游戏状态切换 BGM（幂等：同态重复调用无开销）。
-
-    Args:
-        state: 'calm' 或 'tense'（非法值静默忽略）
-    """
-    global _current
-    if state not in STATES:
-        return
-    if not BGM_ON or not _LOADED:
-        _current = state          # 记住状态，等开关打开时补播
-        return
-    if state == _current:
-        return
-    old = get_sound(_current) if _current else None
-    _current = state
-    new = get_sound(state)
-    # 交叉淡出：旧曲 0.6s 内降到 0 再停；新曲 0.6s 内升到 VOLUME
-    _fade_out(old)
-    _fade_in(new)
-
-
 def _fade_out(snd) -> None:
+    """旧曲 0.6s 内音量降到 0 再停（切池用，避免硬切）。"""
     if snd is None:
         return
     try:
@@ -269,6 +328,7 @@ def _fade_out(snd) -> None:
 
 
 def _fade_in(snd) -> None:
+    """新曲 0.6s 内音量升到 VOLUME。"""
     if snd is None:
         return
     try:
@@ -296,8 +356,9 @@ def _fade_in(snd) -> None:
 
 
 def stop() -> None:
-    """停止全部 BGM（返回主菜单 / 退出对局 / 手动关闭）。"""
-    global _current
+    """停止全部 BGM（退出游戏 / 手动关闭）。"""
+    global _current, _playing
+    _cancel_timers()
     for snd in _SOUNDS.values():
         if snd is not None:
             try:
@@ -305,10 +366,11 @@ def stop() -> None:
             except Exception:
                 pass
     _current = None
+    _playing = None
 
 
 def state_for_suspicion(suspicion: float, crisis_line: float) -> str:
-    """把怀疑度映射到 BGM 态（供游戏侧一行调用）。
+    """把怀疑度映射到 BGM 池（供游戏侧一行调用）。
 
     阈值取危机线的 70% —— 比危机线早一步开始紧张，玩家有「预警感」，
     但不会一有怀疑度就全程紧张（那会让切换失去信息量）。
@@ -319,3 +381,13 @@ def state_for_suspicion(suspicion: float, crisis_line: float) -> str:
     except Exception:
         pass
     return 'calm'
+
+
+def now_playing() -> str:
+    """当前播放的曲目名（''=未播放）。供调试/设置页显示。"""
+    return _playing or ''
+
+
+def current_state():
+    """当前曲池名（None=未播放）。"""
+    return _current

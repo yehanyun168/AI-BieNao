@@ -349,8 +349,12 @@ class DropMixin:
         skill_id = self.drop_skill
         targets = list(self.drop_targets)
         try:
-            if engine.use_skill(skill_id, targets):
-                sfx.play('cast')
+            ok = engine.use_skill(skill_id, targets)
+            # 「确认投放」用 deploy，与全局技能的 cast 区分开 —— 之前两者共用
+            # cast，玩家从声音上分不出「我刚才是确认了投放还是直接放了个技能」。
+            # ⚠️ 成功与失败只响一声：失败时才补 error，避免 deploy+error 叠响。
+            sfx.play('deploy' if ok else 'error')
+            if ok:
                 self.stats.mark_skill(skill_id, 0.0)
                 self.selected_skill = skill_id
                 self._notify(f"{self._skill_name(skill_id)} → {'+'.join(targets)}")

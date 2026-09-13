@@ -23,12 +23,16 @@ import sys
 from kivy.core.audio import SoundLoader
 
 # 音效名（与 tools/gen_sfx.py / demo/assets/sfx 目录内容对应）
-# 前 12 个为合成基线；其后为「语义补充分层」（2026-09-13 新增，源自 Kenney
-# interface-sounds CC0），用于区分原本共用同一个 click 的各类交互。
+# 前 12 个为合成基线；其后为「语义补充分层」——2026-09-13 分两批加入：
+#   第 1 批（Kenney interface-sounds CC0）：区分原本共用 click 的各类交互；
+#   第 2 批（同上，同批素材）：补齐「技能投放」与「科技分支升级」的缺口，
+#     并把过短的 hover 换成听感更清晰的版本。
 NAMES = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
         'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock',
-        # —— 语义补充分层 ——
-        'hover', 'page', 'toggle', 'error', 'confirm', 'scroll')
+        # —— 语义补充分层（第 1 批）——
+        'hover', 'page', 'toggle', 'error', 'confirm', 'scroll',
+        # —— 语义补充分层（第 2 批：投放/分支）——
+        'deploy', 'branch', 'confirm_cast')
 
 # 候选后缀（按优先级；同名多后缀时取靠前者）
 SUFFIXES = ('.wav', '.ogg')
