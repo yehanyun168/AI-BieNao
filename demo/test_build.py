@@ -352,10 +352,9 @@ _vals = _st.stat_spark('compute')
 assert _vals and abs(_vals[-1] - 1.0) < 1e-9 and _vals[0] < _vals[-1], \
     f"火花线归一化异常: {_vals}"
 assert _st.stat_spark('不存在') == [], "未知 key 应返回空序列"
-# 顶栏装配：已构建的 GameUI 实例必须注册 4 个 spark_key（实例属性，
-# 在 _make_topbar 里填充，故检查实例而非类）。
-# ⚠️ 本文件第 35 行已把 ui 重绑定为 GameUI 实例（ui = ui.game），
-# 所以这里直接用 ui，不要再写 ui.game。
+# 顶栏装配：已构建的 GameUI 实例须注册 4 个 spark_key（实例属性，在
+# _make_topbar 填充，故检查实例而非类）。⚠️ 本文件第 35 行已把 ui 重绑定
+# 为 GameUI 实例（ui = ui.game），这里直接用 ui，不要再写 ui.game。
 _ui_sparks = getattr(ui, '_stat_sparks', None)
 assert _ui_sparks, "GameUI 实例应具备顶栏火花线注册表 _stat_sparks"
 _core_keys = {'compute', 'downloads', 'suspicion', 'unlocked'}
@@ -400,6 +399,7 @@ print(f"   ■ 17) 可视化/引导/节奏（顶栏火花×4 / 引导 {len(_step
 # ---- 18) T09 背景音乐：曲池 / 随机播放列表 / 主菜单覆盖 / 设置页接线 ----
 import bgm as _bgm
 import ui_v4_screens as _screens_m
+import balance as _bal
 
 assert _bgm.STATES == ('calm', 'tense', 'menu'), f"BGM 曲池定义变了: {_bgm.STATES}"
 _bgm_dir = _bgm._base_dir()
@@ -412,8 +412,8 @@ for _st in _bgm.STATES:
             f"BGM 资源缺失: {_stem}{_bgm.SUFFIXES}（打包时须 add-data assets/bgm）")
 assert os.path.exists(os.path.join(_bgm_dir, 'CREDITS.md')), \
     "demo/assets/bgm/CREDITS.md 缺失（素材授权声明必须入库）"
-# 主菜单必须有独立曲池，且不得与 calm 池重合 —— 否则玩家进菜单听到的是
-# 对局里那首，失去「我在配置 / 我在执行」的听觉状态边界。
+# 主菜单必须有独立曲池且不与 calm 重合，否则玩家进菜单听到对局那首，
+# 失去「我在配置 / 我在执行」的听觉状态边界。
 assert _bgm.pool_count('menu') >= 1, "缺 menu 曲池或为空 → 主菜单无 BGM"
 assert set(_bgm.pool_stems('menu')) - set(_bgm.pool_stems('calm')), \
     "menu 池与 calm 池完全重合 → 菜单/对局无听觉边界"
@@ -422,10 +422,8 @@ assert set(_shuf) == set(_bgm.pool_stems('calm')) and \
     len(set(_shuf)) == len(_shuf) == _bgm.pool_count('calm'), "打乱丢曲目或重复"
 assert len({tuple(_bgm._shuffle('calm')) for _ in range(8)}) > 1, "随机失效"
 assert abs(_bgm.GAP_SECONDS - 1.0) < 1e-6, "曲目间停顿应为 1 秒"
-# 两态映射：上行 70% 危机线进 tense、跌破 55% 才回 calm（滞回窗口）。
-# ⚠️ state_for_suspicion 是**有状态**的（故意如此，见 bgm.py），故每次断言前
-# 必须显式摆好 _current，否则测出的是随机结果。后两项是滞回核心：tense 态下
-# 小幅回落不得立刻切回 calm，否则抖动会让 BGM 每周期切池、只播得出 0.6s 淡入。
+# 两态映射（滞回）：上行 70% 危机线进 tense、跌破 55% 才回 calm。⚠️ 本函数是
+# **有状态**的（故意如此，见 bgm.py），故每次断言前必须显式摆好 _current。
 for _cur, _sus, _want in ((None, 0.0, 'calm'), (None, 34.9, 'calm'),
                           (None, 35.0, 'tense'), (None, 80.0, 'tense'),
                           (None, 'bad', 'calm'),
@@ -434,6 +432,11 @@ for _cur, _sus, _want in ((None, 0.0, 'calm'), (None, 34.9, 'calm'),
     assert _bgm.state_for_suspicion(_sus, 50.0) == _want, \
         f"怀疑度 {_sus}(当前 {_cur}) 应映射到 {_want}"
 _bgm._current = None
+# 节奏守卫：base_tick_seconds 是真实 tick 间隔唯一来源（main.py 直接消费），
+# 被误改会静默破坏 30s/周期 设计节奏。协作者 PR 曾两次改成 4.0（提交说明均未提及）。
+assert abs(_bal.TUNE['base_tick_seconds'] - 30.0) < 1e-9, \
+    f"base_tick_seconds 应为 30.0，实际 {_bal.TUNE['base_tick_seconds']}"
+assert _bal.SPEED_STEPS == (0.5, 1.0, 2.0, 4.0), "速度档定义被改动，需同步复核"
 # 主菜单覆盖接线：show_menu 切 menu 池、_enter_game 切回对局池、
 # exit_to_menu 不得 stop()（否则菜单曲起播前有一拍静音断点）
 _HERE_D = os.path.dirname(os.path.abspath(__file__))
@@ -747,25 +750,23 @@ print("   ■ 22) T16 觉醒出身（表一致性 / 难度映射 / 出生包 ×5
 # ============================================================
 # 23) 音效资源完整性（2026-09-13 素材集成）
 #     为什么要断言：sfx.py 是「失败安全」设计 —— 文件缺失只打一行警告后静默
-#     跳过，游戏照跑但不响。这保证不崩，代价是**缺失无声无息**；真人测试包
-#     丢过音效（repack 硬编码清单漏登记），靠这条才能发现。
+#     跳过，游戏照跑但不响。保证不崩，代价是缺失**无声无息**；真人测试包丢过
+#     音效（repack 硬编码清单漏登记），靠这条才能发现。
 # ============================================================
 import sfx as _sfx_mod
 _sfx_dir = os.path.join(_HERE, 'assets', 'sfx')
-_missing = [_n for _n in _sfx_mod.NAMES
-            if not any(os.path.exists(os.path.join(_sfx_dir, _n + _s))
-                       for _s in _sfx_mod.SUFFIXES)]
+_missing = [_n for _n in _sfx_mod.NAMES if not any(
+    os.path.exists(os.path.join(_sfx_dir, _n + _s)) for _s in _sfx_mod.SUFFIXES)]
 assert not _missing, f"demo/assets/sfx 缺音效文件: {_missing}（sfx.py 会静默静音）"
 # 基础 12 个合成音必须存在（gen_sfx.py 可复现；删掉=破坏可复现基线）
 _base12 = ('click', 'select', 'cast', 'success', 'fail', 'crisis',
            'end_win', 'end_lose', 'tech', 'pause', 'drop', 'unlock')
 assert not [n for n in _base12 if n not in _sfx_mod.NAMES], "sfx.NAMES 丢了合成基线音效"
 # 语义分层音效必须都在 NAMES 里（第 2 批：投放/分支；第 3 批：系统层反馈）
-_semantic = ('hover', 'page', 'toggle', 'error', 'confirm',
-             'deploy', 'branch', 'confirm_cast',
-             'counter_warn', 'counter_hit', 'achieve', 'commission')
-for _n in _semantic:
-    assert _n in _sfx_mod.NAMES, f"sfx.NAMES 缺语义分层音效: {_n}"
+_semantic = ('hover', 'page', 'toggle', 'error', 'confirm', 'deploy', 'branch',
+             'confirm_cast', 'counter_warn', 'counter_hit', 'achieve', 'commission')
+assert not [n for n in _semantic if n not in _sfx_mod.NAMES], \
+    f"sfx.NAMES 缺语义分层音效: {[n for n in _semantic if n not in _sfx_mod.NAMES]}"
 # scroll 已删除：零调用点、亮度 11964Hz 拉高整库上限、语义错误（氛围噪声）。
 # 若日后真需要滚动音，应用 gen_sfx.py 合成 20-40ms 参数化短脉冲。
 assert 'scroll' not in _sfx_mod.NAMES, "scroll 应已移除（无调用点且指标超标）"
@@ -777,10 +778,9 @@ for _st in _bgm_mod.STATES:
         assert _bgm_mod._resolve(_bgm_dir, _stem) is not None, \
             f"demo/assets/bgm 缺 BGM: {_stem}"
 # 授权声明必须随源码走（素材合规留痕）
-assert os.path.exists(os.path.join(_sfx_dir, 'CREDITS.md')), \
-    "demo/assets/sfx/CREDITS.md 缺失（素材授权声明必须入库）"
-assert os.path.exists(os.path.join(_bgm_dir, 'CREDITS.md')), \
-    "demo/assets/bgm/CREDITS.md 缺失（素材授权声明必须入库）"
+for _d in (_sfx_dir, _bgm_dir):
+    assert os.path.exists(os.path.join(_d, 'CREDITS.md')), \
+        f"{_d}/CREDITS.md 缺失（素材授权声明必须入库）"
 # 接线断言：新增语义音效必须真的被用上，否则等于没集成
 _src_all = ''.join(open(os.path.join(_HERE, _f), encoding='utf-8').read()
                    for _f in ('ui_pages.py', 'ui_session.py',
