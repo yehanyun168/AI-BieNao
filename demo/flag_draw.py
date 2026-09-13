@@ -68,9 +68,9 @@ def _clamp_rects(rects):
 def draw_flag(canvas, code, x, y, w, h):
     """在 canvas 上以 (x, y, w, h) 为区域绘制像素国旗
 
-    ⚠️ Kivy 的 y 轴向上、国旗数据 y 轴向下，所以纵向要翻转：
+    !️ Kivy 的 y 轴向上、国旗数据 y 轴向下，所以纵向要翻转：
        屏幕 y = y + (FLAG_H - gy - gh) * sy
-    ⚠️ Kivy 的 widget canvas 使用**父坐标**（不是本组件的局部坐标），
+    !️ Kivy 的 widget canvas 使用**父坐标**（不是本组件的局部坐标），
        调用方传入的 x/y 必须已经是绝对坐标。
     """
     if w < 1 or h < 1:

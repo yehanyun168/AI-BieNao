@@ -41,7 +41,7 @@ FAILED = []
 def dismiss_popups() -> None:
     """关掉所有 ModalView / Popup，并**同步强制移除**（截图切换屏时必做）。
 
-    ⚠️ 坑：``ModalView.dismiss()`` 走 0.4s 淡出动画，动画由**真实时钟**驱动；
+    !️ 坑：``ModalView.dismiss()`` 走 0.4s 淡出动画，动画由**真实时钟**驱动；
     而截图循环只用 ``Clock.tick()`` 泵布局、不 sleep → 动画永不完成、
     popup 永远留在 ``Window.children``。后果 = 旧弹窗的半透明遮罩（0.55 黑）
     与新弹窗的遮罩叠加，面板被压成近纯黑（曾致 S08/S09 主色 rgb(0,1,1)）。

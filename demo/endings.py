@@ -27,7 +27,7 @@ from conditions import evaluate as _eval, describe as _describe
 class Ending:
     """一个结局。
 
-    ⚠️ 判定条件 ``cond`` 是**纯数据**（见 conditions.py 的条件表语法），
+    !️ 判定条件 ``cond`` 是**纯数据**（见 conditions.py 的条件表语法），
        不再是 ``Callable``。改阈值只需改这个 dict，不用碰任何函数逻辑。
        ``cond=None`` 表示「不参与自动判定」（隐藏结局，由事件手动触发）。
     """

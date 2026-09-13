@@ -224,7 +224,7 @@ def record(dir_path: str, code: str, seed, difficulty: str,
 def compare(entry_before: dict, summary: dict) -> dict:
     """本次成绩 vs 该码历史最佳，产出 UI 直接可用的对照数值。
 
-    ⚠️ 必须传入 **登记本局之前** 的条目（即 ``record()`` 的前一次返回），
+    !️ 必须传入 **登记本局之前** 的条目（即 ``record()`` 的前一次返回），
     否则 best 已把本局算进去，对照会永远显示「打平」。
 
     返回 ``{'plays', 'is_first', 'is_best', 'best', 'd_pen', 'd_dl'}``；

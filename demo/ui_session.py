@@ -172,14 +172,14 @@ class SessionMixin:
             return
         sym = getattr(U, 'SYM', {})
         if self.paused:
-            btn.text = f"{sym.get('play', '▶')} {t('quick_resume')}"
+            btn.text = f"{sym.get('play', '■')} {t('quick_resume')}"
         else:
             btn.text = f"{sym.get('pause', '■')} {t('quick_pause')}"
 
     def toggle_pause(self) -> None:
         """暂停 / 恢复（玩家反馈 #1）。
 
-        ⚠️ 旧实现只是 cancel 掉时钟，恢复时走 _reschedule_tick() 把
+        !️ 旧实现只是 cancel 掉时钟，恢复时走 _reschedule_tick() 把
         _tick_deadline 重置为「现在 + 整个周期」—— 于是暂停前已经过去的
         那几秒被丢掉，倒计时从 30s 重新开始，玩家感知为「暂停不真」。
 

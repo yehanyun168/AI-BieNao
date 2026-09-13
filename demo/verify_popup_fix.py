@@ -1,7 +1,7 @@
 """verify_popup_fix.py —— 弹窗系列修复验证（关闭/字号/换行/无回环）。
 
 覆盖本轮 3 组修复：
-  1. ✕ 关闭按钮 + 点遮罩空白关闭（两条关闭路径）
+  1. × 关闭按钮 + 点遮罩空白关闭（两条关闭路径）
   2. 全局字号放大（正文 20 / 小字 16）+ 标题不再出现字面 [b]
   3. 事件弹窗「不停打印换行」根因 = make_modal 布局无限回环 → 已断环，
      断言渲染期间无 'too much iteration' 刷屏，且面板高度贴合内容不裁切
@@ -74,7 +74,7 @@ def pump(n: int = 120) -> None:
 def pump_anim(seconds: float = 0.8) -> None:
     """推进真实时间以驱动 ModalView 的淡出动画并处理其回调。
 
-    ⚠️ Kivy 2.3.1 的 ``Clock.tick()`` 不接受 dt 参数，也不推进由真实时钟
+    !️ Kivy 2.3.1 的 ``Clock.tick()`` 不接受 dt 参数，也不推进由真实时钟
     驱动的 Animation（Popup.dismiss 的淡出 0.4s）。只 tick 不 sleep 会让
     Popup 永远留在窗口树上 —— 这是测试"点击关闭不生效"的唯一根因（功能本身
     正常）。这里 sleep + tick 交替，让动画完成并触达 _real_remove_widget。

@@ -485,7 +485,7 @@ def main() -> int:
 
     # ---- 10. 语言切 en → 存档 → 读档 → 语言不随存档恢复 ----
     def _lang_not_persisted():
-        """现状行为（⚠️ 已知待办 PR-24，若未来修复需同步改这里）：
+        """现状行为（!️ 已知待办 PR-24，若未来修复需同步改这里）：
         save_manager.save() 不序列化语言 —— 存档顶层只有 version /
         saved_at / player / tech / countries，全文无 lang 键；load 也不
         碰 i18n 全局。因此「切 en → 存档 → 重开 → 读档」后语言是进程

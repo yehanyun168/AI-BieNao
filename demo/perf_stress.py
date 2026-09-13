@@ -26,11 +26,11 @@ perf_stress.py - P1-3 自动压测脚本（构造高压场景 + 三场景分段�
     TICK_FORCE / STRESS_FORCE    强制推进间隔（秒）
     WIN_W / WIN_H                窗口尺寸（宽度需能被 4 整除）
 
-⚠️ 真实节奏是 30s/周期（balance.TUNE['base_tick_seconds']）。脚本把推进
+!️ 真实节奏是 30s/周期（balance.TUNE['base_tick_seconds']）。脚本把推进
 压缩到 2s / 1.5s 一次，**是为了在可测时间窗内取到多次 tick 样本**；
 因此 B/C 段的"长帧"密度高于真实游玩，只用于**横向对比**，不代表真实节奏。
 
-⚠️ 本脚本只构造场景（解锁/开抽屉/提速），**不改任何游戏数值**：
+!️ 本脚本只构造场景（解锁/开抽屉/提速），**不改任何游戏数值**：
 不碰 balance.TUNE、不碰 COUNTRIES 配置、不改掉落/公式。
 """
 import os
@@ -92,13 +92,13 @@ def _phase_boot(_dt):
     try:
         engine.player.seen_tutorial = True
     except Exception as e:
-        _log(f'⚠️ 关引导失败（tick 将被冻结，本段数据无效）：{e!r}')
+        _log(f'!️ 关引导失败（tick 将被冻结，本段数据无效）：{e!r}')
     g = _game()
     if g is not None:
         try:
             g.tutorial.finish()
         except Exception as e:
-            _log(f'⚠️ tutorial.finish 失败（遮罩未关，tick 冻结）：{e!r}')
+            _log(f'!️ tutorial.finish 失败（遮罩未关，tick 冻结）：{e!r}')
         g.paused = True
         g.stop_ticking()
     _state['game'] = g
@@ -126,7 +126,7 @@ def _phase_tick(_dt):
         try:
             g._reschedule_tick()
         except Exception as e:
-            _log(f'⚠️ _reschedule_tick 失败（自然推进停止，仅剩强推）：{e!r}')
+            _log(f'!️ _reschedule_tick 失败（自然推进停止，仅剩强推）：{e!r}')
     _state['forced'] = Clock.schedule_interval(lambda dt: _force_tick(g),
                                                TICK_FORCE)
     _log('[B] 周期推进：×1 速 + 每 %.1fs 强制推进   (%.0fs)'
@@ -151,28 +151,28 @@ def _phase_stress(_dt):
                 if c.downloads_m <= 0:
                     c.downloads_m = max(1.0, c.config.population_m * 0.05)
         except Exception as e:
-            _log(f'⚠️ 20 国解锁失败（C 段高压场景不完整）：{e!r}')
+            _log(f'!️ 20 国解锁失败（C 段高压场景不完整）：{e!r}')
         # 日志塞满 200 条 → 抽屉 rebuild 会建满 120 行（已知热点）
         try:
             for i in range(200):
                 g.stats.push_log(i, 'perf stress log %03d %s' % (i, '·' * 18),
                                  'i')
         except Exception as e:
-            _log(f'⚠️ 日志塞压失败（抽屉热点未构造）：{e!r}')
+            _log(f'!️ 日志塞压失败（抽屉热点未构造）：{e!r}')
         ST.REDUCE_MOTION = False          # 动效全开
         try:
             g.set_speed_idx(3)            # ×4 速
         except Exception as e:
-            _log(f'⚠️ set_speed_idx(3) 失败（C 段非 ×4 速）：{e!r}')
+            _log(f'!️ set_speed_idx(3) 失败（C 段非 ×4 速）：{e!r}')
         try:
             if g._log_drawer is None:
                 g.toggle_log()            # 日志抽屉打开
         except Exception as e:
-            _log(f'⚠️ 打开日志抽屉失败（抽屉热点未构造）：{e!r}')
+            _log(f'!️ 打开日志抽屉失败（抽屉热点未构造）：{e!r}')
         try:
             g.refresh_all()
         except Exception as e:
-            _log(f'⚠️ refresh_all 失败（首次全量重建未触发）：{e!r}')
+            _log(f'!️ refresh_all 失败（首次全量重建未触发）：{e!r}')
     _state['forced'] = Clock.schedule_interval(
         lambda dt: _force_tick(_state['game']), STRESS_FORCE)
     _log('[C] 高压：20 国全解锁 + 抽屉开 + ×4 速 + 动效全开 + 每 %.1fs 推进 '
@@ -199,7 +199,7 @@ def _phase_heat(_dt):
             g.set_layer('heat')
             g.refresh_all()
         except Exception as e:
-            _log(f'⚠️ 切热力层失败（C2 段场景不完整）：{e!r}')
+            _log(f'!️ 切热力层失败（C2 段场景不完整）：{e!r}')
     _log('[C2] 热力层叠加：同 C 条件 + active_layer=heat（20 国中高渗透）(%.0fs)'
          % HEAT_S)
     perf.set_scene('C2-heat 热力层(x4·抽屉)')

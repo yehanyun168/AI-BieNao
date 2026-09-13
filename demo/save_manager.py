@@ -314,7 +314,7 @@ def _v2_to_v3(d: dict) -> dict:
     """v2 → v3（T16 觉醒出身）：纯函数迁移，只增字段、不丢玩家数据。
 
     v2 档没有 origin —— 补白板出身 garage（对 TUNE 零修正），保证老档
-    行为逐位不变。⚠️ 不按老档 difficulty 反推出身：easy 对应两个出身
+    行为逐位不变。!️ 不按老档 difficulty 反推出身：easy 对应两个出身
     （实验室 / 游戏公司），反推不唯一；garage 的 tune_mult 为空，读档时
     `apply_origin_tune_mult('garage')` 是一次空操作，难度语义原样保留。
     """
@@ -462,4 +462,4 @@ if __name__ == "__main__":
     ok = load()
     after = (engine.player.tick_count, engine.player.total_downloads_m)
     print(f" 读档 {'成功' if ok else '失败'}: tick={after[0]} 下载={after[1]:.1f}M")
-    print(f" 一致性: {'✅ 一致' if before == after else '❌ 不一致'}")
+    print(f" 一致性: {'■ 一致' if before == after else '× 不一致'}")

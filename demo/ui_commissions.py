@@ -1,7 +1,7 @@
 """
 ui_commissions.py - CommissionMixin（P0-3 动态委托的 UI 层）
 
-设计语言：design/ardot_ui/（S05 HUD 组件库 / S06 状态芯片 / ⚠ 预警样式）
+设计语言：design/ardot_ui/（S05 HUD 组件库 / S06 状态芯片 / ! 预警样式）
 - CommissionBar：地图左上委托芯片条（待接受=琥珀 / 进行中=青色进度）
 - show_commission_modal：委托详情弹窗（目标 / 时限 / 奖励 / 接受 / 放弃）
 - 引擎接线：engine.accept_commission / engine.decline_commission（纯函数在 commissions.py）
@@ -103,7 +103,7 @@ class CommissionBar(HudBox):
         self._folded = []         # 当前被折叠的委托对象
         self._plus = None         # 「+N」折叠芯片（按需创建并缓存）
         self._last_cap = -1.0     # 上次量宽时的可用宽（用于 resize 检测）
-        self._measuring = False   # _measure ⇄ _layout_hud 的递归闸
+        self._measuring = False   # _measure ↔ _layout_hud 的递归闸
         self._win_bound = False
         self._measure_ev = None
         self.row = BoxLayout(orientation='horizontal', spacing=6,

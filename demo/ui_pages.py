@@ -390,7 +390,7 @@ class PagesMixin:
         try:
             ctx = engine.build_achievement_context()
             v = ach.condition(ctx) if ach.condition else False
-            return '✓' if v else '…'
+            return '■' if v else '…'
         except Exception:
             return '…'  # 条件求值异常（数据组合边界）→ 显示未完成，不崩成就页
 
@@ -418,7 +418,7 @@ class PagesMixin:
                 except Exception as e:
                     # 摘要读不出（多半存档损坏）：不能无声装作"空槽"——玩家会
                     # 误以为可覆盖。留痕，槽位仍按空槽显示（行为不变）。
-                    print(f'[slots] ⚠️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
+                    print(f'[slots] !️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
                     summary = t('slot_empty')
             else:
                 summary = t('slot_empty')
@@ -429,7 +429,7 @@ class PagesMixin:
         """按槽位名生成 保存/读取/删除 三个动作。
 
         保存按钮指向 ``_save_slot_confirm``：槽位已有档时先弹覆盖确认，
-        空槽直接保存。删除按钮用 i18n 的「删除」文案（不再用 ✕ 符号）。
+        空槽直接保存。删除按钮用 i18n 的「删除」文案（不再用 × 符号）。
         """
         import re
         m = re.search(r'(\d+)', title)

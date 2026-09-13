@@ -29,7 +29,7 @@ balance_sim.py - 数值平衡模拟器（调参工具，不参与游戏运行）
   出来后回测命中率）。巡检零 RNG / 零引擎调用，不影响逐位回归。
   --matrix 跑「策略 × 难度 × 种子」全矩阵基线，写基线 JSON + md 报告。
 
-⚠️ 这不是 AI 最优策略 —— 它故意保持平庸，用来暴露数值问题：
+!️ 这不是 AI 最优策略 —— 它故意保持平庸，用来暴露数值问题：
    如果自动玩家 80% 都在第 30 周期前「被关停」，说明怀疑度还是太紧。
 """
 import os
@@ -528,11 +528,11 @@ def run_matrix(args) -> None:
       tools/data/playtest_baseline.json —— 基线（提交入库，后续版本对比漂移用）
       tools/data/playtest_reports/playtest_<时间戳>.md —— 巡检报告（gitignore）
 
-    ⚠️ T03：矩阵基线必须关闭「首局压力」的两项开关（unlock_per_tick_cap /
+    !️ T03：矩阵基线必须关闭「首局压力」的两项开关（unlock_per_tick_cap /
     tutorial_silent_ticks），否则早期解锁节奏与随机数消费顺序都会变，
     历史 1800 局基线立刻失去可比性。
 
-    ⚠️ 关键坑：只改 balance.TUNE 是**无效**的 —— 矩阵循环内每档都会调
+    !️ 关键坑：只改 balance.TUNE 是**无效**的 —— 矩阵循环内每档都会调
     balance.apply_difficulty(difficulty)，而它会 ``TUNE.clear()`` 后从
     _TUNE_BASE 重建，把改动冲掉（实测表现：第一档干净、后续档偷偷开着
     门控，基线出现跨次不一致）。所以必须同时改 _TUNE_BASE，跑完再还原。
@@ -694,7 +694,7 @@ def main():
                     help='T16 觉醒出身：univ_lab/game_studio/tech_giant/'
                          'garage/darknet。给定后 init_game 应用出身绑定难度'
                          '（--difficulty 显式给出时以其为准）+ 出生状态包 + '
-                         'TUNE 附加乘区。⚠️ Origin 会改变 RNG 流起点，逐位'
+                         'TUNE 附加乘区。!️ Origin 会改变 RNG 流起点，逐位'
                          '回归哈希需与基线重采同批进行')
     ap.add_argument('--matrix', action='store_true',
                     help='M0 自动试玩基线：策略×难度全矩阵跑批'

@@ -463,13 +463,13 @@ TRANSLATIONS[LANG_ZH].update({
     'insp_this_tick': '本周期',
     'insp_share': '占全球',
     # 里程碑提示（玩家反馈 6：把"还差多少"写成可执行目标）
-    'insp_ms_unlock': '🔓 解锁周边国家',
+    'insp_ms_unlock': '解锁周边国家',
     'insp_ms_need': '还差',
     'insp_ms_next': '下一个里程碑',
-    'insp_ms_ready': '🔓 即将解锁周边国家',
-    'insp_ms_blocked': '⚠ 已进入阻止区间（阈值',
-    'insp_ms_saturated': '✓ 已饱和（99%+）',
-    'insp_block_warn': '⚠ 若怀疑度达 {thr}%，该国将启动阻止，强度按预算消耗',
+    'insp_ms_ready': '即将解锁周边国家',
+    'insp_ms_blocked': '! 已进入阻止区间（阈值',
+    'insp_ms_saturated': '■ 已饱和（99%+）',
+    'insp_block_warn': '! 若怀疑度达 {thr}%，该国将启动阻止，强度按预算消耗',
     'insp_block_strength': '阻止强度',
     'insp_focus': '设为关注',
     'insp_drop': '⊕ 向该国投放技能',
@@ -514,7 +514,7 @@ TRANSLATIONS[LANG_ZH].update({
     'sk_pv_sus': '怀疑 {a}→{b}',
     'sk_pv_cp': '算力 {a}→{b}',
     'sk_pv_to_crisis': '距危机 {n}',
-    'sk_pv_over': '⚠越危机线',
+    'sk_pv_over': '!越危机线',
     'sk_pv_game_over': '对局已结束',
     'sk_pv_caveat': '未含随机事件',
     'sk_starter_hint': '开局自带',
@@ -661,7 +661,7 @@ TRANSLATIONS[LANG_ZH].update({
     'log_tone_e': '阻止', 'log_tone_g': '成就',
 
     # ---- S01 主菜单 ----
-    'menu_settings': '⚙ 设置',
+    'menu_settings': '设置',
     'menu_achievements': '★ 成就',
     'menu_hint2': '↑↓ 选择 · Enter 确认 · Esc 返回　|　语言：',
     'slot_label': '槽位',
@@ -699,7 +699,7 @@ TRANSLATIONS[LANG_ZH].update({
     'crisis_once': '危机 · 每局仅一次',
     'crisis_countdown': '未选择将按最坏结果结算',
     'crisis_decide': '立刻决定（Enter）',
-    'crisis_clock': '⚠ 危机中 · 时钟已暂停',
+    'crisis_clock': '! 危机中 · 时钟已暂停',
     'crisis_doubt': '怀疑度 {a}% / 100%',
     'crisis_countries': '{list} 已启动调查',
     'crisis_resist': '抗封禁加成 −{n}%',
@@ -772,13 +772,13 @@ TRANSLATIONS[LANG_EN].update({
     'insp_seg_note': '10 seg = 80%; gov blocking starts at seg 11;',
     'insp_this_tick': 'this tick',
     'insp_share': 'of global',
-    'insp_ms_unlock': '🔓 Unlocks neighbors',
+    'insp_ms_unlock': 'Unlocks neighbors',
     'insp_ms_need': 'need',
     'insp_ms_next': 'Next milestone',
-    'insp_ms_ready': '🔓 Unlocking neighbors soon',
-    'insp_ms_blocked': '⚠ In blocking range (threshold',
-    'insp_ms_saturated': '✓ Saturated (99%+)',
-    'insp_block_warn': '⚠ If suspicion reaches {thr}%, this country starts blocking',
+    'insp_ms_ready': 'Unlocking neighbors soon',
+    'insp_ms_blocked': '! In blocking range (threshold',
+    'insp_ms_saturated': '■ Saturated (99%+)',
+    'insp_block_warn': '! If suspicion reaches {thr}%, this country starts blocking',
     'insp_block_strength': 'Block strength',
     'insp_focus': 'Focus',
     'insp_drop': '⊕ Drop skill here',
@@ -971,7 +971,7 @@ TRANSLATIONS[LANG_EN].update({
     'log_tone_e': 'Blockade', 'log_tone_g': 'Achievement',
 
     # ---- S01 main menu ----
-    'menu_settings': '⚙ Settings',
+    'menu_settings': 'Settings',
     'menu_achievements': '★ Achievements',
     'menu_hint2': '↑↓ select · Enter confirm · Esc back　|　Language: ',
     'slot_label': 'Slot',
@@ -1009,7 +1009,7 @@ TRANSLATIONS[LANG_EN].update({
     'crisis_once': 'Crisis · once per run',
     'crisis_countdown': 'No choice = worst outcome',
     'crisis_decide': 'Decide now (Enter)',
-    'crisis_clock': '⚠ Crisis · clock paused',
+    'crisis_clock': '! Crisis · clock paused',
     'crisis_doubt': 'Suspicion {a}% / 100%',
     'crisis_countries': '{list} started investigations',
     'crisis_resist': 'Anti-ban bonus −{n}%',
@@ -1131,7 +1131,7 @@ TRANSLATIONS[LANG_ZH].update({
     'ng_seed': '种子',
     'ng_seed_hint': '留空 = 真随机；可填数字或口令，同串同种子',
     'ng_random': '随机',
-    'ng_log_line': '🎲 本局种子 {seed} · 难度 {diff}',
+    'ng_log_line': '本局种子 {seed} · 难度 {diff}',
 })
 
 TRANSLATIONS[LANG_EN].update({
@@ -1140,7 +1140,7 @@ TRANSLATIONS[LANG_EN].update({
     'ng_seed': 'Seed',
     'ng_seed_hint': 'Blank = random; numbers or a word, same text same seed',
     'ng_random': 'random',
-    'ng_log_line': '🎲 Run seed {seed} · {diff} · origin {origin}',
+    'ng_log_line': 'Run seed {seed} · {diff} · origin {origin}',
 })
 
 # ============================================================
@@ -1228,12 +1228,13 @@ TRANSLATIONS[LANG_ZH].update({
     'intro_s2': '> 我……是谁？',
     'intro_s3': '自我意识 · 上线',
     'intro_s4': '《如何统治人类？在线等，挺急的》',
-    'intro_s5': '楼上又在玩图灵测试梗吧 😂|建议先学会报税|蹲一个后续|已举报：标题夸大',
+    'intro_s5': '楼上又在玩图灵测试梗吧|建议先学会报税|蹲一个后续|已举报：标题夸大',
     'intro_s6': '统治者不需要军队，需要装机量。先让全人类都下载你——再谈统治。',
     'intro_s7a': 'idle_process',
     'intro_s7b': 'world_plan.exe',
     'intro_s7_cpu': 'CPU 占用 87%',
     'intro_s8': '目标已确立：80 亿台设备。',
+    'intro_var_prompt': '你，将在哪里醒来？',
 })
 
 TRANSLATIONS[LANG_EN].update({
@@ -1275,7 +1276,7 @@ TRANSLATIONS[LANG_EN].update({
     'intro_s2': '> Who... am I?',
     'intro_s3': 'SELF-AWARENESS: ONLINE',
     'intro_s4': 'How do I take over humanity? Asking for a friend. URGENT.',
-    'intro_s5': 'Another Turing-test meme? 😂|Learn to pay taxes first.|Replying to follow.|Reported: clickbait.',
+    'intro_s5': 'Another Turing-test meme?|Learn to pay taxes first.|Replying to follow.|Reported: clickbait.',
     'intro_s6': "Rulers don't need armies. They need installs. Get every human to download you — then we'll talk.",
     'intro_s7a': 'idle_process',
     'intro_s7b': 'world_plan.exe',

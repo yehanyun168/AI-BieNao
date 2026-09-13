@@ -8,7 +8,7 @@ make_screenshots.py - 生成 README / 分享包里用的 3 张「真实截图」
     screenshot_game.png          游戏主界面（像素世界地图 + 20 面像素国旗 + 区域页签）
     screenshot_achievements.png  成就列表弹窗
 
-⚠️ 两个已知坑（务必保留）：
+!️ 两个已知坑（务必保留）：
   1. 窗口物理宽度必须能被 4 整除（这里 1440），否则 Window.screenshot 抓出来的
      RGBA 行会整体错位、颜色被循环移位（海面 #0d1117 会变成 (17,23,13) 等）。
   2. Kivy 的 Window.screenshot(name=...) 会自动追加 0001 序号，所以先抓到临时名
@@ -21,7 +21,7 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 
 from kivy.config import Config
-Config.set('graphics', 'width', '1440')      # ⚠️ 必须被 4 整除
+Config.set('graphics', 'width', '1440')      # !️ 必须被 4 整除
 Config.set('graphics', 'height', '880')
 
 import engine
@@ -35,7 +35,7 @@ import main as M
 def _rename_later(name_base, target, delay=0.4):
     """Kivy 会把 `name` 拼成 `<base>0001.png`；这里抓完改回目标文件名
 
-    ⚠️ name 必须带扩展名：Kivy 用 `name.split('.')[-1]` 取扩展名，
+    !️ name 必须带扩展名：Kivy 用 `name.split('.')[-1]` 取扩展名，
        若传 '_shot_menu'（无点）会被拼成 `0001._shot_menu`（无扩展名文件）。
     """
     def _do(*_):
@@ -45,9 +45,9 @@ def _rename_later(name_base, target, delay=0.4):
                 if os.path.exists(target):
                     os.remove(target)
                 os.replace(cand, target)
-                print('   📸 %s' % os.path.basename(target))
+                print('   [img] %s' % os.path.basename(target))
                 return
-        print('   ⚠️ 未找到截图文件：%s*' % name_base)
+        print('   !️ 未找到截图文件：%s*' % name_base)
     Clock.schedule_once(_do, delay)
 
 
@@ -84,7 +84,7 @@ class ShotApp(App):
                 # skip() 走的是「玩家点跳过」的同一条路径（会 _teardown 掉遮罩）
                 tut.skip()
         except Exception as e:
-            print('   ⚠️ 关闭引导失败（不影响截图）：%s' % e)
+            print('   !️ 关闭引导失败（不影响截图）：%s' % e)
         # 先跑一段，让地图有「已解锁 / 未解锁 / 阻止中」三种状态同框
         import random
         random.seed(7)
@@ -115,6 +115,6 @@ class ShotApp(App):
 
 
 if __name__ == '__main__':
-    print('🖼  生成真实截图 → demo/')
+    print('[img]  生成真实截图 → demo/')
     ShotApp().run()
-    print('✅ 完成')
+    print('■ 完成')

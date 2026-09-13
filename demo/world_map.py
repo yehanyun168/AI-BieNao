@@ -24,7 +24,7 @@ world_map.py - 像素世界地图（120 x 60 网格 / Miller 投影 / Natural Ea
 所以 1300+ 个矩形只需在初始化时写一次坐标，窗口缩放只改 Translate/Scale
 两个指令 —— resize 是 O(1) 而不是 O(格子数)。
 
-⚠️ Kivy 的 widget canvas 使用**父坐标**（实测：在子组件 canvas 里画 (200,200)
+!️ Kivy 的 widget canvas 使用**父坐标**（实测：在子组件 canvas 里画 (200,200)
    会落在父容器的 (200,200)，不是本组件的 (200,200)），所以所有绝对坐标
    都要自己加上 self.x / self.y。
 
@@ -212,7 +212,7 @@ class WorldMap(FloatLayout):
             渲染成本与国数线性相关，可控；
           - 视觉上「环越密 = 渗透越深」比色块强得多，符合 T10「让进程
             看得见」的目标，也贴合像素风（方环而非圆环）。
-        ⚠️ 环坐标在 _layout_heat 里就直接算成屏幕绝对坐标（不套网格矩阵），
+        !️ 环坐标在 _layout_heat 里就直接算成屏幕绝对坐标（不套网格矩阵），
         避免「先缩放再叠加」两套坐标系互相污染 —— 与标签 overlay 同策略。
         """
         self._heat_rings = {}   # code -> [(Color, Line), ...]
@@ -232,7 +232,7 @@ class WorldMap(FloatLayout):
 
         传空 dict / None 则隐藏整个热力层（非 heat 图层时调用）。
 
-        ⚠️ 幂等：数据不变直接 return —— 热力层每 tick 都会被刷新，
+        !️ 幂等：数据不变直接 return —— 热力层每 tick 都会被刷新，
         不加这道判断会让 canvas 每帧重算 20 国 × N 环的坐标。
         """
         new = dict(values or {})

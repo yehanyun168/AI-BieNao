@@ -75,7 +75,7 @@ class PopupsMixin:
         solo = (len(opts) == 1)
         content = BoxLayout(orientation='vertical', spacing=0, padding=0)
         content.add_widget(modal_header(
-            getattr(evt, 'icon', '◈'), getattr(evt, 'title', ''),
+            getattr(evt, 'icon', '◆'), getattr(evt, 'title', ''),
             [(t('evt_source_country') if solo else t('evt_source_v2'),
               'plain' if solo else 'sys'),
              (t('evt_tick_fmt').format(n=p.tick_count), 'plain')]))
@@ -150,7 +150,7 @@ class PopupsMixin:
         sfx.play('crisis')
         p = engine.player
         content = BoxLayout(orientation='vertical', spacing=0, padding=0)
-        content.add_widget(modal_header('⚠', t('crisis_modal_title'),
+        content.add_widget(modal_header('!', t('crisis_modal_title'),
                                         [(t('crisis_once'), 'dn')]))
         content.add_widget(hline())
 

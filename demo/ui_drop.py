@@ -214,7 +214,7 @@ class DropMixin:
             return
         actionable = bool(getattr(self, 'drop_mode', False)
                           and self.drop_skill and self.drop_targets)
-        btn.text = (f"✔ {t('drop_confirm')}" if actionable
+        btn.text = (f"■ {t('drop_confirm')}" if actionable
                     else f"⊕ {t('quick_drop')}")
         btn.disabled = False
 
@@ -253,9 +253,9 @@ class DropMixin:
                 ests.append((code, before, before + gmap.get(code, 0.0)))
         warn = ''
         if not pv['ok']:
-            warn = f"⚠ {self._preview_reason_text(pv)}"
+            warn = f"! {self._preview_reason_text(pv)}"
         elif pv['suspicion_delta'] > 0.05:
-            warn = (f"⚠ {t('stats_suspicion')} {pv['suspicion_before']:.0f}%"
+            warn = (f"! {t('stats_suspicion')} {pv['suspicion_before']:.0f}%"
                     f" → {pv['suspicion_after']:.0f}%")
             warn += (f" · {t('sk_pv_over')}" if pv['crisis_crossed']
                      else f" · {t('sk_pv_to_crisis').format(n=f'{pv['suspicion_to_crisis']:.0f}')}")
@@ -290,7 +290,7 @@ class DropMixin:
                 if skill.downloads_mult > 1.0 else f"×{skill.stealth_ratio_mult:.1f}"
             text = f"{get_country_name(code)} {code} · {boost}"
             if code in self.drop_targets:
-                text = "✔ " + text
+                text = "■ " + text
             lbl.set_state(text, 'ok')
             lbl.pos = (x - lbl.width / 2, y + 10)
             self._reticle_layer.add_widget(lbl)
@@ -299,7 +299,7 @@ class DropMixin:
     def _country_screen_pos(self, code: str):
         """国家锚点的窗口坐标（准星/标签定位用）
 
-        ⚠️ world_map 的 canvas 用的是**父容器坐标系**，这里用同一套 _map_rect()
+        !️ world_map 的 canvas 用的是**父容器坐标系**，这里用同一套 _map_rect()
         换算，保证准星与地图块严丝合缝。
         """
         ox, oy, mw, mh = self.map_widget._map_rect()

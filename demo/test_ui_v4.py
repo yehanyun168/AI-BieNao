@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from kivy.config import Config
 Config.set('graphics', 'resizable', '1')
-Config.set('graphics', 'width', '1440')     # ⚠ 宽度必须能被 4 整除
+Config.set('graphics', 'width', '1440')     # ! 宽度必须能被 4 整除
 Config.set('graphics', 'height', '880')
 
 from kivy.core.text import LabelBase
@@ -98,7 +98,7 @@ def main():
                                            p.set_compute(1284),
                                            p.set_sort_visual('profit')))(S.SkillPage()))
     check('SkillPageCard', lambda: S.SkillPageCard().update(
-        None, '⇈', '主动推送', '1', [('a', 'up')], 'desc', 28, '46.2M', '1.65M',
+        None, '↑↑', '主动推送', '1', [('a', 'up')], 'desc', 28, '46.2M', '1.65M',
         [0.1] * 12, 'ready', '就绪', '投放到 CN', True, '当前选中国家：中国 CN'))
     check('TechPage', lambda: (lambda p: (p.ensure_slots(tech_tree.TECH_TREE,
                                                          lambda s: None),
@@ -107,7 +107,7 @@ def main():
         '南亚语系', '已选定', 'up', 'SA', 'desc',
         [('L1', '40', 'done'), ('L2', '80', 'done'), ('L3', '150', 'can')],
         'foot', 'orange', picked=True, dim=False))
-    check('SlotRow', lambda: S.SlotRow('L', '本地化', 'T0 ✔', state='done'))
+    check('SlotRow', lambda: S.SlotRow('L', '本地化', 'T0 ■', state='done'))
     check('LvRow', lambda: S.LvRow('L1', '40', 'can'))
     check('LinkBar', lambda: S.LinkBar(True))
     check('AchPage', lambda: (lambda p: p.rebuild(
@@ -133,9 +133,9 @@ def main():
 
     print()
     if FAILED:
-        print(f"❌ {len(FAILED)} 项失败: {FAILED}")
+        print(f"× {len(FAILED)} 项失败: {FAILED}")
         return 1
-    print("✅ 全部组件实例化通过")
+    print("■ 全部组件实例化通过")
     return 0
 
 

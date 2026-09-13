@@ -59,7 +59,7 @@ def _cancel(widget: Widget, *props: str) -> None:
 def _rgba(color, alpha: Optional[float] = None):
     """把颜色统一成 Kivy 的 RGBA 四元组。
 
-    ⚠️ 项目里颜色有两种形态，混用会直接抛 AttributeError：
+    !️ 项目里颜色有两种形态，混用会直接抛 AttributeError：
     - ``COLORS['cyan']`` 等调色板值 **已经是 RGBA 元组**；
     - ``'#4ec9b0'`` 这类字面量是 **hex 字符串**（要用 hex_rgba 转）。
     动效层会被两边的调用方喂色，所以这里做一次归一化。
@@ -110,7 +110,7 @@ def shake(widget: Widget, dx: float = 4.0, rounds: int = 1,
     15 次/秒，属高频抖动；rounds=1 单次抖动 4 段 × 0.11s（总 0.44s，
     约 7 次反转/秒），拒绝感仍在且明显温和。
 
-    ⚠️ 改 pos 会与 FloatLayout 的 pos_hint 打架（下一帧布局会拉回去），
+    !️ 改 pos 会与 FloatLayout 的 pos_hint 打架（下一帧布局会拉回去），
     所以这里抖动的是 ``x`` 相对量并**显式恢复原值**，且只用于
     size_hint=(None,None) 的固定尺寸控件（芯片/按钮）。
     """
@@ -139,7 +139,7 @@ def count_up(label: Label, from_value: float, to_value: float,
         fmt: 数值 → 文本的格式化函数（各统计单位不同，由调用方决定）。
         duration: 滚动时长。
 
-    ⚠️ 用 Clock 每帧改 text 会触发 texture_update，长时间高频会掉帧；
+    !️ 用 Clock 每帧改 text 会触发 texture_update，长时间高频会掉帧；
     因此滚动只在 motion_on() 且**数值确有变化**时才跑，且时长很短（0.45s）。
     """
     if not motion_on():
@@ -207,7 +207,7 @@ def beacon(target: Widget, code: str,
     需要 ``target`` 暴露 ``country_center(code)``（返回**容器局部坐标**）。
     光环挂在 ``container``（默认 = ``target`` 自身）上。
 
-    ⚠️ 注意：求坐标的对象与承载光环的容器**通常是两个不同的东西** ——
+    !️ 注意：求坐标的对象与承载光环的容器**通常是两个不同的东西** ——
     前者是 GameUI（有 country_center 方法），后者是地图舞台/准星层
     （FloatLayout）。早期版本把二者混为一谈，导致光环永远挂不上去。
     """

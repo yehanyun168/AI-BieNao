@@ -77,7 +77,7 @@ def make_modal(content: Widget, size_hint=(0.6, 0.7), auto_dismiss: bool = True,
         auto_dismiss: 预留参数（当前点遮罩由 close_on_outside 控制）。
         skin: 'win' / 'lose' / 'neutral' / ''（决定边框色，设计稿 .modal.*）。
         on_close: 关闭按钮回调；缺省时关闭按钮直接 ``popup.dismiss()``。
-        close_on_outside: True 时点击面板外的遮罩空白处也能关闭（✕ 之外的
+        close_on_outside: True 时点击面板外的遮罩空白处也能关闭（× 之外的
             第二条关闭路径，符合通用弹窗习惯）。事件类弹窗可传 False 防误关。
     """
     # 先清掉窗口上残留的旧弹窗：dismiss() 的 0.4s 淡出期间旧遮罩仍在树上，
@@ -153,9 +153,9 @@ def make_modal(content: Widget, size_hint=(0.6, 0.7), auto_dismiss: bool = True,
     def _apply_height() -> None:
         """按内容重算并设置面板高度（幂等、无副作用回环）。
 
-        ⚠️ 绝不在 panel.size 变化后再反过来触发本函数：那会和 BoxLayout 的
+        !️ 绝不在 panel.size 变化后再反过来触发本函数：那会和 BoxLayout 的
         do_layout / minimum_height 形成无限回环（曾导致 480 次
-        'too much iteration' 刷屏、弹窗卡死、✕ 点不动）。改用「一次性收敛」：
+        'too much iteration' 刷屏、弹窗卡死、× 点不动）。改用「一次性收敛」：
         只在 layout 定时器里调用有限次数，稳定即停。
         """
         rw, rh = root.width or 1, root.height or 1
@@ -264,7 +264,7 @@ def auto_h_label(text: str, font_size: float, color=None,
     固定 height 的 mk_label 在长文案下会纵向裁切（弹窗文字"显示不清"的根因
     之一），这里把 height 绑定到 texture_size，随文字增长。
 
-    ⚠️ 只绑 ``texture_size``，**不绑 text_size**：绑 text_size 会在
+    !️ 只绑 ``texture_size``，**不绑 text_size**：绑 text_size 会在
     「设高度 → BoxLayout 重排 → 宽度变 → text_size 变 → 再设高度」之间形成
     无限回环（曾导致弹窗刷屏卡死）。texture_size 由 Kivy 在宽度确定后自行
     重算，绑定它即可安全自增高。
@@ -294,10 +294,10 @@ def auto_h_label(text: str, font_size: float, color=None,
 
 
 def modal_header(icon: str, title: str, chips=()) -> BoxLayout:
-    """弹窗标题栏（设计稿 .modal__hd）：图标 + 标题 + chips + 右侧 ✕ 关闭按钮。
+    """弹窗标题栏（设计稿 .modal__hd）：图标 + 标题 + chips + 右侧 × 关闭按钮。
 
     返回的 BoxLayout 带 ``set_close(cb)``：``make_modal`` 构建时会把弹窗的
-    dismiss 回调注入进来，授权 ✕ 按钮关窗（弹窗此前没有任何关闭入口）。
+    dismiss 回调注入进来，授权 × 按钮关窗（弹窗此前没有任何关闭入口）。
     """
     # 高度 48 让 32×32 的 ✕ 按钮放得下且不易误触（像素规范交互 ≥44px）
     hd = BoxLayout(orientation='horizontal', spacing=8, size_hint_y=None, height=48,

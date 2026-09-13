@@ -99,7 +99,7 @@ ACHIEVEMENTS: List[Achievement] = [
     Achievement('ACH_FIXER', '[W]', '金牌承包商', 'Fixer',
                 '完成 10 个委托', 'Complete 10 commissions',
                 cond={'commissions_done': 10}),
-    Achievement('ACH_CLEAN_SHEET', '[✓]', '零差评', 'Clean Sheet',
+    Achievement('ACH_CLEAN_SHEET', '[■]', '零差评', 'Clean Sheet',
                 '完成 5 个委托且零失败', 'Complete 5 commissions with none failed',
                 cond={'all': [{'commissions_done': 5},
                               {'commissions_failed': {'eq': 0}}]}),
@@ -181,4 +181,4 @@ if __name__ == "__main__":
     print(f"\n  共命中 {len(hits)}/{len(ACHIEVEMENTS)} 个条件型成就"
           f"（事件型 {len(EVENT_ACHIEVEMENTS)} 个需由 v2 事件解锁）")
     print(f"  成就总数 {len(ALL_BY_ID)} 个 —— 计划书 F09 要求 20 个"
-          f" + P0-3 委托 2 个 = 22 个 ✅")
+          f" + P0-3 委托 2 个 = 22 个 ■")

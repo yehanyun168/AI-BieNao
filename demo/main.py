@@ -510,7 +510,7 @@ def ach_snapshot(filt: str = 'all'):
             ok = bool(a.condition(ctx)) if (a.condition and ctx) else False
         except Exception:
             ok = False  # 单条成就条件求值异常 → 显示未完成，不拖垮整页列表
-        nearest.append((a.name(lang), '✓' if ok else '…'))
+        nearest.append((a.name(lang), '■' if ok else '…'))
 
     return (cells, cond_got + evt_got, len(cond) + len(evt),
             cond_got, len(cond), evt_got, len(evt), nearest[:3])
@@ -541,7 +541,7 @@ def read_slot_rows(active_idx: int = 0):
             except Exception as e:
                 # 摘要读不出（多半存档损坏）：不能无声装作"空槽"——玩家会误以
                 # 为可覆盖。留一行控制台痕迹，槽位仍按空槽显示（行为不变）。
-                print(f'[slots] ⚠️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
+                print(f'[slots] !️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
                 summary = t('slot_empty')
         rows.append((title, summary, i == active_idx))
     return rows
@@ -580,7 +580,7 @@ def _difficulty_label(pid: str) -> str:
 
 
 def _diff_index(pid: str, default: int = 1) -> int:
-    """难度档 id → SegSwitch 下标；未知档回退默认（标准）。"""
+    """难度档 id → DIFFICULTY_ORDER 下标；未知档回退默认（标准）。"""
     try:
         return balance.DIFFICULTY_ORDER.index(pid)
     except ValueError:
@@ -757,7 +757,7 @@ class MainMenu(FloatLayout):
         ach_got = len(getattr(engine.player, 'achievements', set())) if engine.player else 0
         btns = [
             (f"{U.SYM['play']} {t('menu_start')}", 'primary', self._fire_start, True),
-            (f"⏵ {t('menu_continue_slot').format(slot=slot_txt)}", 'plain',
+            (f"■ {t('menu_continue_slot').format(slot=slot_txt)}", 'plain',
              self._fire_continue, has_save),
             (t('menu_settings'), 'plain', self._open_settings, True),
             (f"{t('menu_achievements')}  {ach_got} / {ach_total}", 'plain',
@@ -964,45 +964,35 @@ class MainMenu(FloatLayout):
         T16：origin 给定时，SegSwitch 预置到出身绑定档并显示出身行；
         挑战码自带难度时仍以码为准（出身乘区保持，见 engine.init_game）。
         """
-        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
+        body = BoxLayout(orientation='vertical', spacing=10, padding=(14, 14))
         body.add_widget(modal_header(U.SYM['play'], t('menu_start')))
         body.add_widget(hline())
 
-        # 出身行（T16）：显示所选觉醒地点与绑定难度
-        if origin is not None and origin in origins.ORIGINS:
-            odiff = origins.ORIGINS[origin]['difficulty']
-            body.add_widget(mk_label(
-                t('ng_origin_line').format(
-                    origin=t('origin_%s_name' % origin),
-                    diff=_difficulty_label(odiff)),
-                font_size=U.FS_CAP, color=COLORS['accent4'],
-                size_hint_y=None, height=22))
+        # 难度由出身硬绑定（T16）：OriginPage 已定难度，弹窗仅回显，不做重复确认
+        diff_holder = [origins.ORIGINS[origin]['difficulty']
+                       if origin in origins.ORIGINS else 'normal']
 
-        # 难度行：轻松 / 标准 / 困难，默认 = 出身绑定档（T16 前默认标准）
-        preset = _diff_index(origins.ORIGINS[origin]['difficulty']) \
-            if origin in origins.ORIGINS else 1
-        drow = BoxLayout(orientation='horizontal', spacing=10,
-                         size_hint_y=None, height=44)
-        drow.add_widget(mk_label(t('ng_difficulty'), font_size=U.FS_BODY,
-                                 color=COLORS['text_dim'], size_hint_x=None,
-                                 width=110))
-        sw = SegSwitch([t('diff_easy'), t('diff_normal'), t('diff_hard')],
-                       preset)
-        sw.size_hint_x = None
-        sw.width = 260
-        sw.height = 36
-        drow.add_widget(sw)
-        drow.add_widget(Widget())
-        body.add_widget(drow)
+        # 出身 + 绑定难度行（左对齐；T16 后无手动难度三选）
+        info_lbl = mk_label('', font_size=U.FS_CAP, color=COLORS['accent4'],
+                            halign='left', size_hint=(1, None), height=24)
+
+        def _refresh_info():
+            oname = t('origin_%s_name' % origin) if origin in origins.ORIGINS \
+                else t('ng_random')
+            info_lbl.text = t('ng_origin_line').format(
+                origin=oname, diff=_difficulty_label(diff_holder[0]))
+
+        _refresh_info()
+        body.add_widget(info_lbl)
 
         # 种子行：可选；留空 = 真随机；也可直接粘贴挑战码（T13）
         srow = BoxLayout(orientation='horizontal', spacing=10,
-                         size_hint_y=None, height=44)
-        srow.add_widget(mk_label(t('ng_seed'), font_size=U.FS_BODY,
+                         size_hint_y=None, height=40)
+        srow.add_widget(mk_label(t('ng_seed'), font_size=U.FS_CAP,
                                  color=COLORS['text_dim'], size_hint_x=None,
-                                 width=110))
+                                 width=96))
         ti = TextInput(multiline=False, write_tab=False, size_hint_x=None,
-                       width=260, height=36, font_size=U.FS_BODY,
+                       width=250, height=36, font_size=U.FS_CAP,
                        hint_text=t('ch_import_hint'), background_normal='',
                        background_color=COLORS['panel_2'],
                        foreground_color=COLORS['text'],
@@ -1014,32 +1004,38 @@ class MainMenu(FloatLayout):
         srow.add_widget(Widget())
         body.add_widget(srow)
 
-        hint_lbl = mk_label(t('ng_seed_hint'), font_size=U.FS_CAP,
+        hint_lbl = mk_label(t('ng_seed_hint'), font_size=U.FS_BODY,
                             color=COLORS['text_mute'], size_hint_y=None,
-                            height=U.FS_CAP * 1.9)
+                            height=U.FS_BODY * 2.0)
 
-        def _on_seed_text(_inst, value, _sw=sw, _lbl=hint_lbl):
-            """T13 实时解析：贴入挑战码即切难度并回显；抄错则标红。"""
+        def _on_seed_text(_inst, value):
+            """T13 实时解析：贴入挑战码即覆写难度并回显；抄错则标红。
+            无挑战码时回落到出身绑定难度（T16 后由出身决定，不提供手动切换）。"""
             seed, diff, err = _parse_seed_input(value)
             if err:
-                _lbl.text = '⚠ ' + t(err)
-                _lbl.color = COLORS['warning']
-            elif diff:
-                _sw.set_current(_diff_index(diff))
-                _lbl.text = t('ch_applied').format(
+                hint_lbl.text = '! ' + t(err)
+                hint_lbl.color = COLORS['warning']
+                return
+            if diff:
+                diff_holder[0] = diff
+                _refresh_info()
+                hint_lbl.text = t('ch_applied').format(
                     seed=seed, diff=_difficulty_label(diff))
-                _lbl.color = COLORS['accent4']
+                hint_lbl.color = COLORS['accent4']
             else:
-                _lbl.text = t('ng_seed_hint')
-                _lbl.color = COLORS['text_mute']
+                diff_holder[0] = origins.ORIGINS[origin]['difficulty'] \
+                    if origin in origins.ORIGINS else 'normal'
+                _refresh_info()
+                hint_lbl.text = t('ng_seed_hint')
+                hint_lbl.color = COLORS['text_mute']
 
         ti.bind(text=_on_seed_text)
         body.add_widget(hint_lbl)
 
         row = BoxLayout(orientation='horizontal', spacing=12,
-                        size_hint_y=None, height=50)
+                        size_hint_y=None, height=46)
         row.add_widget(make_button(t('save_overwrite_cancel'),
-                                   font_size=U.FS_BODY, height=50,
+                                   font_size=U.FS_CAP, height=46,
                                    bg=COLORS['panel_light'],
                                    on_release=lambda *_: pop.dismiss()))
 
@@ -1049,14 +1045,14 @@ class MainMenu(FloatLayout):
             if err:
                 return
             pop.dismiss()
-            on_confirm(seed, balance.DIFFICULTY_ORDER[sw.current])
+            on_confirm(seed, diff_holder[0])
 
-        row.add_widget(make_button(t('menu_start'), font_size=U.FS_BODY,
-                                   height=50,
+        row.add_widget(make_button(t('menu_start'), font_size=U.FS_CAP,
+                                   height=46,
                                    bg=(0.078, 0.188, 0.173, 1),
                                    on_release=_fire_start))
         body.add_widget(row)
-        pop = make_modal(body, size_hint=(0.52, 0.62), skin='win',
+        pop = make_modal(body, size_hint=(0.46, 0.56), skin='win',
                          close_on_outside=True)
         pop.bind(on_dismiss=lambda *_: setattr(self, '_ng_modal', None))
         self._ng_modal = pop

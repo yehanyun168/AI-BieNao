@@ -75,7 +75,7 @@ def load_all() -> None:
 def set_enabled(on: bool) -> None:
     """设置页「音乐」开关。关闭时立即停播，开启时按需恢复。
 
-    ⚠️ 关闭时用 _pause()（保留 _current）而不用 stop()（清空 _current）——
+    !️ 关闭时用 _pause()（保留 _current）而不用 stop()（清空 _current）——
     否则一旦关过音乐，再打开时就不知道「此刻该放哪一态」，
     要等下一个 tick 才会重新出声（等于开关失效一次）。
     """

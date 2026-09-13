@@ -15,7 +15,7 @@ origins.py - T16 觉醒模式（Origin）声明式表
       - 初始状态：initial_compute_mult / initial_downloads_add_m /
         initial_suspicion（engine.init_game 出生时一次性应用，不进 TUNE）；
       - TUNE 附加乘区：tune_mult（目前仅 dl_growth_origin_mult 一个新键）。
-  · ⚠️ 表内数值均为提案值，定版必须过 balance_sim 矩阵验证。
+  · !️ 表内数值均为提案值，定版必须过 balance_sim 矩阵验证。
 """
 from typing import Dict, Tuple
 

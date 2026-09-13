@@ -644,7 +644,7 @@ def _apply_event(evt: data.GameEvent):
     """
     应用事件效果
 
-    ⚠️ 修复说明：旧代码在各个分支里已经加了算力/怀疑度，函数末尾又无
+    !️ 修复说明：旧代码在各个分支里已经加了算力/怀疑度，函数末尾又无
     条件再结算一遍 —— 所有带算力或怀疑度效果的事件都被执行了两次。
     现在统一在末尾结算一次。
     """
@@ -1018,7 +1018,7 @@ def _complete_commission(com) -> None:
         _sus('commission', -com.sus_relief)
         p.suspicion = max(0.0, p.suspicion - com.sus_relief)
     p.commissions.remove(com)
-    p.events_history.insert(0, f"[周期 {p.tick_count}] ✅ 委托完成：{com.name_zh}")
+    p.events_history.insert(0, f"[周期 {p.tick_count}] ■ 委托完成：{com.name_zh}")
     if len(p.events_history) > 20:
         p.events_history = p.events_history[:20]
 
@@ -1032,7 +1032,7 @@ def _fail_commission(com) -> None:
     _sus('commission', delta)
     p.suspicion = min(100.0, p.suspicion + delta)
     p.commissions.remove(com)
-    p.events_history.insert(0, f"[周期 {p.tick_count}] ❌ 委托失败：{com.name_zh}")
+    p.events_history.insert(0, f"[周期 {p.tick_count}] × 委托失败：{com.name_zh}")
     if len(p.events_history) > 20:
         p.events_history = p.events_history[:20]
 
@@ -1725,7 +1725,7 @@ if __name__ == "__main__":
     print("最终科技加点：")
     for slot in tech_tree.TECH_TREE:
         if player.tech.t0_unlocked[slot.slot_id]:
-            print(f"  ✅ {slot.icon} {slot.name} T0")
+            print(f"  ■ {slot.icon} {slot.name} T0")
         for branch in slot.branches:
             level = player.tech.branch_levels.get(branch.branch_id, 0)
             if level > 0:

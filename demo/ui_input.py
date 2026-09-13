@@ -94,7 +94,7 @@ class InputMixin:
     def _bind_skill_hover(self) -> None:
         """绑定鼠标位置实现「悬停技能卡 → 底部预览条」。
 
-        ⚠️ 只**加信息**、不加确认步骤：点击仍然立即释放，手感完全不变。
+        !️ 只**加信息**、不加确认步骤：点击仍然立即释放，手感完全不变。
         绑定失败（无 Window / 无鼠标的环境）时静默降级 —— 预览是增强项，
         绝不能成为新的崩溃点。
         """
@@ -314,7 +314,7 @@ class InputMixin:
         柱子，无法知道「算力到底涨了多少」。这里把窗口首尾差算成人话
         （↑12 / ↓3% / →0），交给 _animate_stat 拼在数值后面。
 
-        ⚠️ 本函数**不写 label.text**：文本统一由 _animate_stat 负责，
+        !️ 本函数**不写 label.text**：文本统一由 _animate_stat 负责，
         避免与滚动动效互相覆盖（两边写同一个 Label 会闪）。
 
         玩家反馈 #7（确认怀疑度增长时机 + 下周期预测）：在趋势箭头之后，
@@ -670,7 +670,7 @@ class InputMixin:
                 save_manager.save()
             except Exception as e:
                 # 存档失败绝不能挡结算（见上注释），但必须留痕便于排查：
-                print(f'[save] ⚠️ 结局自动存档失败（不影响结局弹窗）：{e!r}')
+                print(f'[save] !️ 结局自动存档失败（不影响结局弹窗）：{e!r}')
             self.show_ending_popup(report["ending"])
 
     # ========================================================

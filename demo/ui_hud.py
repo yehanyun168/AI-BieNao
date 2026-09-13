@@ -531,7 +531,7 @@ class HudMixin:
             spark_key: 传 'compute'/'downloads'/'suspicion'/'unlocked' 时，
                 在数字下方叠一根 12 周期的像素趋势柱（设计稿 S05 顶栏样式）。
 
-        ⚠️ 设计稿 S05 里每个统计都是「上行=标签+数值，下行=火花线」的两段式。
+        !️ 设计稿 S05 里每个统计都是「上行=标签+数值，下行=火花线」的两段式。
         实现上用一个垂直 BoxLayout 承载（label 在上，Spark 在下），整体作为
         单个子控件加进顶栏，宽度自适应 —— 顶栏是水平布局，多塞一个子控件
         会挤掉右侧周期块，所以必须包在一个盒子里。
@@ -769,9 +769,9 @@ class HudMixin:
         'open_bait': {'zh': '算力 +150 · 怀疑 +8%', 'en': 'Compute +150 · susp +8%'},
         'arbitrage': {'zh': '偷算力 +60% · 怀疑增速 ×1.6', 'en': 'Steal +60% · susp ×1.6'},
     }
-    SKILL_ICON = {'push_song': '⇈', 'algo_top': '⌁', 'stealth': '◐',
-                  'hit_maker': '✹', 'bypass': '⇄', 'take_cut': '％',
-                  'anon_cdn': '◇', 'bot_farm': '✦', 'open_bait': '❖',
+    SKILL_ICON = {'push_song': '↑↑', 'algo_top': '~', 'stealth': '●',
+                  'hit_maker': '★', 'bypass': '↔', 'take_cut': '％',
+                  'anon_cdn': '◇', 'bot_farm': '★', 'open_bait': '◆',
                   'arbitrage': '◆'}
 
 

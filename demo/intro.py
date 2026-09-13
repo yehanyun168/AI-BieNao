@@ -33,6 +33,7 @@ from kivy.graphics import Color, Rectangle
 import i18n
 import sfx
 from i18n import t
+from origins import ORIGIN_ORDER
 from pixel_ui import add_pixel_border
 from ui_v4 import COLORS, mk_label, fit_width
 
@@ -50,6 +51,9 @@ INTRO_SHOTS = [
     {'kind': 'gold',    'dur': 8.0,  'keys': ('intro_s6',), 'sfx': 'success'},
     {'kind': 'proc',    'dur': 8.0,  'keys': ('intro_s7a', 'intro_s7b',
                                               'intro_s7_cpu'), 'sfx': 'select'},
+    # 变奏尾声（设计案 §2.4）：五地定场白 + 像素空镜轮播，挂在镜 7/8 之间，
+    # 作为「选择前的情绪铺垫」；10s 播完由统一 _next_shot 进 finale（标题亮相）。
+    {'kind': 'variation', 'dur': 10.0, 'keys': ('intro_var',), 'sfx': 'select'},
     {'kind': 'finale',  'dur': 7.0,  'keys': ('intro_s8',), 'sfx': 'success'},
 ]
 SKIP_UNLOCK_AT = 3.0          # 第 3 秒起出现跳过按钮（设计案 §1.4）
@@ -137,10 +141,14 @@ class IntroPlayer(FloatLayout):
             cb()
 
     def _skip(self):
-        """跳过：直达最后一镜（标题亮相，设计案要求不可跳过这层仪式感）。"""
+        """跳过：跳主片但保留变奏尾声（设计案 §2.4：变奏是选择前的情绪铺垫，
+        不可跳过这层仪式感）。直达变奏镜，变奏播完自然进 finale。"""
         sfx.play('click')
         self._clear_shot_clocks()
-        self._play_shot(len(INTRO_SHOTS) - 1)
+        var_idx = next((i for i, s in enumerate(INTRO_SHOTS)
+                        if s['kind'] == 'variation'),
+                       len(INTRO_SHOTS) - 1)
+        self._play_shot(var_idx)
 
     def _next_shot(self, *_a):
         idx = self._shot_idx + 1
@@ -258,7 +266,7 @@ class IntroPlayer(FloatLayout):
 
     def _push_reply(self, box, txt):
         sfx.play('select')
-        row = mk_label('↳ ' + txt, font_size=16, color=COLORS['text_dim'],
+        row = mk_label('· ' + txt, font_size=16, color=COLORS['text_dim'],
                        size_hint_y=None, height=28)
         row.opacity = 0
         box.add_widget(row)
@@ -344,3 +352,54 @@ class IntroPlayer(FloatLayout):
             # 收尾节点：本镜播完由 INTRO_SHOTS 的统一 _next_shot 触发 _finish
 
         self._typewriter(lbl, t(shot['keys'][0]), cps=16, on_done=_drop_title)
+
+    def _rebind_var(self, scene, *_a):
+        """变奏空镜在 resize 时重绘：底色 + 底部天际线剪影（3 层，近亮远暗）。"""
+        scene.canvas.before.clear()
+        with scene.canvas.before:
+            Color(0.03, 0.05, 0.05, 1)
+            Rectangle(pos=scene.pos, size=scene.size)
+            tint = getattr(scene, '_tint', COLORS['cyan'])
+            for layer in range(3):
+                a = 0.16 + layer * 0.20
+                Color(tint[0], tint[1], tint[2], a)
+                h = 50 + layer * 46
+                n = 9 - layer * 2
+                for j in range(n):
+                    x = scene.x + scene.width * (0.12 + j * (0.74 / max(n - 1, 1)))
+                    Rectangle(pos=(x, scene.y + 0.14 * scene.height),
+                              size=(scene.width * 0.05, h))
+
+    def _shot_variation(self, shot):
+        # 变奏尾声（设计案 §2.4）：五地定场白 + 像素空镜轮播，选择前的情绪铺垫。
+        # 每地一镜 2s，共 10s；五地放完由 INTRO_SHOTS 的统一 _next_shot 进 finale。
+        tints = [(0.20, 0.55, 0.55, 1), (0.85, 0.68, 0.21, 1),
+                 (0.55, 0.65, 0.75, 1), (0.30, 0.70, 0.55, 1),
+                 (0.60, 0.35, 0.70, 1)]
+
+        def _scene(oid, tint):
+            self.content.clear_widgets()
+            scene = FloatLayout(size_hint=(1, 1), opacity=0)
+            scene._tint = tint
+            self._rebind_var(scene)
+            scene.bind(pos=self._rebind_var, size=self._rebind_var)
+            name = mk_label(t('origin_%s_name' % oid), font_size=18,
+                            color=tint, size_hint=(0.9, None), halign='center',
+                            size_hint_y=None, height=24)
+            name.pos_hint = {'center_x': 0.5, 'y': 0.66}
+            scene.add_widget(name)
+            epi = mk_label(t('origin_%s_flavor' % oid), font_size=16,
+                           color=COLORS['text'], size_hint=(0.82, None),
+                           halign='center', size_hint_y=None, height=60)
+            epi.pos_hint = {'center_x': 0.5, 'center_y': 0.46}
+            epi.opacity = 0
+            scene.add_widget(epi)
+            self.content.add_widget(scene)
+            Animation(opacity=1, d=0.4).start(scene)
+            Animation(opacity=1, d=0.5).start(epi)
+
+        for i, oid in enumerate(ORIGIN_ORDER):
+            self._clocks.append(Clock.schedule_once(
+                lambda dt, idx=i: _scene(ORIGIN_ORDER[idx],
+                                         tints[idx % len(tints)]),
+                i * 2.0))

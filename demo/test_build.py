@@ -69,7 +69,7 @@ assert p.skill_cooldowns.get('push_song') == 3, "冷却初值应为 3"
 for _ in range(4):
     engine.tick_one_round()
 assert p.skill_cooldowns.get('push_song') is None, "4 周期后冷却应已归零并移除"
-print("   ✅ 技能冷却会递减（push_song 3 → 0）")
+print("   ■ 技能冷却会递减（push_song 3 → 0）")
 
 # --- 2. 邻国解锁必须能推进（旧阈值 0.2 导致 150 周期仍卡 2/12）---
 engine.init_game()
@@ -80,7 +80,7 @@ for _ in range(60):
 unlocked = sum(1 for c in engine.player_countries if c.unlocked)
 total = len(engine.player_countries)
 assert unlocked >= 5, f"60 周期应至少解锁 5 国，实际 {unlocked}/{total}"
-print(f"   ✅ 国家解锁可推进（60 周期 {unlocked}/{total} 国）")
+print(f"   ■ 国家解锁可推进（60 周期 {unlocked}/{total} 国）")
 
 # --- 3. 事件效果不得重复结算（旧代码算力/怀疑度被加两次）---
 engine.init_game()
@@ -98,7 +98,7 @@ before = p.suspicion
 engine._apply_event(evt_s)
 assert abs((p.suspicion - before) - evt_s.effect_suspicion) < 1e-9, \
     f"怀疑度应只加一次（期望 {evt_s.effect_suspicion}，实际 {p.suspicion - before}）"
-print(f"   ✅ 事件效果只结算一次（{evt_c.id} 算力 +{evt_c.effect_compute} / "
+print(f"   ■ 事件效果只结算一次（{evt_c.id} 算力 +{evt_c.effect_compute} / "
       f"{evt_s.id} 怀疑 {evt_s.effect_suspicion}）")
 
 # --- 4. 结局系统：怀疑度 100% 必须判定为「被关停」且游戏结束 ---
@@ -110,14 +110,14 @@ assert e is not None and e.id == 'shutdown', f"怀疑度 100% 应触发被关停
 report = engine.tick_one_round()
 assert p.game_over, "结局命中后 game_over 应为 True"
 assert report["ending"] is not None, "report 应携带 ending"
-print(f"   ✅ 结局判定生效（{e.icon} {e.title_zh}）")
+print(f"   ■ 结局判定生效（{e.icon} {e.title_zh}）")
 
 # --- 5. 结局命中后不得继续推进 ---
 ticks_before = p.tick_count
 for _ in range(5):
     engine.tick_one_round()
 assert p.tick_count == ticks_before, "游戏结束后 tick_count 不应再增加"
-print("   ✅ 结局后停止推进")
+print("   ■ 结局后停止推进")
 
 # --- 6. v2 事件库（37 条）已接入并可触发 ---
 import v2_events
@@ -130,7 +130,7 @@ for _ in range(60):
     if r.get('v2_event'):
         fired.add(r['v2_event'][0].id)
 assert fired, "60 周期内应至少触发 1 条 v2 事件"
-print(f"   ✅ v2 事件库已接入（{len(v2_events.EVENTS)} 条，"
+print(f"   ■ v2 事件库已接入（{len(v2_events.EVENTS)} 条，"
       f"60 周期触发 {len(fired)} 条）")
 
 # --- 7. 成就系统可解锁 ---
@@ -139,7 +139,7 @@ random.seed(2)
 for _ in range(60):
     engine.tick_one_round()
 assert len(engine.player.achievements) > 0, "60 周期内应至少解锁 1 个成就"
-print(f"   ✅ 成就系统生效（解锁 {len(engine.player.achievements)} 个："
+print(f"   ■ 成就系统生效（解锁 {len(engine.player.achievements)} 个："
       f"{', '.join(sorted(engine.player.achievements)[:3])}…）")
 
 # --- 8. 存档 / 读档一致性 ---
@@ -158,7 +158,7 @@ restored = (engine.player.tick_count,
             round(engine.player.total_downloads_m, 4),
             dict(engine.player.tech.branch_levels))
 assert snapshot == restored, f"读档后状态不一致：{snapshot} vs {restored}"
-print(f"   ✅ 存档/读档一致（tick {restored[0]} / {restored[1]:.1f}M）")
+print(f"   ■ 存档/读档一致（tick {restored[0]} / {restored[1]:.1f}M）")
 
 # --- 9. F12 自适应：缩放基础设施必须真的改到字号/行高 ---
 ui._apply_scale()
@@ -175,7 +175,7 @@ assert ui.stats_compute.font_size < base_font, "缩小后状态条字号应变�
 assert ui.skill_cards['push_song'].lbl_fx.font_size < big_fx, "缩小后技能带字号应变小"
 ui.user_scale = 1.0
 ui._apply_scale()
-print(f"   ✅ F12 自适应缩放生效（状态条字号 {base_font:.0f} → {big_font:.0f}；"
+print(f"   ■ F12 自适应缩放生效（状态条字号 {base_font:.0f} → {big_font:.0f}；"
       f"技能带字号 {base_fx:.0f} → {big_fx:.0f}，+/- 可调）")
 
 # --- 10. F11：Tab 切区域高亮（设计稿 §5 的 5 个页签）---
@@ -186,7 +186,7 @@ assert 'CN' in asia_codes, "亚洲高亮应包含 CN"
 for _ in range(len(ui.REGION_KEYS)):      # 从亚洲起再转 5 步回到「取消高亮」
     ui.cycle_continent()
 assert not ui.map_widget._continent_codes, "转满一圈后应取消高亮"
-print(f"   ✅ Tab 切区域生效（亚洲 {len(asia_codes)} 国，{len(ui.REGION_KEYS)} 区域转一圈可取消高亮）")
+print(f"   ■ Tab 切区域生效（亚洲 {len(asia_codes)} 国，{len(ui.REGION_KEYS)} 区域转一圈可取消高亮）")
 
 # --- 11. F11：全屏开关（只验证方法可调用，不干扰沙箱窗口）---
 import inspect
@@ -196,7 +196,7 @@ assert 'f11' in inspect.getsource(main_module.GameUI._on_keyboard_down), \
 for k in ('tab', "f1", 'escape', '+', '-'):
     assert k in inspect.getsource(main_module.GameUI._on_keyboard_down), \
         f"快捷键 {k} 应绑定在键盘处理里"
-print("   ✅ F11 快捷键齐全（F11 全屏 / Tab 大洲 / +/- 缩放 / Esc 菜单 / F1 帮助）")
+print("   ■ F11 快捷键齐全（F11 全屏 / Tab 大洲 / +/- 缩放 / Esc 菜单 / F1 帮助）")
 
 # --- 12. 计划书验收数量断言（F02 / F05 / F08 / F09）---
 import data, endings as endings_mod, achievements as ach_mod
@@ -209,7 +209,7 @@ assert len(ach_mod.ALL_BY_ID) == 22, f"应 22 成就，实际 {len(ach_mod.ALL_B
 triggerable = sum(1 for e in endings_mod.ENDINGS if e.id != 'liberation')
 assert triggerable >= 4, "至少 4 种结局可自动触发"
 assert len(ui.map_widget.country_labels) == 20, "地图应画出 20 国标签"
-print(f"   ✅ 验收数量达标：{len(data.COUNTRIES)} 国 / {len(data.SKILLS)} 技能 / "
+print(f"   ■ 验收数量达标：{len(data.COUNTRIES)} 国 / {len(data.SKILLS)} 技能 / "
       f"{len(endings_mod.ENDINGS)} 结局（{triggerable} 种可自动判定）/ "
       f"{len(ach_mod.ALL_BY_ID)} 成就")
 
@@ -262,7 +262,7 @@ assert engine.accept_commission(9003), "接受待接受委托应成功"
 assert com3.status == 'active' and com3.deadline_tick, "接受后应为进行中"
 assert com3.snap_compute == 555.0, "接受时应写入偷算力快照"
 assert not engine.accept_commission(9003), "同一委托不可重复接受"
-print("   ✅ P0-3 委托系统生效（成功/失败判定 + 接受状态机 + 快照）")
+print("   ■ P0-3 委托系统生效（成功/失败判定 + 接受状态机 + 快照）")
 
 # --- 14. P0-3 政府反制：预警结算 + 怀疑度截断在危机线下 ---
 engine.init_game()
@@ -283,7 +283,7 @@ assert p.suspicion <= 79.0, \
     f"反制怀疑度应截断在危机线下，实际 {p.suspicion}"
 assert any(e["type"] == "cross_inquiry" for e in res), \
     "60 次三选一应覆盖跨境协查"
-print("   ✅ P0-3 政府反制生效（预警→结算 + 怀疑度截断在危机线下）")
+print("   ■ P0-3 政府反制生效（预警→结算 + 怀疑度截断在危机线下）")
 
 # --- 15. P0-3 存档往返：委托 / 计数器 / 快照字段 ---
 import save_manager
@@ -307,7 +307,7 @@ res_c = (len(p.commissions), p.commissions_done, p.commissions_failed,
          round(p.compute_earned_total, 2), dict(p.skill_uses),
          p.last_commission_tick)
 assert snap_c == res_c, f"委托存档往返不一致：{snap_c} vs {res_c}"
-print(f"   ✅ P0-3 存档往返一致（在场 {res_c[0]} 单 / 完成 {res_c[1]} / "
+print(f"   ■ P0-3 存档往返一致（在场 {res_c[0]} 单 / 完成 {res_c[1]} / "
       f"失败 {res_c[2]} / 累计偷取 {res_c[3]:.0f}）")
 
 # ---- 16) 委托/反制 UI 接线（i18n 键完整性 + 模板字段 + Mixin 装配）----
@@ -335,7 +335,7 @@ assert hasattr(main_module.GameUI, 'refresh_commissions'), \
     "GameUI 应装配 CommissionMixin（委托芯片条）"
 assert hasattr(main_module.GameUI, 'show_top_toast'), \
     "GameUI 应具备顶部弹条（反制预警）"
-print(f"   ✅ 16) 委托/反制 UI 接线（i18n zh+en ×{len(_needed)} 键 / "
+print(f"   ■ 16) 委托/反制 UI 接线（i18n zh+en ×{len(_needed)} 键 / "
       f"模板字段 / Mixin 装配）")
 
 # ---- 17) 可视化 / 引导 / 节奏参考（玩家反馈 6、7、10）----
@@ -395,7 +395,7 @@ _pace_keys = ['help_pace_t', 'help_pace_body', 'insp_ms_unlock', 'insp_ms_need',
 for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
     _m = [k for k in _pace_keys if k not in i18n_mod.TRANSLATIONS[_lang]]
     assert not _m, f"i18n[{_lang}] 缺可视化/节奏键: {_m}"
-print(f"   ✅ 17) 可视化/引导/节奏（顶栏火花×4 / 引导 {len(_steps)} 步 / "
+print(f"   ■ 17) 可视化/引导/节奏（顶栏火花×4 / 引导 {len(_steps)} 步 / "
       f"里程碑分档 / i18n ×{len(_pace_keys)} 键）")
 
 # ---- 18) T09 背景音乐：资源 / 两态映射 / 设置页开关接线 ----
@@ -430,7 +430,7 @@ _main_src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 for _needle in ('import bgm', 'bgm.load_all()', 'on_music=self._set_music_idx',
                 'def _set_music_idx'):
     assert _needle in _main_src, f"main.py 缺 BGM 接线: {_needle}"
-print("   ✅ 18) T09 背景音乐（calm/tense 两态 WAV / 70% 阈值映射 / "
+print("   ■ 18) T09 背景音乐（calm/tense 两态 WAV / 70% 阈值映射 / "
       "设置页开关 ×2 语 / main 接线四连）")
 
 # ---- 19) T10 地图渗透热力层：同心环几何 + 图例语义 + 图层互斥 ----
@@ -460,7 +460,7 @@ for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
     _miss = [k for k in ('heat_leg_low', 'heat_leg_mid', 'heat_leg_high',
                          'heat_leg_full') if k not in i18n_mod.TRANSLATIONS[_lang]]
     assert not _miss, f"i18n[{_lang}] 缺热力图例键: {_miss}"
-print("   ✅ 19) T10 渗透热力层（同心环几何自洽 / 4 档图例同源 / "
+print("   ■ 19) T10 渗透热力层（同心环几何自洽 / 4 档图例同源 / "
       "8 档旧色阶已下线 / 图层互斥 / i18n ×4 键）")
 
 # ---- 20) T11 技能扩容 6→10：表一致 + 科技挂载 + 三处文案齐备 + 键位兜底 ----
@@ -516,7 +516,7 @@ assert '_key_hint(sid)' in open(os.path.join(_HERE, 'ui_pages.py'),
 _ui_input_src = open(os.path.join(_HERE, 'ui_input.py'), encoding='utf-8').read()
 assert "'0'" in _ui_input_src and '9 if key' in _ui_input_src, \
     "ui_input 数字键分支须含 '0' 兜底（第 10 个技能）"
-print("   ✅ 20) T11 技能扩容 6→10（表一致 / 4 项科技挂载 / 文案 ×4 ×2 语 / "
+print("   ■ 20) T11 技能扩容 6→10（表一致 / 4 项科技挂载 / 文案 ×4 ×2 语 / "
       "新战术轴 cdelta+sus_up / 键位兜底 + _key_hint 同源）")
 
 # ---- 21) T13 挑战码：编解码往返 + 校验位 + 容错 + 战绩账本 + 三处接线 ----
@@ -618,7 +618,7 @@ for _needle in ('import challenge', 'def _challenge_block', 'def _copy_text',
                 'save_manager.SAVE_DIR'):
     assert _needle in _pop_src, f"ui_popups.py 缺挑战码接线: {_needle}"
 assert '_challenge_block(p, ending)' in _pop_src, "结算弹窗未挂载挑战码区块"
-print("   ✅ 21) T13 挑战码（往返 ×21 / 校验位逐位抓错 / 容错四种 / 战绩账本"
+print("   ■ 21) T13 挑战码（往返 ×21 / 校验位逐位抓错 / 容错四种 / 战绩账本"
       "最佳判定 + 损坏容错 / L0 零项目依赖 / ch_* ×14 ×2 语 / 导入导出接线）")
 
 # ---- 22) T16 觉醒出身：表一致性 / 难度映射 / 出生包 / 存档往返 / 文案接线 ----
@@ -681,9 +681,10 @@ _ok2 = _save_manager.load(_tmp)
 assert _ok2 and _engine.player.origin == 'garage', "v2 档应迁移为白板出身"
 os.remove(_tmp)
 
-# 开场动画表：8 镜、最后一镜 finale（跳过保留标题仪式感）
-assert len(_intro_mod.INTRO_SHOTS) == 8
+# 开场动画表：9 镜（8 主片 + 1 变奏尾声）、最后一镜 finale、含 variation 镜
+assert len(_intro_mod.INTRO_SHOTS) == 9
 assert _intro_mod.INTRO_SHOTS[-1]['kind'] == 'finale'
+assert any(_s['kind'] == 'variation' for _s in _intro_mod.INTRO_SHOTS)
 assert sum(_s['dur'] for _s in _intro_mod.INTRO_SHOTS) >= 50.0
 
 # i18n：origin_*/intro_* 键双语齐全 + 出身页/流程接线
@@ -707,8 +708,8 @@ for _needle in ('import intro', 'import origins', 'def _open_origin_flow',
                 'intro.IntroPlayer', 'S.OriginPage',
                 "os.path.exists(target)"):
     assert _needle in _main_src, f"main.py 缺出身流程接线: {_needle}"
-print("   ✅ 22) T16 觉醒出身（表一致性 / 难度映射 / 出生包 ×5 / 乘区复位 /"
-      "存档 v2→v3 迁移与往返 / 动画 8 镜 finale 收尾 / origin_*·intro_* 双语 /"
+print("   ■ 22) T16 觉醒出身（表一致性 / 难度映射 / 出生包 ×5 / 乘区复位 /"
+      "存档 v2→v3 迁移与往返 / 动画 9 镜含变奏尾声 / origin_*·intro_* 双语 /"
       "出身页与流程接线）")
 
 print("\n 全部通过 - demo 可以正常启动")

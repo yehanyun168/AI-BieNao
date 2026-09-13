@@ -12,7 +12,7 @@
   - unlock_budget()      单周期解锁额度（0 = 不设限）
   - in_tutorial_silence(tick)  是否处于引导静默期
 
-⚠️ 引导静默会改变 random 消费顺序（事件抽取是 random 调用点），所以
+!️ 引导静默会改变 random 消费顺序（事件抽取是 random 调用点），所以
 balance_sim 的矩阵与逐位回归会把 tutorial_silent_ticks 设为 0 关闭，
 保证历史 1800 局基线哈希可比（见 run_matrix）。这是「真人新档体验」
 与「回归可比性」之间的显式取舍，不是遗漏。
@@ -51,7 +51,7 @@ def try_unlock(country, player_countries, cap: int, unlocked_so_far: int,
 def in_tutorial_silence(TUNE, tick: int) -> bool:
     """tick ≤ tutorial_silent_ticks 时视为引导静默期（关闭随机事件）。
 
-    ⚠️ RNG 顺序依赖：本函数为真时，tick_one_round 会跳过若干 random
+    !️ RNG 顺序依赖：本函数为真时，tick_one_round 会跳过若干 random
     调用点，因此同一 seed 的事件流与关闭该开关时不同。任何需要与历史
     基线逐位对齐的跑批都必须把 tutorial_silent_ticks 设为 0。
     """

@@ -12,7 +12,7 @@ ui_v4.py - AI 别闹 v0.4 交互界面组件库
     光栅 2px / 节奏 8px / 线宽 1·2·3px / 圆角恒 0 /
     硬投影 6px 6px 0 / 字号下限 11px / 交互尺寸下限 44px。
 
-⚠️ Kivy 坑（项目记忆）：canvas.before/after 全部在**父容器坐标系**绘制，
+!️ Kivy 坑（项目记忆）：canvas.before/after 全部在**父容器坐标系**绘制，
    所以自绘背景一律用 self.pos / self.size（它们是父坐标系下的绝对坐标），
    绝不能写局部坐标 (0,0)。
 """
@@ -63,7 +63,7 @@ BASE_TINY = 14
 def _fs(v: float) -> int:
     """基准字号 → 实际字号（统一乘全局系数，取整到 2px 像素栅格）。
 
-    ⚠️ 必须返回 **int**：Kivy 的 markup ``[size=…]`` 只接受整数，
+    !️ 必须返回 **int**：Kivy 的 markup ``[size=…]`` 只接受整数，
     传 float 会在渲染时抛 ``ValueError: invalid literal for int()``。
     """
     return int(round(float(v) * FS_SCALE / 2.0) * 2)
@@ -91,22 +91,22 @@ MIN_TOUCH = 44
 #
 # 新增图标前请先跑 ``demo/_check_glyphs.py`` 核验；本表是图标符号的单一来源。
 SYM: Dict[str, str] = {
-    'play': '■',          # 运行/继续（▶ 缺失）→ 实心方块
-    'pause': '‖',         # 暂停（⏸ 缺失）
+    'play': '■',          # 运行/继续（■ 缺失）→ 实心方块
+    'pause': '‖',         # 暂停（‖ 缺失）
     'drop': '⊕',          # 投放
-    'tech': '◆',          # 科技（⌗ 缺失）→ 菱形
+    'tech': '◆',          # 科技（◆ 缺失）→ 菱形
     'skills': '◇',        # 技能（▦ 缺失）→ 空心菱形
     'log': '≡',           # 日志
-    'ach': '★',           # 成就（🏆 emoji 在 kivy 里也不稳）
+    'ach': '★',           # 成就（★ emoji 在 kivy 里也不稳）
     'help': '?',          # 帮助
-    'close': '×',         # 关闭（✕ 缺失）→ 乘号
+    'close': '×',         # 关闭（× 缺失）→ 乘号
     'minus': '－',        # 缩小
     'plus': '＋',         # 放大
     'lock': '□',          # 未解锁等级点
     'done': '■',          # 已解锁等级点
     'a11y_on': '●',       # 色盲辅助四态形状
     'a11y_sel': '▲',
-    'a11y_blk': '★',      # （✖ 缺失）
+    'a11y_blk': '★',      # （× 缺失）
     'a11y_lk': '○',
 }
 
@@ -176,7 +176,7 @@ def fit_width(label: Label, pad: float = 0.0,
               min_w: float = 0.0, max_w: Optional[float] = None) -> Label:
     """让 ``size_hint_x=None`` 的 Label 宽度**恰好贴合**文字（单行不换行）。
 
-    ⚠️⚠️ 绝对不要写 ``label.bind(texture_size=lambda i, v: setattr(i, 'width',
+    !️!️ 绝对不要写 ``label.bind(texture_size=lambda i, v: setattr(i, 'width',
     v[0] + pad))`` —— 这是**正反馈回环**，会把标签撑到几千像素宽：
 
         宽度变 → ``_bind_text_size`` 把 text_size 设成「宽×高」

@@ -140,7 +140,7 @@ class UiStats:
     def _norm(dq: deque) -> List[float]:
         """把一条序列归一化到 0–1（用于像素趋势柱）。
 
-        ⚠️ 用「全局最大值」而非「末值」做分母：顶栏的下载量/算力是单调递增的，
+        !️ 用「全局最大值」而非「末值」做分母：顶栏的下载量/算力是单调递增的，
         用末值归一化会让所有柱子都贴着 1.0（看不出增长）。除以序列最大值后，
         增量趋势才显形；全 0 序列返回全 0，避免除零。
         """
@@ -1159,7 +1159,7 @@ class TechCanvas(FloatLayout):
     def _make_labels(self, nd: TechNode) -> None:
         """给一个节点建 2 个 Label（名称行 / 状态行），加入画布。
 
-        ⚠️ ``size_hint`` 必须关掉 ``(None, None)``：mk_label 默认 (1,1)，
+        !️ ``size_hint`` 必须关掉 ``(None, None)``：mk_label 默认 (1,1)，
         在 FloatLayout 里会被撑成整个画布大小，文字跑到画布角落。
         text_size/size 的最终控制权在 ``_layout_labels``（每次重绘都全量回写）。
         """
@@ -1190,7 +1190,7 @@ class TechCanvas(FloatLayout):
     def _compute_transform(self) -> None:
         """等比缩放铺满可用区（保持长宽比，节点不变形）。
 
-        ⚠️ 坐标系真相（已用像素级实验确认）：
+        !️ 坐标系真相（已用像素级实验确认）：
           * ``canvas.before`` 绘制**完全忽略** widget 的 ``self.pos``——
             在 canvas 里画 ``Rectangle(pos=(0,0))``，无论 widget 在哪，
             都会落在窗口 ``(0,0)``。所以方块坐标必须自己带上**绝对**位置：
@@ -1300,7 +1300,7 @@ class TechCanvas(FloatLayout):
     def _layout_labels(self) -> None:
         """把每个节点的 2 个 Label 摆到方块内。
 
-        ⚠️ 坐标系真相（已用 ``to_window`` + 像素级实验双重确认）：
+        !️ 坐标系真相（已用 ``to_window`` + 像素级实验双重确认）：
           * ``canvas.before/after`` 绘制**完全忽略 widget 的 self.pos**——
             在 canvas 里画 ``Rectangle(pos=(0,0))`` 会落到窗口 (0,0)。
           * **子控件也一样**：``cv.to_window(*nm.pos) == nm.pos``，

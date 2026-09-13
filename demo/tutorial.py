@@ -67,13 +67,13 @@ class TutorialController:
     def _force_layout(w, depth: int = 0) -> None:
         """递归重排 bubble 子树。
 
-        ⚠️ Kivy 布局时序坑：bubble 在 inner 还是默认 100×100 时建立，
+        !️ Kivy 布局时序坑：bubble 在 inner 还是默认 100×100 时建立，
         子控件（含 ScrollView 里的正文 Label）全按 100 基准布局；之后
         inner 变 720×400，但 ScrollView→wrap→body 的深层布局链的延迟
         trigger 不会再执行 → 正文停在 100×10 纹理（= 看不见），按钮挤在
         左下角（文字与面板"分离"）。逐层 do_layout 强制全树归位。
 
-        ⚠️⚠️ 遍历顺序必须是「先父后子」：父容器（bubble/inner）挪动后，
+        !️!️ 遍历顺序必须是「先父后子」：父容器（bubble/inner）挪动后，
         子控件的 pos_hint 是相对**父的新坐标**算的。若先递归子节点再
         `do_layout(父)`，子节点会按父的**旧坐标**归位，于是出现"面板已到
         新位置、标题/按钮还停在上一步位置"的滞后（实测 step2/step3 各错一
@@ -191,7 +191,7 @@ class TutorialController:
             '3️⃣ 每周期放 1 个技能，盯着怀疑度别过 80\n'
             '4️⃣ 渗透到 10% 会自动解锁周边国家，顺势扩张\n'
             '5️⃣ 怀疑度高了就放「深度伪装」压一压\n\n'
-            '操作得当约 80 周期可通关。祝你统治全球舆论 😏',
+            '操作得当约 80 周期可通关。祝你统治全球舆论 ',
             target=None, anchor='center', dim=0.62),
     ]
 
@@ -382,7 +382,7 @@ class TutorialController:
     def _target_rect(self, target: Optional[str]):
         """返回目标控件在 **overlay 局部坐标系** 下的 (x, y, w, h)。
 
-        ⚠️ Kivy 的 ``Widget.pos`` 是**窗口绝对坐标**（不是父控件相对坐标），
+        !️ Kivy 的 ``Widget.pos`` 是**窗口绝对坐标**（不是父控件相对坐标），
         所以取窗口坐标应当直接读 ``w.pos``。旧写法 ``w.to_window(0, 0)``
         语义是「把**父坐标** (0,0) 换算到窗口」→ 返回的是父链偏移（≈(0,0)），
         等于每次都把高亮框画到屏幕左下角。这里改为直接用 ``w.pos`` 再转局部。
@@ -406,7 +406,7 @@ class TutorialController:
         - 纵向：top 锚点放目标上方，放不下就翻到目标下方；bottom 锚点放技能带上方。
         - 所有坐标都在 overlay 局部系（与 _target_rect 一致）。
 
-        ⚠️ 布局时序坑（教程"文字在左下、面板在中"的根因）：
+        !️ 布局时序坑（教程"文字在左下、面板在中"的根因）：
         ``_redraw`` 可能在 overlay 尺寸尚未定稿时被调用（首帧 overlay 仍是
         默认值），此时若直接按错误尺寸摆放会把气泡钉到 (12,12)；而随后
         overlay 尺寸变化只触发 ``_redraw`` 重设 ``bubble.pos``——``bubble`` 是
