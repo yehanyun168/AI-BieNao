@@ -388,7 +388,15 @@ LAYERS = {
                                #       （函数内延迟 import 解循环），不是基础层，置其上
     'ui_v4.py':           4,
     # L5-9 UI 组件 / Mixin
-    'ui_v4_screens.py':   5,
+    # 2026-09-13：ui_v4_screens.py（2327 行，长期占白名单）按职责拆为 6 个模块，
+    # 全部同层 L5（依赖完全相同：ui_v4/pixel_ui/i18n/sfx/origins/flag_draw），
+    # 互相之间只有 screens → 其余 5 个的转发引用，同层允许。
+    'ui_v4_common.py':    5,   # 公共底座：UiStats + small_btn（零 ui_v4_* 依赖）
+    'ui_v4_panels.py':    5,   # 浮层/抽屉：InspectorPanel / DropPreview / LogDrawer
+    'ui_v4_cards.py':     5,   # 页面内重复单元：SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
+    'ui_v4_canvas.py':    5,   # S06 科技树自绘节点网络图：TechNode / TechCanvas
+    'ui_v4_syspages.py':  5,   # 非对局全屏页：HelpPage / SettingsPage / OriginPage
+    'ui_v4_screens.py':   5,   # 对局全屏页 SkillPage / TechPage / AchPage + 家族转发入口
     'ui_shared.py':       6,
     'ui_fx.py':           7,   # P1-8：动效层（依赖 ui_shared/pixel_ui），被 ui_drop/ui_input 延迟调用
     'cursor_fx.py':       7,   # 2026-09-13：光标语义层（只依赖 kivy Window，零项目依赖，
@@ -568,11 +576,9 @@ section("[8] 单文件行数 ≤ 800（P2-1 守卫）")
 FILE_LINE_LIMIT = 800
 LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 实测）
     'pixel_assets.py':   2353,    # 2026-09-12 再登记（原 2352）：台湾归属修正，gen_pixel_map.py 并入 6 格致游程换行 +1；自动生成的游程素材数据，重构 = 换生成器
-    'ui_v4_screens.py':  2327,    # 2026-09-13 再登记（原 2326）：科技树节点点击音效 sfx.play('tech')
-                                  #    （OriginCard/OriginPage 五卡竖排；
-                                  #     T11 技能页网格的 2238 已被本值取代）
-    # 'ui_v4_screens.py' 旧值 2238（T11 技能页网格）
-                                  #    改动态行数（6 卡固定 3×2 → 10 卡自动补到 4 行）
+    # 'ui_v4_screens.py' 已于 2026-09-13 拆分为 6 个模块（common/panels/cards/
+    #   canvas/syspages/screens，各自 267~532 行），不再超限 → 移出白名单。
+    #   若后续任一拆分模块涨过 800 行，需按「再登记约定」显式留痕后重新登记。
     'ui_v4.py':          1980,    # 2026-09-13 再登记（原 1965）：SkillBarCard 裁字/重叠修复
     'engine.py':         1739,    # 2026-09-13 再登记（原 1732）：算力维护费（协作者 273978c）
                                   #    PlayerState.origin 字段 + init_game(origin=)

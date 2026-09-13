@@ -59,8 +59,12 @@ for d in (sfx_dir, bgm_dir):
 # ---- 7) 接线断言：语义音效必须真的被用上，否则等于没集成 ----
 # ⚠️ main.py 必须在内 —— 它此前是唯一零音效接线的 UI 文件（5 主按钮 + 3 存档槽
 # 点击全静默），而旧版这里漏扫 main.py，导致该缺陷长期不被测试发现。
+# 2026-09-13：ui_v4_screens.py 已拆分为 6 个模块，音效调用点随之分散，
+# 扫描清单必须覆盖全家族，否则「已接线」断言会假绿。
 SRC_FILES = ('ui_pages.py', 'ui_session.py', 'ui_input.py', 'ui_drop.py',
-             'main.py', 'intro.py', 'ui_popups.py', 'ui_v4_screens.py')
+             'main.py', 'intro.py', 'ui_popups.py',
+             'ui_v4_common.py', 'ui_v4_panels.py', 'ui_v4_cards.py',
+             'ui_v4_canvas.py', 'ui_v4_syspages.py', 'ui_v4_screens.py')
 src_all = ''.join(open(os.path.join(HERE, f), encoding='utf-8').read()
                   for f in SRC_FILES)
 for needle in ("sfx.play('error')", "sfx.play('page')", "sfx.play('toggle')",

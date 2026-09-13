@@ -727,10 +727,10 @@ _ORG_KEYS += ['intro_skip', 'intro_forum_name', 'intro_s1', 'intro_s2',
 for _lang in (i18n_mod.LANG_ZH, i18n_mod.LANG_EN):
     _miss = [k for k in _ORG_KEYS if k not in i18n_mod.TRANSLATIONS[_lang]]
     assert not _miss, f"i18n[{_lang}] 缺 T16 键: {_miss}"
-_scr = open(os.path.join(_HERE, 'ui_v4_screens.py'), encoding='utf-8').read()
+_scr = open(os.path.join(_HERE, 'ui_v4_syspages.py'), encoding='utf-8').read()
 for _needle in ('class OriginCard', 'class OriginPage', 'origins.ORIGIN_ORDER',
                 'origin_%s_name'):
-    assert _needle in _scr, f"ui_v4_screens.py 缺出身页接线: {_needle}"
+    assert _needle in _scr, f"ui_v4_syspages.py 缺出身页接线: {_needle}"
 _main_src = open(os.path.join(_HERE, 'main.py'), encoding='utf-8').read()
 for _needle in ('import intro', 'import origins', 'def _open_origin_flow',
                 'def _show_origin_page', 'def _close_origin_flow',
