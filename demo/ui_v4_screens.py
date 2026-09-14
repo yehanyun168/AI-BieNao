@@ -182,6 +182,7 @@ class SkillPage(U.PageScreen):
     def __init__(self, on_action: Callable = None, on_sort: Callable = None, **kwargs):
         super().__init__(title=i18n.t('sk_page_title'), **kwargs)
         self._on_action = on_action
+        self._on_sort = on_sort
         self._sort = 'profit'
         self.sort_btns: Dict[str, Button] = {}
 
@@ -232,12 +233,24 @@ class SkillPage(U.PageScreen):
         body_row.add_widget(self.preview)
         self.body.add_widget(body_row)
 
+    def _card_select(self, touch, card, sid: str) -> None:
+        """点击技能卡（卡体，非底部动作按钮）→ 切换右侧预览面板。
+
+        设计修正 2026-09-14：原 hover（on_enter/on_leave）联动不可靠——
+        Kivy 的 on_enter/on_leave 只在**顶层** widget 上派发，技能卡内部
+        塞满子控件（标题/正文/状态芯片/按钮/火花），鼠标几乎总停在某子控件
+        上，card.on_enter 极少触发 → 预览永远卡在第一张（默认）。改用点击
+        选择：桌面 / 触屏都 100% 可靠，且选择保持（不被 clear_if 误清）。
+        """
+        if card.collide_point(*touch.pos) and not card.btn.collide_point(*touch.pos):
+            self.preview.set_skill(sid)
+
     def _pick_sort(self, key: str) -> None:
         if key == 'ready':
             self._sort = 'ready'
         else:
             self._sort = key
-        if self._on_sort:
+        if self._on_sort is not None:
             self._on_sort(self._sort)
 
     def ensure_cards(self, skill_ids: Sequence[str]) -> None:
@@ -257,8 +270,8 @@ class SkillPage(U.PageScreen):
             card = SkillPageCard(
                 on_action=lambda s=sid: self._on_action and self._on_action(s, 'auto'),
                 size_hint_y=None, height=SkillPageCard.CARD_H)
-            card.bind(on_enter=lambda *_, s=sid: self.preview.set_skill(s))
-            card.bind(on_leave=lambda *_, s=sid: self.preview.clear_if(s))
+            card.bind(on_touch_down=lambda touch, c=card, s=sid:
+                      self._card_select(touch, c, s))
             self.cards[sid] = card
             self._grid.add_widget(card)
         # 首屏默认高亮第一张（避免冷启动时右侧空白）

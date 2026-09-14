@@ -103,7 +103,17 @@ def play(name: str, volume: float = 1.0) -> None:
         return
     snd = _SOUNDS.get(name)
     if snd is None:
-        return
+        # 兜底：load_all 时文件可能尚未就位（如打包后首次运行、热更新补资源），
+        # 这里惰性重探并加载，避免「文件明明在却静音」。加载失败仍静默降级。
+        p = _resolve(_base_dir(), name)
+        if p is not None:
+            try:
+                snd = SoundLoader.load(p)
+                _SOUNDS[name] = snd
+            except Exception:
+                snd = None
+        if snd is None:
+            return
     try:
         snd.volume = max(0.0, min(1.0, volume))
         if getattr(snd, 'state', 'stop') == 'play':
