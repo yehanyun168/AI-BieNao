@@ -78,10 +78,13 @@ def normalize_peak(x, peak_dbfs=-3.0):
 def save_ogg(name, x):
     path = os.path.join(OUT, name + '.ogg')
     sf.write(path, x.astype(np.float32), SR, subtype='VORBIS')
+    # 同步产出 .wav：sfx.py 优先 .wav，规避个别机器 sdl2 无 Vorbis 解码导致 OGG 静音
+    wavp = os.path.join(OUT, name + '.wav')
+    sf.write(wavp, x.astype(np.float32), SR, subtype='PCM_16')
     dur = len(x) / SR
     rms = 20 * math.log10(math.sqrt(float(np.mean(x * x))) or 1e-9)
     peak = 20 * math.log10(float(np.max(np.abs(x))) or 1e-9)
-    print(f'  [OK] {name}.ogg  {dur:.2f}s  RMS {rms:.1f} dBFS  '
+    print(f'  [OK] {name}.ogg/.wav  {dur:.2f}s  RMS {rms:.1f} dBFS  '
           f'peak {peak:.1f} dBFS')
     return path
 

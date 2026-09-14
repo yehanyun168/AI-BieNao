@@ -95,12 +95,21 @@ class SkillPreviewPanel(StrokePanel):
         self.lbl_state = PxChip('', tone='plain', height=22)
         self.add_widget(self.lbl_state)
         self.add_widget(hline())
-        # 完整介绍（label.height 跟随 texture_size 自动扩容）
-        self.lbl_full = mk_label('', font_size=FS_CAP, color=COLORS['text'],
-                                 valign='top', markup=True)
+        # 完整介绍：放进 ScrollView 内部滚动，根除 #28「文字向上飘」回环。
+        # 根因：lbl_full 直接挂在固定高面板上、height 反绑 texture_size，
+        # 叠加 mk_label 的 text_size=size 把高度裁死 → 每帧 +4px 顶起上方控件。
+        # 这里直接用 PixelLabel（不走 mk_label 的 text_size=size 自动绑定），
+        # size_hint_y=None + text_size=(w, None) 自适应高度，超长内容面内滚动。
+        self.sv_full = ScrollView(size_hint=(1, 1), do_scroll_x=False)
+        self.lbl_full = PixelLabel(text='', font_size=FS_CAP, color=COLORS['text'],
+                                   halign='left', valign='top', markup=True)
+        self.lbl_full.size_hint_x = 1
         self.lbl_full.size_hint_y = None
+        self.lbl_full.bind(
+            size=lambda inst, v: setattr(inst, 'text_size', (v[0], None)))
         self.lbl_full.bind(texture_size=self._resize_full)
-        self.add_widget(self.lbl_full)
+        self.sv_full.add_widget(self.lbl_full)
+        self.add_widget(self.sv_full)
 
     def _resize_full(self, inst, sz) -> None:
         inst.height = sz[1] + 4 if sz[1] > 0 else 24
