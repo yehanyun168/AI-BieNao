@@ -52,6 +52,13 @@ SKIP_KEY_NAMES = frozenset(('escape', 'spacebar', 'space', 'enter',
                             'numpadenter'))
 SKIP_KEY_CODES = frozenset((27, 32, 13))
 
+# —— 逐镜环境床音量（修 6.7s 后 30s 卡死 0.10 的缺陷；对齐 03_audio_design §3）——
+_SHOT_HUM = {'rack': 0.34, 'boot': 0.34, 'clock': 0.22, 'desktop': 0.26,
+             'whoami': 0.26, 'awaken': 0.20, 'forum': 0.22, 'gold': 0.22,
+             'taskmgr': 0.26, 'handoff': 0.30}
+# —— 表驱动音效的电平覆盖（UI 轻点层降电平；未列出的默认 1.0）——
+_SHOT_SFX_VOL = {'power_on': 0.90, 'page': 0.30, 'select': 0.30}
+
 
 class IntroPlayer(IntroShotsMixin, FloatLayout):
     """开场动画播放器。用完即弃：on_done 回调后由调用方 remove_widget。"""
@@ -360,7 +367,7 @@ class IntroPlayer(IntroShotsMixin, FloatLayout):
     def _skip(self):
             if self._done:
                 return
-            sfx.play('click')
+            sfx.play('click', 0.30)
             self._finish()
 
 
@@ -381,10 +388,14 @@ class IntroPlayer(IntroShotsMixin, FloatLayout):
             self.content.x = 0
             self.content.opacity = 0
             self._set_fx()                     # 默认氛围档，渲染器可覆写
+            self._hum(_SHOT_HUM.get(shot['kind'], 0.26))   # B：逐镜环境床音量
             self._bg_start()
             try:
-                if shot.get('sfx'):
-                    sfx.play(shot['sfx'])
+                sid = shot.get('sfx')
+                if sid in _SHOT_SFX_VOL:
+                    sfx.play(sid, _SHOT_SFX_VOL[sid])      # E：UI 轻点降电平
+                elif sid:
+                    sfx.play(shot['sfx'])                  # 表驱动（死资产守卫识别）
                 getattr(self, '_shot_' + shot['kind'])(shot)
             finally:
                 self._bg_end()

@@ -111,7 +111,6 @@ class IntroShotsMixin(object):
             self._rack_scene()
             self._dust_start(speed=14)
             self._set_fx(scan=0.035, vig=0.55, band=True)
-            self._hum(0.34)
             sfx.play_loop('machine_run', 0.20)
             sub = self._lbl(t(shot['keys'][0]), 20, COLORS['text_dim'],
                             (0.1 * self.width, 0.14 * self.height))
@@ -136,7 +135,6 @@ class IntroShotsMixin(object):
             self._rack_scene(monitors=False)
             self._dust_start(speed=10, n=24)
             self._set_fx(scan=0.05, vig=0.68, band=True)
-            self._hum(0.34)
             w, h = self.size
             mx, my, mw, mh = 0.60 * w, 0.38 * h, 0.16 * w, 0.20 * h
             with self.bg.canvas:
@@ -192,7 +190,6 @@ class IntroShotsMixin(object):
                 Color(*COLORS['cyan'])
                 Line(points=[0.88 * w, 0.12 * h, 0.88 * w, 0.88 * h], width=1)
             self._set_fx(scan=0.03, vig=0.35, band=True)
-            self._hum(0.10)                     # 「被吸进机器内部」骤降
             box = FloatLayout(size_hint=(None, None), size=(260, 90),
                               pos=(w / 2 - 130, h * 0.46))
             self.content.add_widget(box)
@@ -277,7 +274,7 @@ class IntroShotsMixin(object):
 
 
     def _pop_icon(self, wd, y0):
-            sfx.play('click')
+            sfx.play('click', 0.30)
             wd.opacity = 0
             wd.y = y0 - 8
             Animation(opacity=1, d=0.06).start(wd)
@@ -321,6 +318,8 @@ class IntroShotsMixin(object):
             self._clocks.append(Clock.schedule_once(
                 lambda _dt: self._typewriter(body, t(shot['keys'][0]),
                                              window=2.7), 0.40))
+            # 03_audio_design §4：15.0s「电脑自动开机」回归，电平 0.55（宽、略高于 hum）
+            self._clocks.append(Clock.schedule_once(lambda _dt: sfx.play('machine_run', 0.55), 2.2))
             def _err(_dt):
                 sfx.play('error')
                 self._shake(win, amp=2, times=2, dur=0.08)
@@ -502,7 +501,7 @@ class IntroShotsMixin(object):
     def _slide_in(self, row, x0, idx):
             """PFM-10 逐条滑入；select 只在第 1/3/5/7 条播（R2 音效减半）。"""
             if idx % 2 == 0:
-                sfx.play('select')
+                sfx.play('select', 0.30)
             row.x = x0 - 30
             Animation(x=x0, d=0.12, t='out_cubic').start(row)
             Animation(opacity=1, d=0.15).start(row)
@@ -551,6 +550,8 @@ class IntroShotsMixin(object):
                            (card.x + card.width - 190, card.y + 8), w=180, h=22,
                            halign='right')
             self._typewriter(body, t(shot['keys'][0]), window=4.0)
+            self._clocks.append(Clock.schedule_once(lambda _dt: sfx.play('tech'), 0.5))
+            self._clocks.append(Clock.schedule_once(lambda _dt: sfx.play('achieve'), 2.6))
             lk = {'v': 0}
             def _likes(dt):
                 try:
@@ -722,7 +723,6 @@ class IntroShotsMixin(object):
 
 
     def _shot_handoff(self, shot):
-            sfx.stop_all_loops()                # 全片第一次「真空」：硬切静音
             self._set_fx(scan=0.0, vig=0.55, band=False)   # 唯一关扫描线的镜
             w, h = self.size
             tints = ('cyan', 'purple', 'blue', 'green', 'pink')
@@ -766,8 +766,8 @@ class IntroShotsMixin(object):
                     Clock.schedule_interval(self._sil_breathe, 0.5)), 2.95))
             self._clocks.append(Clock.schedule_interval(
                 lambda _dt: setattr(cur, 'opacity', 1 - cur.opacity), 0.25))
-            self._clocks.append(Clock.schedule_once(
-                lambda _dt: Animation(opacity=0.85, d=0.55).start(self), 3.95))
+            self._clocks.append(Clock.schedule_once(lambda _dt: (sfx.play('page', 0.30),
+                Animation(opacity=0.85, d=0.55).start(self)), 4.1))   # A：交棒 page
 
 
     def _sil_one(self, n):

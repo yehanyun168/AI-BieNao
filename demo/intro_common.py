@@ -38,8 +38,7 @@ INTRO_SHOTS = [
      'sfx': 'drop'},                                                    # SHOT06
     {'kind': 'forum',   'dur': 7.0, 'keys': ('intro_s4', 'intro_s5'),
      'sfx': 'page'},                                                    # SHOT07
-    {'kind': 'gold',    'dur': 6.0, 'keys': ('intro_s6',),
-     'sfx': 'unlock'},                                                  # SHOT08
+    {'kind': 'gold',    'dur': 6.0, 'keys': ('intro_s6',)},            # SHOT08
     {'kind': 'taskmgr', 'dur': 5.0, 'keys': ('intro_tm_title', 'intro_s7a',
                                               'intro_s7b', 'intro_s7_cpu',
                                               'intro_tm_end', 'intro_s8'),
