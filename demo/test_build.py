@@ -160,6 +160,10 @@ assert snapshot == restored, f"读档后状态不一致：{snapshot} vs {restore
 print(f"   ■ 存档/读档一致（tick {restored[0]} / {restored[1]:.1f}M）")
 
 # --- 9. F12 自适应：缩放基础设施必须真的改到字号/行高 ---
+# 基准钉死 user_scale=1.0：preferences 会把 ui_scale 持久化到
+# demo/settings.json，上一轮测试（如 test_zoom_controls）留下的
+# 0.70/1.60 会让 +/- 被 min/max 夹住、断言失真（与执行顺序解耦）。
+ui.user_scale = 1.0
 ui._apply_scale()
 base_font = ui.stats_compute.font_size
 base_fx = ui.skill_cards['push_song'].lbl_fx.font_size

@@ -351,6 +351,7 @@ LAYERS = {
     # L0 纯逻辑：零项目依赖
     'conditions.py':      0,
     'balance.py':         0,
+    'preferences.py':     0,   # 全局偏好 JSON；应用阶段仅在函数内延迟 import
     'onboarding.py':      0,   # T03：首局节奏开关（纯 TUNE 读取，零项目依赖）
     'i18n.py':            0,   # P1-8：文案表，零项目依赖；engine(L3) 引用属合法
                                #       逻辑依赖（此前不在白名单导致违规漏报，现按定级放行）
@@ -406,6 +407,7 @@ LAYERS = {
     'ui_v4_syspages.py':  5,   # 非对局全屏页：HelpPage / SettingsPage / OriginPage
     'ui_v4_screens.py':   5,   # 对局全屏页 SkillPage / TechPage / AchPage + 家族转发入口
     'ui_shared.py':       6,
+    'ui_preferences.py':  7,   # 应用纯偏好到声音、语言及 UI 运行时
     'ui_fx.py':           7,   # P1-8：动效层（依赖 ui_shared/pixel_ui），被 ui_drop/ui_input 延迟调用
     'cursor_fx.py':       7,   # 2026-09-13：光标语义层（只依赖 kivy Window，零项目依赖，
                                #       与 ui_fx/ui_modal 同级；由 main 在 GameUI/MainMenu 装配）
@@ -604,11 +606,13 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     941 条 CRITICAL」降回 0 条）
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
-    'main.py':           1512,    # 2026-09-14 再登记：跨对局设置移植（+9 行）
-                                  #    「暂停 + 打开设置页」（GameUI._pause_menu 标记 +1 行）
-                                  #    开场动画 v2 持久化接线（start_load_game 补播判定 +
-                                  #    _play_intro_then/_finish_intro_and_enter + _enter_game 置位）
-                                  # 'main.py' 旧值 1455（T16 出身流程重排）／1377（T13 挑战码导入）
+    'main.py':           1543,    # 2026-09-14 五度登记（原 1533）：开场动画收尾停
+                                  #    BGM 后，取消出身页回菜单要接回菜单曲池 ——
+                                  #    新增 _close_origin_flow_to_menu（+10 行）
+                                  #    （原 1533 = 合并协作者分支：设置浮层回调 +
+                                  #     设置页 values 传参；1523 = 音频启动加载前移）
+    'ui_input.py':        801,    # 2026-09-14 登记（原走 800 默认上限）：
+                                  #    合并协作者分支（事件暂停 +1 行）
     'i18n.py':           1387,    # 2026-09-14 再登记（原 1381）：右侧预览面板兜底文案
                                   #    sk_preview_empty / sk_preview_missing ×2 语
                                   #    （原 1381：技能完整介绍 sk_full_* + sk_detail_*

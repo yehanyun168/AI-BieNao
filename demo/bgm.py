@@ -254,9 +254,13 @@ def update(state: str) -> None:
     global _current
     if state not in STATES:
         return
-    if not BGM_ON or not _LOADED:
+    if not BGM_ON:
         _current = state          # 记住状态，等开关打开时补播
         return
+    if not _LOADED:
+        # 自举（2026-09-14 修）：与 sfx 同构 —— 主菜单阶段 update('menu')
+        # 先于 load_all() 执行，被 `not _LOADED` 拦下 → 主菜单/开场无音乐。
+        load_all()
     if state == _current:
         return
     old_stem = _playing

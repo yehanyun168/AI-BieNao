@@ -17,6 +17,7 @@ share/*.zip
 
 # ===== 运行时数据 / 日志（存档属玩家数据，不入库）=====
 demo/saves/
+demo/settings.json
 *.log
 crash.log
 
@@ -45,3 +46,6 @@ desktop.ini
 # 汇总后的稳定基线见 docs/帧率基线_0913.md）
 demo/perf.log
 assets_library/
+
+# ===== WorkBuddy 会话产物（含 artifacts / memory，不入库）=====
+.workbuddy/

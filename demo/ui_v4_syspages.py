@@ -194,8 +194,13 @@ class SettingsPage(U.PageScreen):
                  on_music: Callable = None,
                  on_tutorial: Callable = None,
                  slot_actions: Callable = None, on_reset: Callable = None,
+                 values: dict = None,
                  **kwargs):
         super().__init__(title=i18n.t('set_page_title'), **kwargs)
+        # 2026-09-14（合并协作者分支移植）：values = 已持久化的跨对局设置。
+        # 设置页各开关按存档值初始化，而不是一律写死默认值 —— 否则玩家
+        # 改过设置后重开，页面显示与实际生效值不一致。
+        values = values or {}
         self.add_head_widget(small_btn(i18n.t('set_restore'), 'plain',
                                        lambda: on_reset and on_reset(),
                                        height=32, font_size=FS_CAP))
@@ -206,11 +211,14 @@ class SettingsPage(U.PageScreen):
                            spacing=10, padding=(10, 10))
         left.add_widget(_section_band(i18n.t('set_display'), SPR_GEAR, PAL_GEAR))
 
-        self.lbl_lang_val = SegSwitch([i18n.t('lang_zh'), i18n.t('lang_en')], 0,
-                                      on_change=lambda i: on_lang and on_lang(i))
+        self.lbl_lang_val = SegSwitch(
+            [i18n.t('lang_zh'), i18n.t('lang_en')],
+            1 if i18n.get_lang() == i18n.LANG_EN else 0,
+            on_change=lambda i: on_lang and on_lang(i))
         left.add_widget(self._row('set_lang', self.lbl_lang_val,
                                   i18n.t('set_lang_hint')))
-        self.sw_speed = SegSwitch(['×0.5', '×1', '×2', '×4'], 1,
+        self.sw_speed = SegSwitch(['×0.5', '×1', '×2', '×4'],
+                                  values.get('speed_idx', 1),
                                   on_change=lambda i: on_speed and on_speed(i))
         left.add_widget(self._row('set_speed', self.sw_speed, ''))
 
@@ -223,11 +231,16 @@ class SettingsPage(U.PageScreen):
         _tf = [i18n.t('set_off'), i18n.t('set_on')]      # 通用开/关
         _mf = [i18n.t('set_motion_full'), i18n.t('set_motion_low')]
         _gf = [i18n.t('set_grid_off'), i18n.t('set_grid_dim'), i18n.t('set_grid_strong')]
-        self.sw_motion = _seg('set_motion', _mf, 0, on_motion)
-        self.sw_grid = _seg('set_grid', _gf, 1, on_grid)
-        self.sw_a11y = _seg('set_a11y', _tf, 1, on_a11y)
-        self.sw_sound = _seg('set_sound', _tf, 1, on_sound)
-        self.sw_music = _seg('set_music', _tf, 1, on_music)
+        self.sw_motion = _seg('set_motion', _mf,
+                              int(values.get('reduce_motion', False)), on_motion)
+        self.sw_grid = _seg('set_grid', _gf,
+                            values.get('grid_mode', 1), on_grid)
+        self.sw_a11y = _seg('set_a11y', _tf,
+                            int(values.get('a11y_shapes', True)), on_a11y)
+        self.sw_sound = _seg('set_sound', _tf,
+                             int(values.get('sound_on', True)), on_sound)
+        self.sw_music = _seg('set_music', _tf,
+                             int(values.get('music_on', True)), on_music)
 
         # UI 缩放行
         zoom = BoxLayout(orientation='horizontal', spacing=8,

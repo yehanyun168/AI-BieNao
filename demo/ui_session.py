@@ -14,6 +14,7 @@ import engine
 import save_manager
 import sfx
 import bgm
+import preferences
 import ui_v4 as U
 import ui_v4_screens as S
 import ui_shared as ST
@@ -64,6 +65,13 @@ class SessionMixin:
             self._walk_refresh(ch, depth + 1)
 
     def _on_window_resize(self, window, w, h) -> None:
+        pending = getattr(self, '_resize_fit_event', None)
+        if pending is not None:
+            pending.cancel()
+        self._resize_fit_event = Clock.schedule_once(self._fit_after_resize, 0.15)
+
+    def _fit_after_resize(self, _dt) -> None:
+        self._resize_fit_event = None
         self._apply_scale()
 
     def _zoom_btn(self, delta: float) -> None:
@@ -72,6 +80,7 @@ class SessionMixin:
         else:
             self.user_scale = min(max(self.user_scale + delta, 0.70), 1.60)
         self._apply_scale()
+        preferences.update(ui_scale=self.user_scale)
         self._notify(f"{t('scale_label')} ×{self.user_scale:.2f}")
 
     def adjust_scale(self, delta: float) -> None:
@@ -138,19 +147,21 @@ class SessionMixin:
             self._notify(save_manager.load_fail_text(reason))
 
     def toggle_lang(self) -> None:
-        set_lang(LANG_EN if get_lang() == LANG_ZH else LANG_ZH)
-        self._rebuild_lang()
+        self._set_lang_idx(1 if get_lang() == LANG_ZH else 0)
 
     def _rebuild_lang(self) -> None:
         """切换语言后重建所有带文案的控件"""
+        page_name = getattr(self._page, 'page_name', None)
         _update_window_title()
         self.lang_switch.set_tone('plain', LANG_CHIP_TAG[get_lang()])
         self.help_chip.set_tone('plain', '? ' + t('rail_help'))
         for sid, card in self.skill_cards.items():
             card.set_texts(self._skill_name(sid), self._skill_desc(sid))
         for sid, btn in self.rail.buttons.items():
-            pass
-        self.lbl_logo.text = f"[b]{t('app_title')}[/b]"
+            btn._caption = '' if sid == 'help' else t(f'rail_{sid}')
+            btn._sync_text()
+        self.lbl_tick_cap.text = t('stats_tick')
+        U.fit_width(self.lbl_tick_cap, pad=6)
         self.lbl_grey.text = t('drop_grey_note')
         self.drop_hint.set_tone('on', t('drop_click_hint'))
         self.layer_hud.seg.set_options([t(LAYER_LABEL_KEY[k]) for k in LAYER_KEYS])
@@ -158,7 +169,17 @@ class SessionMixin:
         self._sync_pause_button()
         self._sync_region_tabs()
         self._apply_layer()
+        self._stat_prev.clear()
         self.refresh_all()
+        self._refresh_tech_page()
+        if page_name:
+            self.close_page()
+            self.open_page(page_name)
+        evt = getattr(self, '_active_choice_event', None)
+        popup = getattr(self, '_active_choice_popup', None)
+        if evt is not None and popup is not None:
+            popup.dismiss()
+            self.show_choice_popup(evt)
 
     def _sync_pause_button(self) -> None:
         """底部暂停按钮文案的唯一来源（玩家反馈 #1）。
@@ -199,6 +220,11 @@ class SessionMixin:
             self.stop_ticking()
             bgm.pause()                  # 随游戏一同暂停 BGM
         self.refresh_all()
+
+    def _pause_for_event(self) -> None:
+        """事件弹窗复用手动暂停流程；已暂停时保持原状态。"""
+        if not self.paused:
+            self.toggle_pause()
 
     def _resume_from_pause(self) -> None:
         """按暂停前冻结的剩余秒数恢复周期进度（而非重置为整周期）。"""
@@ -261,12 +287,14 @@ class SessionMixin:
         self.speed_idx = max(0, min(int(i), len(ST.SPEED_STEPS) - 1))
         self.speed_mult = ST.SPEED_STEPS[self.speed_idx]
         ST.CURRENT_SPEED_IDX = self.speed_idx
+        preferences.update(speed_idx=self.speed_idx)
         self._reschedule_tick()
         self.refresh_all()
 
     def _set_motion_idx(self, i: int) -> None:
         """动效开关：0=完整 / 1=减弱（P0-5）。"""
         ST.REDUCE_MOTION = bool(int(i))
+        preferences.update(reduce_motion=ST.REDUCE_MOTION)
         self._reschedule_countdown()
 
     def _cd_interval(self) -> float:
@@ -283,6 +311,7 @@ class SessionMixin:
     def _set_a11y_idx(self, i: int) -> None:
         """色盲辅助开关：0=关 / 1=开（P0-5）。"""
         ST.A11Y_SHAPES = bool(int(i))
+        preferences.update(a11y_shapes=ST.A11Y_SHAPES)
         if getattr(self, 'legend_hud', None) is not None:
             self.legend_hud.apply_a11y()
 
@@ -295,11 +324,13 @@ class SessionMixin:
         """
         sfx.set_enabled(bool(int(i)))
         sfx.play('toggle')
+        preferences.update(sound_on=sfx.SFX_ON)
 
     def _set_music_idx(self, i: int) -> None:
         """音乐开关：0=关 / 1=开（T09）。关闭停播，开启按当前怀疑度补播。"""
         bgm.set_enabled(bool(int(i)))
         sfx.play('toggle')
+        preferences.update(music_on=bgm.BGM_ON)
 
     def exit_to_menu(self) -> None:
         self.stop_ticking()

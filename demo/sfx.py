@@ -99,8 +99,15 @@ def set_enabled(on: bool) -> None:
 
 def play(name: str, volume: float = 1.0) -> None:
     """播放一个音效；关闭 / 未加载 / 异常时静默 no-op。"""
-    if not SFX_ON or not _LOADED:
+    if not SFX_ON:
         return
+    if not _LOADED:
+        # 自举（2026-09-14 修）：_LOADED 只由 load_all() 置位，而原本只有
+        # GameUI.__init__ 会调它 —— 启动阶段（主菜单 / 开场动画）_LOADED
+        # 恒为 False，play() 会在加载前直接 return，导致整段静默（连下面
+        # 的惰性重探兜底都被挡住）。改为首次播放前按需自举一次，从此调用
+        # 顺序不再影响发声。
+        load_all()
     snd = _SOUNDS.get(name)
     if snd is None:
         # 兜底：load_all 时文件可能尚未就位（如打包后首次运行、热更新补资源），
@@ -147,8 +154,10 @@ def play_loop(name: str, volume: float = 1.0) -> None:
     音量包络（如 server_hum 的电涌掉压 0.34→0.08→渐起）由调用方用
     Animation(snd.volume) 或 Clock 驱动 —— Kivy Sound.volume 是可动画属性。
     """
-    if not SFX_ON or not _LOADED:
+    if not SFX_ON:
         return
+    if not _LOADED:
+        load_all()      # 同上：循环床同样受制于启动顺序，按需自举
     cur = _LOOP_SOUNDS.get(name)
     if cur is not None:
         try:

@@ -44,6 +44,7 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 # intro_v2：SAVE_VERSION 3 → 4。新增 player.intro_seen（该档是否看过/
 # 跳过过开场动画），v3 老档经 _v3_to_v4 补 False —— 语义=「没播过」，
 # 老玩家下次继续游戏时补播一次新开场，此后不再重复。
+# v4（协作方改动）：新增游戏开局年月，日期随周期推进并可跨存档延续。
 SAVE_VERSION = 4
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 DEFAULT_SLOT = 'slot1.json'
@@ -148,6 +149,8 @@ def save(path: str = None) -> str:
             'suspicion': p.suspicion,
             'suspicion_peak': getattr(p, 'suspicion_peak', 0.0),
             'tick_count': p.tick_count,
+            'start_year': p.start_year,
+            'start_month': p.start_month,
             'events_history': p.events_history,
             'skill_cooldowns': dict(p.skill_cooldowns),
             'selected_country': p.selected_country,
@@ -227,6 +230,8 @@ def _apply_save(data: dict) -> None:
     p.suspicion = ps['suspicion']
     p.suspicion_peak = ps.get('suspicion_peak', ps['suspicion'])
     p.tick_count = ps['tick_count']
+    p.start_year = ps['start_year']
+    p.start_month = ps['start_month']
     p.events_history = ps.get('events_history', [])
     p.skill_cooldowns = ps.get('skill_cooldowns', {})
     p.selected_country = ps.get('selected_country')
@@ -334,15 +339,20 @@ _MIGRATIONS[2] = _v2_to_v3
 
 
 def _v3_to_v4(d: dict) -> dict:
-    """v3 → v4（intro_v2 开场动画播放状态）：纯函数迁移，只增字段。
+    """v3 → v4：补 intro_seen（开场播放状态）+ 游戏起始年月。
 
-    v3 档没有 intro_seen —— 补 False（=「没播过」）：老玩家下次继续
-    游戏时补播一次重制开场，播完立刻落盘，此后不再重复。与
-    seen_tutorial / origin 的「缺键 = 最保守的还没发生过」约定一致。
+    - intro_seen：v3 档没有该字段，补 False（=「没播过」）—— 与
+      seen_tutorial / origin 的「缺键 = 最保守的还没发生过」约定一致；
+      老玩家下次继续游戏时补播一次重制开场，播完立刻落盘，此后不再重复。
+    - start_year / start_month（协作方改动）：旧档以迁移时的设备年月
+      作为游戏起始年月，日期随周期推进并可跨存档延续。
     """
     ps = d.get('player')
     if isinstance(ps, dict):
         ps.setdefault('intro_seen', False)
+        now = datetime.now()
+        ps.setdefault('start_year', now.year)
+        ps.setdefault('start_month', now.month)
     d['version'] = SAVE_VERSION
     return d
 

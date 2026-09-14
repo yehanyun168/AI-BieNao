@@ -358,6 +358,8 @@ import intro            # T16 开场动画播放器（仅首次新档播放）
 import origins          # T16 觉醒出身表（OriginPage 数据源）
 import sfx  # 音效管理器（失败安全；tools/gen_sfx.py 合成的 CC0 WAV）
 import bgm  # 背景音乐管理器（两态 calm/tense 随怀疑度切换；T09）
+import preferences
+import ui_preferences
 from ui_v4 import (LegendChip, SaveSlotRow, SegSwitch, mk_label, fit_width)
 from tutorial import TutorialController   # P0-1 新手引导步骤机
 
@@ -384,6 +386,7 @@ from ui_session import SessionMixin
 from ui_input import InputMixin
 from ui_commissions import CommissionMixin
 
+ui_preferences.load_and_apply()
 _update_window_title()
 Window.clearcolor = (0.051, 0.067, 0.090, 1)
 
@@ -415,7 +418,7 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self.speed_mult: float = ST.SPEED_STEPS[self.speed_idx]
         self._tick_deadline: float = Clock.get_time() + ST.BASE_TICK_SECONDS
         self._cd_clock = None
-        self.user_scale = 1.0
+        self.user_scale = preferences.get('ui_scale')
         self._scalables = []
         self.scale = self._compute_scale()
         self.active_region = None
@@ -438,6 +441,7 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._reticles = []
 
         self._build_ui()
+        self.map_widget.set_grid_mode(ST.GRID_MODE)
         # P1-2：悬停技能卡 → 底部预览条（只加信息，不改点击即释放的手感）
         self._bind_skill_hover()
         # 光标方案 A：按语义切换系统光标（可点→hand / 投放→crosshair /
@@ -650,14 +654,14 @@ class MainMenu(FloatLayout):
         self.on_continue = on_continue
         self.on_exit = on_exit
         self.on_start_new_slot = on_start_new_slot
-        self.user_scale = 1.0
+        self.user_scale = preferences.get('ui_scale')
         self._scalables = []
         self._overlay = None
         self._ng_modal = None            # P2-3 新档弹窗（打开时接管按键）
         self._origin_flow = None         # T16 开场动画/出身页浮层（打开时接管按键）
         self._sel_slot = 1                # 默认选中槽位 02（设计稿）
         self.scale = self._compute_scale()
-        self._build()
+        self._build(); self.sil_map.set_grid_mode(ST.GRID_MODE)
         self._apply_scale()
         # 光标方案 A：主菜单同样装（5 主按钮 + 3 存档槽才有手型反馈）。
         # MainMenu 无 drop_mode 属性 —— cursor_fx 用 getattr 取、缺省 False，
@@ -673,9 +677,6 @@ class MainMenu(FloatLayout):
         except Exception:
             self._keyboard = None  # 拿不到键盘 = 本机不支持键位操作，鼠标仍可用
 
-    # --------------------------------------------------------
-    # 缩放
-    # --------------------------------------------------------
     def _compute_scale(self) -> float:
         w = Window.width or self.DESIGN_W
         h = Window.height or self.DESIGN_H
@@ -690,6 +691,13 @@ class MainMenu(FloatLayout):
         return widget
 
     def _on_resize(self, *_a) -> None:
+        pending = getattr(self, '_resize_fit_event', None)
+        if pending is not None:
+            pending.cancel()
+        self._resize_fit_event = Clock.schedule_once(self._fit_after_resize, 0.15)
+
+    def _fit_after_resize(self, _dt) -> None:
+        self._resize_fit_event = None
         self._apply_scale()
 
     def _apply_scale(self) -> None:
@@ -714,12 +722,13 @@ class MainMenu(FloatLayout):
 
     def rebuild(self) -> None:
         """语言切换后整页重建（文案全在控件上）。"""
-        keep_overlay = self._overlay is not None
-        if keep_overlay:
+        reopen_settings = isinstance(self._overlay, S.SettingsPage)
+        if self._overlay is not None:
             self._close_overlay()
         self._build()
+        self.sil_map.set_grid_mode(ST.GRID_MODE)
         self._apply_scale()
-
+        if reopen_settings: self._open_settings()
     # --------------------------------------------------------
     # 布局
     # --------------------------------------------------------
@@ -962,11 +971,21 @@ class MainMenu(FloatLayout):
             on_picked(oid)
 
         page = S.OriginPage(on_pick=_picked,
-                            on_cancel=self._close_origin_flow)
+                            on_cancel=self._close_origin_flow_to_menu)
         page.size_hint = (1, 1)
         page.pos_hint = {'x': 0, 'y': 0}
         self._origin_flow = page
         self.add_widget(page)
+
+    def _close_origin_flow_to_menu(self) -> None:
+        """取消出身选择 → 回主菜单：摘浮层并**恢复主菜单 BGM**。
+
+        开场动画收尾（播完 / 跳过）会 bgm.stop()，取消出身页回到菜单时不
+        接回来的话菜单就静音了。bgm.update('menu') 幂等：本来就在菜单曲池
+        时无开销；音乐开关关闭时 update() 只记状态不出声。
+        """
+        self._close_origin_flow()
+        bgm.update('menu')
 
     def _close_origin_flow(self) -> None:
         if self._origin_flow is not None:
@@ -1093,6 +1112,7 @@ class MainMenu(FloatLayout):
         else:
             self.user_scale = min(max(self.user_scale + d, 0.70), 1.60)
         self._apply_scale()
+        preferences.update(ui_scale=self.user_scale)
 
     # 主菜单设置浮层回调：音效/音乐/动效/色盲/速度（进游戏时 GameUI 读取）
     def _set_sound_idx(self, i: int) -> None:
@@ -1133,11 +1153,12 @@ class MainMenu(FloatLayout):
             on_lang=self._set_lang_idx,
             on_scale=self._scale_delta,
             on_speed=self._set_speed_idx,
-            on_grid=lambda i: self.sil_map.set_grid_mode(i),
+            on_grid=lambda i: ui_preferences.set_grid(i, self.sil_map),
             on_a11y=self._set_a11y_idx,
             on_motion=self._set_motion_idx,
             on_sound=self._set_sound_idx,
             on_music=self._set_music_idx,
+            values=preferences.get(),
             slot_actions=self._slot_actions,
             on_reset=self._reset_settings)
         page.rebuild_slots(read_slot_rows(self._sel_slot))
@@ -1213,7 +1234,6 @@ class MainMenu(FloatLayout):
         self.user_scale = 1.0
         set_grid(1, self.sil_map)
         self._apply_scale()
-
     def _set_lang_idx(self, idx: int) -> None:
         set_language(LANG_EN if idx == 1 else LANG_ZH)
         _update_window_title()
@@ -1252,7 +1272,7 @@ class MainMenu(FloatLayout):
             # T16：开场动画 / 出身页打开时接管按键——Esc 取消流程回主菜单，
             # 其余键交动画层（IntroPlayer 自绑定键盘，这里只防菜单快捷键劫持）
             if key == 'escape' and isinstance(self._origin_flow, S.OriginPage):
-                self._close_origin_flow()
+                self._close_origin_flow_to_menu()
                 return True
             return False
         if self._ng_modal is not None:
@@ -1461,6 +1481,17 @@ class AIBienaoApp(App):
             load_and_apply()
         except Exception:
             pass  # 偏好加载失败安全：回退到 ui_shared 默认值，不影响开局
+        # 2026-09-14 修（开场动画/主菜单无声的根因）：音频必须在这里、
+        # 即 RootView（内含 MainMenu）构建**之前**加载。
+        # 原 sfx.load_all()/bgm.load_all() 只写在 GameUI.__init__（进对局
+        # 才执行），而 sfx.play()/sfx.play_loop()/bgm.update() 都有
+        # `not _LOADED` 前置拦截 —— 于是启动阶段的「主菜单按钮点击音」「
+        # 开场动画音效」「主菜单 BGM」全被静默跳过，只有进对局后才出声。
+        try:
+            sfx.load_all()
+            bgm.load_all()
+        except Exception:
+            pass  # 音频加载失败安全：无音频后端则全部 no-op，不影响开局
         _register_fonts()
         engine.init_game()
         self.root_view = RootView()

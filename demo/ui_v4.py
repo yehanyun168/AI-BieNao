@@ -1750,29 +1750,28 @@ class AchCell(Widget):
         self._icon_lbl.color = (COLORS['green'] if self.got else COLORS['text_mute'])
 
 
-# ============================================================
-# LogRow —— 事件日志行（设计稿 .logrow：左侧 3px 类型色条）
-# ============================================================
 LOG_TONE = {'i': 'cyan', 'w': 'orange', 'e': 'red', 'g': 'green'}
-
-
 class LogRow(Widget):
     """日志行：左色条 + [周期] 文案。"""
 
+    MIN_HEIGHT, PAD_Y = 32, 6
     def __init__(self, text: str = '', tone: str = 'i', **kwargs):
         kwargs.setdefault('size_hint_y', None)
-        kwargs.setdefault('height', 22)
+        kwargs.setdefault('height', self.MIN_HEIGHT)
         super().__init__(**kwargs)
         self.tone = tone
-        self.lbl = mk_label(text, font_size=FS_CAP, color=COLORS['text_dim'])
+        self.lbl = mk_label(text, font_size=FS_CAP, color=COLORS['text_dim'], valign='middle')
         self.add_widget(self.lbl)
         self.bind(pos=self._layout, size=self._layout)
+        self.lbl.bind(
+            texture_size=lambda _, s: setattr(self, 'height', max(self.MIN_HEIGHT, s[1] + self.PAD_Y * 2)))
         self._layout()
 
     def _layout(self, *_args) -> None:
-        self.lbl.pos = (self.x + 9, self.y)
-        self.lbl.size = (max(self.width - 13, 1), self.height)
-        self.lbl.text_size = self.lbl.size
+        width = max(self.width - 13, 1)
+        self.lbl.size = (width, max(self.lbl.texture_size[1], FS_CAP + 2))
+        self.lbl.text_size = (width, None)
+        self.lbl.pos = (self.x + 9, self.y + (self.height - self.lbl.height) / 2)
         self._redraw()
 
     def _redraw(self, *_args) -> None:

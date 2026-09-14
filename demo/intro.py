@@ -21,7 +21,8 @@ Clock 回调内 try/except；换镜 _cancel_tree 全树 cancel Animation（铁�
 
 跳过契约（沿用 v1，用户已验收）：右下角「» 跳过 (ESC)」第一帧即可见可点；
 键盘只认 ESC/空格/回车；点击任意处跳过；播放期间吞触摸防穿透主菜单；
-on_done 由调用方接 OriginPage；跳过/播完均立即收尾（stop_all_loops 防漏音）。
+on_done 由调用方接 OriginPage；跳过/播完均立即收尾
+（stop_all_loops 防漏音 + bgm.stop() 停开场音乐）。
 
 播放规则（2026-09-14 定版）：是否播放由 main 按 player.intro_seen 判定
 （新游戏必播；旧档已播过则跳过），本模块不判存档。BGM 按用户指示暂空，
@@ -40,6 +41,7 @@ from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 
+import bgm
 import sfx
 from i18n import t
 from intro_common import (INTRO_SHOTS, MIN_CPS, PANEL_LIT, RACK_EDGE, _ease,
@@ -361,6 +363,12 @@ class IntroPlayer(IntroShotsMixin, FloatLayout):
             self._cancel_tree(self.content, self.bg, self.fx, self.skip_btn)
             self._release_kb()
             sfx.stop_all_loops()               # 循环床兜底，防漏音
+            # BGM（2026-09-14 用户规则）：开场动画播完 / 被跳过后，
+            #   开场期间放着的音乐必须立刻停 —— 动画层是盖在主菜单上的
+            #   浮层，不停的话菜单曲会一路漏进出身页甚至对局。
+            #   后续界面各自负责接回自己的曲池（进局 bgm.update('calm')、
+            #   取消回菜单 bgm.update('menu')）。
+            bgm.stop()
             cb, self._on_done = self._on_done, None
             if callable(cb):
                 cb()
