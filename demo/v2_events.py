@@ -114,7 +114,11 @@ class V2Effect:
 @dataclass
 class V2Option:
     text: str
+    text_en: str = ''
     effects: List[V2Effect] = field(default_factory=list)
+
+    def text_for(self, lang: str = 'zh') -> str:
+        return self.text_en or self.text if lang == 'en' else self.text
 
 
 @dataclass
@@ -132,6 +136,14 @@ class V2Event:
     progress_min: float = 0.0            # 触发所需全球渗透率
     tech_gate: Optional[Tuple[str, int]] = None   # (slot_id, level)
     options: List[V2Option] = field(default_factory=list)
+    title_en: str = ''
+    flavor_en: str = ''
+
+    def title_for(self, lang: str = 'zh') -> str:
+        return self.title_en or self.title if lang == 'en' else self.title
+
+    def flavor_for(self, lang: str = 'zh') -> str:
+        return self.flavor_en or self.flavor if lang == 'en' else self.flavor
 
 
 # ============================================================
@@ -200,7 +212,8 @@ def load_events(path: str = None) -> List[V2Event]:
                     ach_id=f.get('ach_id'),
                     ending_id=f.get('ending_id'),
                 ))
-            options.append(V2Option(text=o.get('text', ''), effects=effs))
+            options.append(V2Option(
+                text=o.get('text', ''), text_en=o.get('text_en', ''), effects=effs))
 
         events.append(V2Event(
             id=e['id'],
@@ -216,6 +229,8 @@ def load_events(path: str = None) -> List[V2Event]:
             progress_min=float(trig.get('global_progress_min', 0) or 0),
             tech_gate=tech_gate,
             options=options,
+            title_en=e.get('title_en', ''),
+            flavor_en=e.get('flavor_en', ''),
         ))
     return events
 

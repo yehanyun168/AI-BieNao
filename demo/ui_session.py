@@ -159,7 +159,6 @@ class SessionMixin:
         for sid, btn in self.rail.buttons.items():
             btn._caption = '' if sid == 'help' else t(f'rail_{sid}')
             btn._sync_text()
-        self.lbl_logo.text = f"[b]{t('app_title')}[/b]"
         self.lbl_tick_cap.text = t('stats_tick')
         U.fit_width(self.lbl_tick_cap, pad=6)
         self.lbl_grey.text = t('drop_grey_note')
@@ -175,6 +174,11 @@ class SessionMixin:
         if page_name:
             self.close_page()
             self.open_page(page_name)
+        evt = getattr(self, '_active_choice_event', None)
+        popup = getattr(self, '_active_choice_popup', None)
+        if evt is not None and popup is not None:
+            popup.dismiss()
+            self.show_choice_popup(evt)
 
     def _sync_pause_button(self) -> None:
         """底部暂停按钮文案的唯一来源（玩家反馈 #1）。

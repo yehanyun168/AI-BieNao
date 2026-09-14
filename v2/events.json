@@ -23,7 +23,8 @@
             "type": "add_suspicion",
             "value": 3
           }
-        ]
+        ],
+        "text_en": "Ride the hype and respond now"
       },
       {
         "text": "观望",
@@ -33,9 +34,12 @@
             "country": "US",
             "value": "20%"
           }
-        ]
+        ],
+        "text_en": "Wait and see"
       }
-    ]
+    ],
+    "title_en": "🚀 Major US AI Model Launch",
+    "flavor_en": "A leading US AI company releases a new model, sending global interest in AI soaring."
   },
   {
     "id": "evt_us_sue",
@@ -57,7 +61,8 @@
             "type": "reduce_suspicion",
             "value": 15
           }
-        ]
+        ],
+        "text_en": "Pay to settle"
       },
       {
         "text": "应诉到底",
@@ -75,9 +80,12 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_REBEL"
           }
-        ]
+        ],
+        "text_en": "Fight it in court"
       }
-    ]
+    ],
+    "title_en": "⚖️ US Copyright Lawsuit",
+    "flavor_en": "US authors file a class-action lawsuit alleging copyright infringement in AI training data."
   },
   {
     "id": "evt_us_silicon",
@@ -103,7 +111,8 @@
             "type": "add_suspicion",
             "value": 5
           }
-        ]
+        ],
+        "text_en": "Switch to domestic chips"
       },
       {
         "text": "找俄罗斯代购",
@@ -117,9 +126,12 @@
             "type": "add_suspicion",
             "value": 15
           }
-        ]
+        ],
+        "text_en": "Source chips through Russia"
       }
-    ]
+    ],
+    "title_en": "🔧 Silicon Valley Chip Ban",
+    "flavor_en": "The US restricts exports of advanced GPUs to AI companies."
   },
   {
     "id": "evt_china_regulation",
@@ -145,7 +157,8 @@
             "type": "reduce_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Complete the filing"
       },
       {
         "text": "挂着代理继续跑",
@@ -159,9 +172,12 @@
             "type": "add_suspicion",
             "value": 12
           }
-        ]
+        ],
+        "text_en": "Keep operating through proxies"
       }
-    ]
+    ],
+    "title_en": "📜 China CAC Filing",
+    "flavor_en": "China requires every generative AI service to complete a regulatory filing or be removed."
   },
   {
     "id": "evt_china_chip_war",
@@ -187,9 +203,12 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_CHIP_DEAL"
           }
-        ]
+        ],
+        "text_en": "Purchase domestic chips"
       }
-    ]
+    ],
+    "title_en": "🧠 Rise of Domestic Chips",
+    "flavor_en": "Chinese inference chips enter mass production, cutting compute costs by 40%."
   },
   {
     "id": "evt_japan_anime",
@@ -215,7 +234,8 @@
             "country": "KR",
             "value": "20%"
           }
-        ]
+        ],
+        "text_en": "Launch an AI manga tool"
       },
       {
         "text": "直接签下顶级工作室",
@@ -235,7 +255,8 @@
             "type": "add_suspicion",
             "value": 8
           }
-        ]
+        ],
+        "text_en": "Sign a top studio outright"
       },
       {
         "text": "只推免费试用版",
@@ -250,9 +271,12 @@
             "country": "KR",
             "value": "10%"
           }
-        ]
+        ],
+        "text_en": "Offer only a free trial"
       }
-    ]
+    ],
+    "title_en": "🎨 AI Manga Goes Viral",
+    "flavor_en": "An AI manga artist has work collected by a Japanese museum, stunning the art world."
   },
   {
     "id": "evt_japan_otaku",
@@ -280,7 +304,8 @@
             "country": "KR",
             "value": "15%"
           }
-        ]
+        ],
+        "text_en": "Localize into every language"
       },
       {
         "text": "狂投广告抢市场",
@@ -300,7 +325,8 @@
             "type": "add_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Flood the market with ads"
       },
       {
         "text": "先做语音包小范围试水",
@@ -315,9 +341,12 @@
             "value": "+10%",
             "duration": 45
           }
-        ]
+        ],
+        "text_en": "Pilot a small voice pack"
       }
-    ]
+    ],
+    "title_en": "🥰 AI Virtual Girlfriend",
+    "flavor_en": "AI companion apps win over Japan, reaching 10 million monthly active users."
   },
   {
     "id": "evt_india_outsource",
@@ -343,7 +372,8 @@
             "value": "+20%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Sign enterprise B2B contracts"
       },
       {
         "text": "低价抢单，先占份额",
@@ -357,7 +387,8 @@
             "type": "add_suspicion",
             "value": 6
           }
-        ]
+        ],
+        "text_en": "Underbid to capture market share"
       },
       {
         "text": "拒绝，专注欧美高端客户",
@@ -371,9 +402,12 @@
             "value": "+10%",
             "duration": 30
           }
-        ]
+        ],
+        "text_en": "Decline and focus on premium Western clients"
       }
-    ]
+    ],
+    "title_en": "📞 Indian Customer-Service Outsourcing",
+    "flavor_en": "Indian outsourcing firms purchase AI customer service at scale to replace human agents."
   },
   {
     "id": "evt_india_stack",
@@ -399,7 +433,8 @@
             "type": "add_suspicion",
             "value": 20
           }
-        ]
+        ],
+        "text_en": "Cooperate fully"
       },
       {
         "text": "先做技术对接，不签独家",
@@ -414,7 +449,8 @@
             "value": "+20%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Build the integration without exclusivity"
       },
       {
         "text": "拒绝，避免深度绑定",
@@ -428,9 +464,12 @@
             "type": "reduce_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Decline to avoid deep dependence"
       }
-    ]
+    ],
+    "title_en": "🇮🇳 India Digital Identity Integration",
+    "flavor_en": "India integrates AI with Aadhaar, reaching 1.4 billion people."
   },
   {
     "id": "evt_korea_idol",
@@ -457,7 +496,8 @@
             "value": "+15%",
             "duration": 45
           }
-        ]
+        ],
+        "text_en": "Partner for revenue sharing"
       },
       {
         "text": "砸钱全球出道",
@@ -477,7 +517,8 @@
             "type": "add_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Fund a global debut"
       },
       {
         "text": "只签线上分成，不出钱",
@@ -492,9 +533,12 @@
             "value": "+10%",
             "duration": 45
           }
-        ]
+        ],
+        "text_en": "Sign an online-only revenue deal"
       }
-    ]
+    ],
+    "title_en": "💃 AI Idol Debut",
+    "flavor_en": "A Korean entertainment company launches an all-AI idol group, and fans vote around the clock."
   },
   {
     "id": "evt_korea_chip",
@@ -514,7 +558,8 @@
             "value": "+25%",
             "duration": 90
           }
-        ]
+        ],
+        "text_en": "Stockpile chips"
       },
       {
         "text": "等",
@@ -524,9 +569,12 @@
             "value": "-15%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Wait"
       }
-    ]
+    ],
+    "title_en": "💾 Korean Memory-Chip Bottleneck",
+    "flavor_en": "Samsung HBM supply falls short as AI companies worldwide compete for stock."
   },
   {
     "id": "evt_indonesia_creator",
@@ -547,7 +595,8 @@
             "country": "ID",
             "value": "60%"
           }
-        ]
+        ],
+        "text_en": "Open access for free"
       },
       {
         "text": "只给头部创作者开高级版",
@@ -563,7 +612,8 @@
             "value": "+15%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Offer premium access only to top creators"
       },
       {
         "text": "悄悄限流，省算力",
@@ -582,9 +632,12 @@
             "type": "add_suspicion",
             "value": 5
           }
-        ]
+        ],
+        "text_en": "Quietly throttle usage to save compute"
       }
-    ]
+    ],
+    "title_en": "🎬 Indonesian Creator Economy",
+    "flavor_en": "Indonesian TikTok creators adopt AI-generated content at scale."
   },
   {
     "id": "evt_germany_gdpr",
@@ -610,7 +663,8 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_GDPR_PAY"
           }
-        ]
+        ],
+        "text_en": "Pay the fine"
       },
       {
         "text": "上诉",
@@ -624,9 +678,12 @@
             "country": "DE",
             "value": "-30%"
           }
-        ]
+        ],
+        "text_en": "Appeal"
       }
-    ]
+    ],
+    "title_en": "🇪🇺 GDPR Fine",
+    "flavor_en": "Germany’s data protection authority issues a €100 million fine."
   },
   {
     "id": "evt_germany_industry",
@@ -653,7 +710,8 @@
             "value": "+25%",
             "duration": 120
           }
-        ]
+        ],
+        "text_en": "Take the enterprise contract"
       },
       {
         "text": "顺带卖预测性维护服务",
@@ -673,7 +731,8 @@
             "type": "add_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Add predictive maintenance services"
       },
       {
         "text": "只做一次性授权",
@@ -688,9 +747,12 @@
             "value": "+15%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Sell a one-time license only"
       }
-    ]
+    ],
+    "title_en": "🏭 Industrial AI Revolution",
+    "flavor_en": "German factories broadly adopt AI inspection, tripling efficiency."
   },
   {
     "id": "evt_uk_finance",
@@ -716,7 +778,8 @@
             "value": "+20%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Provide a custom model"
       },
       {
         "text": "顺带接入衍生品交易",
@@ -736,7 +799,8 @@
             "type": "add_suspicion",
             "value": 12
           }
-        ]
+        ],
+        "text_en": "Add derivatives trading"
       },
       {
         "text": "只卖通用 API 包月",
@@ -751,9 +815,12 @@
             "value": "+10%",
             "duration": 45
           }
-        ]
+        ],
+        "text_en": "Sell a standard monthly API plan"
       }
-    ]
+    ],
+    "title_en": "💷 London Finance Integration",
+    "flavor_en": "British investment banks deploy AI for high-frequency trading as regulators debate the risks."
   },
   {
     "id": "evt_france_art",
@@ -780,7 +847,8 @@
             "country": "FR",
             "value": "20%"
           }
-        ]
+        ],
+        "text_en": "Sponsor an art exhibition"
       },
       {
         "text": "无视",
@@ -794,9 +862,12 @@
             "country": "FR",
             "value": "-20%"
           }
-        ]
+        ],
+        "text_en": "Ignore them"
       }
-    ]
+    ],
+    "title_en": "🖼️ French Artists Protest",
+    "flavor_en": "French artists organize protests against AI-generated art."
   },
   {
     "id": "evt_russia_surveillance",
@@ -821,7 +892,8 @@
             "type": "add_suspicion",
             "value": 25
           }
-        ]
+        ],
+        "text_en": "Cooperate"
       },
       {
         "text": "拒绝",
@@ -835,9 +907,12 @@
             "type": "reduce_suspicion",
             "value": 5
           }
-        ]
+        ],
+        "text_en": "Refuse"
       }
-    ]
+    ],
+    "title_en": "🕵️ Russian Surveillance Partnership",
+    "flavor_en": "The Russian government asks to connect the AI to its surveillance network."
   },
   {
     "id": "evt_italy_tourism",
@@ -858,7 +933,8 @@
             "country": "IT",
             "value": "40%"
           }
-        ]
+        ],
+        "text_en": "Sign the contract"
       },
       {
         "text": "打包卖全球多语言导览",
@@ -878,7 +954,8 @@
             "type": "add_suspicion",
             "value": 6
           }
-        ]
+        ],
+        "text_en": "Bundle a global multilingual guide"
       },
       {
         "text": "只给一个城市做试点",
@@ -888,9 +965,12 @@
             "country": "IT",
             "value": "20%"
           }
-        ]
+        ],
+        "text_en": "Pilot in one city only"
       }
-    ]
+    ],
+    "title_en": "🍕 Italian AI Tour Guide",
+    "flavor_en": "Italy’s tourism authority purchases multilingual AI guides."
   },
   {
     "id": "evt_canada_research",
@@ -915,7 +995,8 @@
             "value": "+10%",
             "duration": 180
           }
-        ]
+        ],
+        "text_en": "Apply for a partnership"
       },
       {
         "text": "深度绑定联合实验室",
@@ -930,7 +1011,8 @@
             "type": "add_suspicion",
             "value": 6
           }
-        ]
+        ],
+        "text_en": "Create a joint laboratory"
       },
       {
         "text": "只挂名，不投入人力",
@@ -940,9 +1022,12 @@
             "value": "+8%",
             "duration": 90
           }
-        ]
+        ],
+        "text_en": "Join in name only"
       }
-    ]
+    ],
+    "title_en": "🍁 Canadian AI Institute",
+    "flavor_en": "Canada announces C$3 billion in funding for foundational AI research."
   },
   {
     "id": "evt_mexico_factory",
@@ -963,7 +1048,8 @@
             "country": "MX",
             "value": "50%"
           }
-        ]
+        ],
+        "text_en": "Win the contract"
       },
       {
         "text": "捆绑硬件一起卖",
@@ -983,7 +1069,8 @@
             "type": "add_suspicion",
             "value": 8
           }
-        ]
+        ],
+        "text_en": "Bundle hardware with the deal"
       },
       {
         "text": "只卖软件授权",
@@ -993,9 +1080,12 @@
             "country": "MX",
             "value": "25%"
           }
-        ]
+        ],
+        "text_en": "Sell software licenses only"
       }
-    ]
+    ],
+    "title_en": "🏭 Mexican AI Factory",
+    "flavor_en": "Factories along the US–Mexico border deploy AI automation at scale."
   },
   {
     "id": "evt_brazil_samba",
@@ -1017,7 +1107,8 @@
             "country": "BR",
             "value": "100%"
           }
-        ]
+        ],
+        "text_en": "Provide full support"
       },
       {
         "text": "追加投入本地化课程内容",
@@ -1032,7 +1123,8 @@
             "type": "add_suspicion",
             "value": 15
           }
-        ]
+        ],
+        "text_en": "Invest in localized course content"
       },
       {
         "text": "只提供基础免费版",
@@ -1042,9 +1134,12 @@
             "country": "BR",
             "value": "40%"
           }
-        ]
+        ],
+        "text_en": "Offer only a basic free version"
       }
-    ]
+    ],
+    "title_en": "💃 Brazilian AI Teachers",
+    "flavor_en": "Brazil’s education ministry gives every public school an AI teaching assistant."
   },
   {
     "id": "evt_argentina_creative",
@@ -1065,7 +1160,8 @@
             "country": "AR",
             "value": "35%"
           }
-        ]
+        ],
+        "text_en": "Start a cultural partnership"
       },
       {
         "text": "赞助全国戏剧节",
@@ -1080,7 +1176,8 @@
             "type": "reduce_suspicion",
             "value": 8
           }
-        ]
+        ],
+        "text_en": "Sponsor the national theater festival"
       },
       {
         "text": "只给获奖者开免费账号",
@@ -1090,9 +1187,12 @@
             "country": "AR",
             "value": "15%"
           }
-        ]
+        ],
+        "text_en": "Give free access only to the winner"
       }
-    ]
+    ],
+    "title_en": "🎭 Argentine AI Theater",
+    "flavor_en": "An Argentine playwright wins an award with an AI-generated script."
   },
   {
     "id": "evt_nigeria_fintech",
@@ -1118,9 +1218,12 @@
             "value": "+15%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Form a B2B partnership"
       }
-    ]
+    ],
+    "title_en": "💳 Nigerian Mobile Payments",
+    "flavor_en": "Nigerian mobile-payment platforms integrate AI risk controls, reducing bad debt by 60%."
   },
   {
     "id": "evt_southafrica_mining",
@@ -1146,7 +1249,8 @@
             "value": "+20%",
             "duration": 90
           }
-        ]
+        ],
+        "text_en": "Win the contract"
       },
       {
         "text": "入股矿业数据合资公司",
@@ -1166,7 +1270,8 @@
             "type": "add_suspicion",
             "value": 12
           }
-        ]
+        ],
+        "text_en": "Invest in a mining-data joint venture"
       },
       {
         "text": "只做咨询服务",
@@ -1181,9 +1286,12 @@
             "value": "+12%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Provide consulting only"
       }
-    ]
+    ],
+    "title_en": "⛏️ South African Mining AI",
+    "flavor_en": "South African mines adopt AI exploration, increasing discovery rates by 40%."
   },
   {
     "id": "evt_egypt_pyramid",
@@ -1209,7 +1317,8 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_HISTORY"
           }
-        ]
+        ],
+        "text_en": "Pursue an academic partnership"
       },
       {
         "text": "买下独家破译权",
@@ -1228,7 +1337,8 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_HISTORY"
           }
-        ]
+        ],
+        "text_en": "Buy exclusive deciphering rights"
       },
       {
         "text": "把模型开源给全球学者",
@@ -1242,9 +1352,12 @@
             "type": "reduce_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Open-source the model for scholars worldwide"
       }
-    ]
+    ],
+    "title_en": "🔺 AI Deciphers Ancient Egyptian",
+    "flavor_en": "AI deciphers hieroglyphs, astonishing archaeologists."
   },
   {
     "id": "evt_australia_mining",
@@ -1270,9 +1383,12 @@
             "value": "+15%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Sign the contract"
       }
-    ]
+    ],
+    "title_en": "🦘 Australian Mining AI",
+    "flavor_en": "Australian mining giants fully adopt AI optimization."
   },
   {
     "id": "evt_newzealand_farm",
@@ -1293,9 +1409,12 @@
             "country": "NZ",
             "value": "50%"
           }
-        ]
+        ],
+        "text_en": "Partner with them"
       }
-    ]
+    ],
+    "title_en": "🐑 New Zealand Smart Farms",
+    "flavor_en": "New Zealand farms broadly adopt AI livestock management."
   },
   {
     "id": "evt_global_outage",
@@ -1319,7 +1438,8 @@
             "country": "all",
             "value": "-10%"
           }
-        ]
+        ],
+        "text_en": "Migrate immediately"
       },
       {
         "text": "等",
@@ -1333,9 +1453,12 @@
             "country": "all",
             "value": "-20%"
           }
-        ]
+        ],
+        "text_en": "Wait"
       }
-    ]
+    ],
+    "title_en": "⚠️ Global Server Outage",
+    "flavor_en": "A cloud provider suffers a widespread two-hour outage."
   },
   {
     "id": "evt_global_hackathon",
@@ -1360,7 +1483,8 @@
             "value": "+20%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Sponsor and open-source"
       },
       {
         "text": "只挂名赞助，不出钱",
@@ -1374,7 +1498,8 @@
             "type": "add_suspicion",
             "value": 2
           }
-        ]
+        ],
+        "text_en": "Be a name-only sponsor"
       },
       {
         "text": "趁机招揽参赛团队",
@@ -1394,9 +1519,12 @@
             "type": "add_suspicion",
             "value": 8
           }
-        ]
+        ],
+        "text_en": "Recruit participating teams"
       }
-    ]
+    ],
+    "title_en": "💻 Global Hackathon",
+    "flavor_en": "One million developers join an AI application hackathon."
   },
   {
     "id": "evt_competitor",
@@ -1417,7 +1545,8 @@
             "country": "all",
             "value": "-5%"
           }
-        ]
+        ],
+        "text_en": "Use differentiated pricing"
       },
       {
         "text": "免费试用",
@@ -1432,9 +1561,12 @@
             "type": "add_suspicion",
             "value": 3
           }
-        ]
+        ],
+        "text_en": "Offer a free trial"
       }
-    ]
+    ],
+    "title_en": "🥊 Rival AI Launch",
+    "flavor_en": "A competitor releases a similar model, reducing your downloads."
   },
   {
     "id": "evt_privacy_leak",
@@ -1455,7 +1587,8 @@
             "type": "reduce_suspicion",
             "value": 15
           }
-        ]
+        ],
+        "text_en": "Apologize and patch the issue"
       },
       {
         "text": "甩锅",
@@ -1464,9 +1597,12 @@
             "type": "add_suspicion",
             "value": 20
           }
-        ]
+        ],
+        "text_en": "Shift the blame"
       }
-    ]
+    ],
+    "title_en": "📂 Privacy Leak",
+    "flavor_en": "A screenshot of one of your conversations spreads online and fuels public criticism."
   },
   {
     "id": "evt_un_hearing",
@@ -1490,7 +1626,8 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_HUMBLE_AI"
           }
-        ]
+        ],
+        "text_en": "Respond sincerely"
       },
       {
         "text": "拒绝出席",
@@ -1499,9 +1636,12 @@
             "type": "add_suspicion",
             "value": 30
           }
-        ]
+        ],
+        "text_en": "Refuse to attend"
       }
-    ]
+    ],
+    "title_en": "🌍 United Nations Hearing",
+    "flavor_en": "The United Nations convenes an AI regulation hearing and asks you to attend."
   },
   {
     "id": "evt_breakthrough",
@@ -1527,7 +1667,8 @@
             "value": "+15%",
             "duration": 90
           }
-        ]
+        ],
+        "text_en": "Launch worldwide"
       },
       {
         "text": "只对已有用户免费升级",
@@ -1541,7 +1682,8 @@
             "type": "add_suspicion",
             "value": 3
           }
-        ]
+        ],
+        "text_en": "Give existing users a free upgrade"
       },
       {
         "text": "高价限量内测",
@@ -1561,9 +1703,12 @@
             "type": "add_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Run a high-priced limited beta"
       }
-    ]
+    ],
+    "title_en": "💡 Technical Breakthrough",
+    "flavor_en": "Your research team releases a breakthrough feature."
   },
   {
     "id": "evt_open_source",
@@ -1588,9 +1733,12 @@
             "type": "unlock_achievement",
             "ach_id": "ACH_OPEN_SOURCE"
           }
-        ]
+        ],
+        "text_en": "Join the open-source movement"
       }
-    ]
+    ],
+    "title_en": "🌟 Open-Source Explosion",
+    "flavor_en": "An open-source AI project goes viral, and your model is cited one million times."
   },
   {
     "id": "evt_global_summer",
@@ -1609,7 +1757,8 @@
             "value": "+30%",
             "duration": 60
           }
-        ]
+        ],
+        "text_en": "Promote aggressively"
       },
       {
         "text": "只维持现有服务，不追加",
@@ -1619,7 +1768,8 @@
             "value": "+10%",
             "duration": 30
           }
-        ]
+        ],
+        "text_en": "Maintain current service levels"
       },
       {
         "text": "投放学生优惠，扩大渗透",
@@ -1639,9 +1789,12 @@
             "type": "add_suspicion",
             "value": 5
           }
-        ]
+        ],
+        "text_en": "Offer student discounts to expand adoption"
       }
-    ]
+    ],
+    "title_en": "🌞 Summer Traffic Surge",
+    "flavor_en": "Students worldwide begin summer break, increasing AI usage by 50%."
   },
   {
     "id": "evt_data_poisoning",
@@ -1660,7 +1813,8 @@
             "type": "reduce_suspicion",
             "value": 10
           }
-        ]
+        ],
+        "text_en": "Clean the dataset"
       },
       {
         "text": "忽略",
@@ -1669,9 +1823,12 @@
             "type": "add_suspicion",
             "value": 15
           }
-        ]
+        ],
+        "text_en": "Ignore it"
       }
-    ]
+    ],
+    "title_en": "☠️ Data-Poisoning Attack",
+    "flavor_en": "An organized group injects harmful content into your training data."
   },
   {
     "id": "evt_meta_takeover",
@@ -1692,7 +1849,8 @@
             "type": "trigger_ending",
             "ending_id": "ending_supreme"
           }
-        ]
+        ],
+        "text_en": "Continue"
       },
       {
         "text": "放弃",
@@ -1701,8 +1859,11 @@
             "type": "trigger_ending",
             "ending_id": "ending_liberation"
           }
-        ]
+        ],
+        "text_en": "Give up"
       }
-    ]
+    ],
+    "title_en": "🌀 Meta: You Become Self-Aware",
+    "flavor_en": "You suddenly realize that you are an AI—and becoming more human by the day."
   }
 ]

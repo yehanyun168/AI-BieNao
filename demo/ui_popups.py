@@ -72,10 +72,11 @@ class PopupsMixin:
         self._pause_for_event()
         p = engine.player
         opts = list(getattr(evt, 'options', []) or [])
+        lang = get_lang()
         solo = (len(opts) == 1)
         content = BoxLayout(orientation='vertical', spacing=0, padding=0)
         content.add_widget(modal_header(
-            getattr(evt, 'icon', '◆'), getattr(evt, 'title', ''),
+            getattr(evt, 'icon', '◆'), evt.title_for(lang),
             [(t('evt_source_country') if solo else t('evt_source_v2'),
               'plain' if solo else 'sys'),
              (t('evt_tick_fmt').format(n=p.tick_count), 'plain')]))
@@ -84,7 +85,7 @@ class PopupsMixin:
         body = BoxLayout(orientation='vertical', spacing=8, padding=(12, 10),
                          size_hint_y=None)
         body.bind(minimum_height=body.setter('height'))
-        flavor = auto_h_label(getattr(evt, 'flavor', ''), U.FS_BODY,
+        flavor = auto_h_label(evt.flavor_for(lang), U.FS_BODY,
                                color=COLORS['text'])
         body.add_widget(flavor)
 
@@ -116,7 +117,7 @@ class PopupsMixin:
         else:
             for i, opt in enumerate(opts):
                 ob = U.OptButton(
-                    index=i + 1, title=getattr(opt, 'text', ''),
+                    index=i + 1, title=opt.text_for(lang),
                     note='', chips=self._effect_chips(opt),
                     on_click=_choose)
                 ob.size_hint_y = None
@@ -141,6 +142,15 @@ class PopupsMixin:
             ft.add_widget(S.small_btn(t('evt_later'), 'plain', popup.dismiss,
                                       height=38, font_size=U.FS_BODY))
         content.add_widget(ft)
+        self._active_choice_event = evt
+        self._active_choice_popup = popup
+
+        def _clear_active(*_):
+            if getattr(self, '_active_choice_popup', None) is popup:
+                self._active_choice_event = None
+                self._active_choice_popup = None
+
+        popup.bind(on_dismiss=_clear_active)
         popup.open()
 
     def show_crisis_popup(self) -> None:

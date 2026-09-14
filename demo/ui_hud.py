@@ -419,15 +419,6 @@ class HudMixin:
         holder.height = self.TOP_H
         self._register(holder, height=self.TOP_H)
 
-        # ---- 左组：品牌 ----
-        self.lbl_logo = mk_label(f"[b]{t('app_title')}[/b]", font_size=U.FS_H3,
-                                 color=COLORS['cyan'], size_hint_x=None,
-                                 markup=True)
-        fit_width(self.lbl_logo, pad=12, min_w=64)
-        self._register(self.lbl_logo, font=U.FS_H3)
-        bar.add_widget(self.lbl_logo)
-        bar.add_widget(self._sep())
-
         # ---- 左组：统计（设计稿 .stat；下方各挂一根 12 周期趋势火花线）----
         self._stat_sparks: dict = {}
         self._stat_labels: dict = {}
