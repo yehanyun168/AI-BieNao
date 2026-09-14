@@ -27,6 +27,7 @@ on_done 由调用方接 OriginPage；跳过/播完均立即收尾（stop_all_loo
 （新游戏必播；旧档已播过则跳过），本模块不判存档。BGM 按用户指示暂空，
 本片只有环境音床（server_hum / machine_run 循环床）与一次性音效。
 """
+import math
 import random
 import time
 
@@ -34,14 +35,15 @@ from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import (Color, Rectangle, Line, Point, Mesh, PushMatrix,
-                           PopMatrix, Scale, Translate)
+                           PopMatrix, Rotate, Scale, Translate)
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 
 import sfx
 from i18n import t
-from intro_common import INTRO_SHOTS, MIN_CPS, _ease, alpha, dim, mix  # noqa: F401
+from intro_common import (INTRO_SHOTS, MIN_CPS, PANEL_LIT, RACK_EDGE, _ease,
+                          alpha, dim, mix)  # noqa: F401
 from intro_shots import IntroShotsMixin
 from pixel_ui import add_pixel_border
 from ui_v4 import COLORS, mk_label, fit_width
@@ -142,8 +144,8 @@ class IntroPlayer(IntroShotsMixin, FloatLayout):
                 self._band = Rectangle(pos=(0, 0), size=(w, 3))       # 滚动扫描带
                 self._vig_cols = []
                 step = min(w, h) * 0.030
-                lw = max(2, int(min(w, h) * 0.045))
-                for i in range(6):                                    # 暗角：6 层同心环
+                lw = max(2, int(min(w, h) * 0.018))   # P2-1：20~28px（原 0.045=59px 过厚）
+                for i in range(4):                    # P2-1：6 层 → 4 层，去「相框」感
                     pad = i * step
                     c = Color(0, 0, 0, 0.20 - i * 0.032)
                     self._vig_cols.append(c)
@@ -474,11 +476,18 @@ class IntroPlayer(IntroShotsMixin, FloatLayout):
 
 
     def _bind_draw(self, wid, fn):
-            """小面板位移例外：pos/size 事件触发重绘（面板指令数 ≤6，代价可控）。"""
+            """小面板位移例外：pos/size 事件触发重绘（面板指令数 ≤6，代价可控）。
+
+            ⚠️ P0-1 根因：``fn()`` 必须在 ``wid.canvas.before`` 上下文内调用 ——
+            否则 Color/Rectangle/Line 指令不会进该 widget 的 canvas.before，
+            面板/卡片/窗口几何整层丢失（S05 编辑器窗 / S07 帖卡 / S08 金卡 /
+            S09 任务管理器面板 的「界面载体」曾全部为 0，违反 ACT-1）。
+            """
             def _draw(*_a):
                 wid.canvas.before.clear()
                 try:
-                    fn()
+                    with wid.canvas.before:
+                        fn()
                 except Exception:
                     pass
             _draw()
@@ -503,6 +512,222 @@ class IntroPlayer(IntroShotsMixin, FloatLayout):
                 fit_width(lbl)
             except Exception:
                 pass
+
+
+    # ------------------------------------------------------------------
+    # 以下为非 _shot_* 的镜内辅助方法（2026-09-14 从 intro_shots.py 迁入，
+    # 为界面骨架层修复腾出行数门禁；test_intro_split 只要求两文件方法集不相交、
+    # 且每个 kind 的 _shot_* 渲染器留在 mixin 内 —— 二者均不受影响）。
+    # ------------------------------------------------------------------
+    def _rack_scene(self, monitors=True):
+            """机柜长廊几何（SHOT01/02 共用）。灯/风扇指令存引用供 Clock 驱动。"""
+            w, h = self.size
+            self._lamps = []
+            self._fan_on = True
+            self._lamp_calm = False
+            with self.bg.canvas:
+                Color(*COLORS['bg'])
+                Rectangle(pos=(0, 0), size=(w, h))
+                Color(*alpha('cyan', 0.06))
+                Rectangle(pos=(0.46 * w, 0.12 * h), size=(0.08 * w, 0.5 * h))
+                Color(*COLORS['border_strong'])                 # P1-1：地面引导线提亮
+                Line(points=[0.06 * w, 0.10 * h, 0.5 * w, 0.56 * h], width=1)
+                Line(points=[0.94 * w, 0.10 * h, 0.5 * w, 0.56 * h], width=1)
+                Color(*alpha('green', 0.25))                    # 应急照明
+                Rectangle(pos=(0.30 * w, 0.94 * h), size=(0.06 * w, 0.02 * h))
+                Rectangle(pos=(0.64 * w, 0.94 * h), size=(0.06 * w, 0.02 * h))
+                groups = {'cyan': [], 'cyan2': [], 'green': [], 'orange': []}
+                for side in (0, 1):
+                    for i in range(4):
+                        s = 0.62 ** i
+                        rw, rh = 0.15 * w * s, 0.58 * h * s
+                        x = (0.03 + 0.115 * i) * w if side == 0 else \
+                            w - (0.03 + 0.115 * i) * w - rw
+                        y = 0.12 * h
+                        # P1-1：近亮远暗（s 越大越近）—— 原式 (1-s) 让最近机柜最暗，
+                        # 且 dim('panel',…) 填充对底色仅 1.01:1；改 dim('border_strong',…)
+                        # 后近端 4.11:1 / 远端 1.94:1，纵深关系正确且结构面可辨。
+                        Color(*dim('border_strong', 0.45 + 0.55 * s))
+                        Rectangle(pos=(x, y), size=(rw, rh))
+                        Color(*RACK_EDGE)                       # P1-1：描边换低 alpha cyan
+                        Line(points=[x, y, x + rw, y, x + rw, y + rh, x, y + rh],
+                             close=True, width=2)
+                        for j in range(3 if i < 2 else 2):      # 指示灯 → 分相位组
+                            k = (i * 3 + j) % 10
+                            g = ('cyan', 'cyan2')[k % 2] if k < 6 else \
+                                ('green' if k < 8 else 'orange')  # ~70/20/10 配比
+                            gx = x + rw * (0.2 + 0.3 * j)
+                            gy = y + rh * (0.72 + 0.05 * j)
+                            groups[g] += [gx, gy]
+                for g, pts in groups.items():                   # PFM-01 分组呼吸
+                    if not pts:
+                        continue
+                    cname = 'orange' if g == 'orange' else \
+                        ('green' if g == 'green' else 'cyan')
+                    col = Color(*alpha(cname, 0.5))
+                    Point(pointsize=3.0, points=pts)
+                    self._lamps.append([col, random.random(), 1.2 + random.random(),
+                                        g])
+                self._fan_rot = Rotate(angle=0, origin=(0.5 * w, 0.64 * h))
+                Color(*alpha('text_dim', 0.7))
+                Line(points=[0.47 * w, 0.61 * h, 0.53 * w, 0.67 * h], width=2)
+                Line(points=[0.47 * w, 0.67 * h, 0.53 * w, 0.61 * h], width=2)
+                if monitors:                                    # 3 台死掉的显示器
+                    for k in range(3):
+                        mx = (0.08 + 0.13 * k) * w
+                        Color(*dim('bg', 0.6))
+                        Rectangle(pos=(mx, 0.16 * h), size=(0.10 * w, 0.09 * h))
+                        Color(*COLORS['border_strong'])         # P1-1：显示器边框提亮
+                        Line(points=[mx, 0.16 * h, mx + 0.10 * w, 0.16 * h,
+                                     mx + 0.10 * w, 0.25 * h, mx, 0.25 * h],
+                             close=True, width=2)
+            self._clocks.append(Clock.schedule_interval(self._lamps_tick, 1 / 30.0))
+
+
+    def _lamps_tick(self, dt):
+            """PFM-01：1 个 Clock 批量驱动全部灯 + 风扇旋转（30Hz）。"""
+            try:
+                self._t += dt
+                for col, phase, period, g in self._lamps:
+                    if g == 'orange' and not self._fan_on:
+                        col.a = 0.05                            # 故障灯熄灭
+                    elif self._lamp_calm:                       # 骤停后压振幅（§6.5）
+                        col.a = 0.15 + 0.10 * (0.5 + 0.5 * math.sin(
+                            2 * math.pi * self._t / 2.6 + phase))
+                    else:
+                        col.a = 0.15 + 0.80 * math.sin(
+                            2 * math.pi * self._t / period + phase) ** 2
+                if self._fan_rot is not None and self._fan_on:
+                    self._fan_rot.angle = (self._fan_rot.angle + 90 * dt) % 360
+            except Exception:
+                pass
+            return True
+
+
+    def _halt(self):
+            """3.0s 风扇骤停：声画四件事同帧（机器「死掉」的视觉信号，§6.5）。"""
+            self._fan_on = False
+            self._lamp_calm = True
+            self._dust_speed = 4
+            self._set_vig(0.62)
+            sfx.stop_loop('machine_run')       # 硬停，不淡出（音频设计对齐）
+            self._hum(0.08)
+
+
+    def _pop_icon(self, wd, y0):
+            sfx.play('click', 0.30)
+            wd.opacity = 0
+            wd.y = y0 - 8
+            Animation(opacity=1, d=0.06).start(wd)
+            Animation(y=y0, d=0.18, t='out_back').start(wd)
+
+
+    def _slam(self, lbl):
+            """PFM-13 大字砸下：y 过冲 + 闪帧；字号定值（禁补间），无强闪。"""
+            lbl.opacity = 1
+            y0 = lbl.y
+            Animation(y=y0 + 12, d=0.18, t='out_cubic').start(lbl)
+            Animation(y=y0, d=0.12).start(lbl)
+            self._flash(0.18, 0.08)
+            self._shake(self.content, amp=3, times=1, dur=0.05)
+
+
+    def _spinner(self, lbl, frames):
+            try:
+                lbl.text = frames[0]
+                frames.append(frames.pop(0))
+            except Exception:
+                return False
+            return True
+
+
+    def _publish(self, spin):
+            sfx.play('confirm')
+            spin.opacity = 0
+
+
+    def _slide_in(self, row, x0, idx):
+            """PFM-10 逐条滑入；select 只在第 1/3/5/7 条播（R2 音效减半）。"""
+            if idx % 2 == 0:
+                sfx.play('select', 0.30)
+            row.x = x0 - 30
+            Animation(x=x0, d=0.12, t='out_cubic').start(row)
+            Animation(opacity=1, d=0.15).start(row)
+
+
+    def _gold_scan(self):
+            sfx.play('unlock')
+            w, h = self.size
+            ln = Widget(size_hint=(None, None), size=(0.56 * w, 3),
+                        pos=(0.22 * w, h * 0.30))
+            with ln.canvas:
+                Color(*COLORS['yellow'])
+                Rectangle(pos=(0, 0), size=ln.size)
+            self.content.add_widget(ln)
+            Animation(y=h * 0.52, d=0.4).start(ln)
+
+
+    def _rename(self, lbl, old, new):
+            """逐字擦除 → 空档 → 逐字打出（间隔 0.045s，纹理重建可控）。"""
+            st = {'i': len(old), 'ph': 0, 'j': 0}
+            def _tick(dt):
+                try:
+                    if st['ph'] == 0:
+                        st['i'] -= 1
+                        lbl.text = old[:max(st['i'], 0)]
+                        if st['i'] <= 0:
+                            st['ph'] = 1
+                    elif st['ph'] == 1:
+                        st['ph'] = 2
+                    else:
+                        st['j'] += 1
+                        lbl.text = new[:st['j']]
+                        if st['j'] >= len(new):
+                            return False
+                except Exception:
+                    return False
+                return True
+            self._clocks.append(Clock.schedule_interval(_tick, 0.045))
+
+
+    def _end_grey(self, btn):
+            self._set_vig(0.50)
+            Animation(opacity=0.45, d=0.15).start(btn)
+
+
+    def _panel_out(self, pan):
+            Animation(opacity=0.15, d=0.4).start(pan)
+            Animation(y=pan.y + 20, d=0.4).start(pan)
+
+
+    def _sil_one(self, n):
+            try:
+                col = self._sil_cols[n]
+                Animation(a=1.0, d=0.15).start(col)
+                self._clocks.append(Clock.schedule_once(
+                    lambda _dt: Animation(a=0.25, d=0.15).start(col), 0.19))
+            except Exception:
+                pass
+
+
+    def _sil_all(self, a):
+            try:
+                for col in self._sil_cols:
+                    Animation(a=a, d=0.15).start(col)
+            except Exception:
+                pass
+
+
+    def _sil_breathe(self, dt):
+            """定格段微呼吸：剪影依次 0.22↔0.30（+光标 = 画面不死，N-6）。"""
+            try:
+                self._bt = getattr(self, '_bt', 0) + 1
+                for i, col in enumerate(self._sil_cols):
+                    col.a = 0.26 + 0.04 * math.sin(
+                        2 * math.pi * (self._bt * 0.5 + i * 0.2))
+            except Exception:
+                return False
+            return True
 
 
 # —— 转发（外部契约：main / test_build / test_intro_skip）——

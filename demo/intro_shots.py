@@ -5,106 +5,28 @@ self 上的核心设施（_lbl/_push/_set_fx/_hum/_typewriter/_clocks 等）由�
 ⚠️ 禁止 import intro（防循环导入，test_intro_split 守卫）。
 分镜契约见 docs/intro_v2/01_storyboard.md（10 镜 41.0s）。
 """
-import math
 import random
 
 from kivy.animation import Animation
 from kivy.clock import Clock
-from kivy.graphics import Color, Rectangle, Line, Point, Rotate
+from kivy.graphics import Color, Rectangle, Line, Point
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 
 import sfx
 from i18n import t
-from intro_common import alpha, dim, mix
+from intro_common import PANEL_LIT, alpha, dim, mix
 from pixel_ui import COLORS
 from ui_v4 import mk_label
 
 
 class IntroShotsMixin(object):
-    """10 镜渲染器（_shot_*）+ 镜内专用小工具。"""
+    """10 镜渲染器（_shot_*）+ 镜内专用小工具。
 
-
-    def _rack_scene(self, monitors=True):
-            """机柜长廊几何（SHOT01/02 共用）。灯/风扇指令存引用供 Clock 驱动。"""
-            w, h = self.size
-            self._lamps = []
-            self._fan_on = True
-            self._lamp_calm = False
-            with self.bg.canvas:
-                Color(*COLORS['bg'])
-                Rectangle(pos=(0, 0), size=(w, h))
-                Color(*alpha('cyan', 0.06))
-                Rectangle(pos=(0.46 * w, 0.12 * h), size=(0.08 * w, 0.5 * h))
-                Color(*COLORS['border'])
-                Line(points=[0.06 * w, 0.10 * h, 0.5 * w, 0.56 * h], width=1)
-                Line(points=[0.94 * w, 0.10 * h, 0.5 * w, 0.56 * h], width=1)
-                Color(*alpha('green', 0.25))                    # 应急照明
-                Rectangle(pos=(0.30 * w, 0.94 * h), size=(0.06 * w, 0.02 * h))
-                Rectangle(pos=(0.64 * w, 0.94 * h), size=(0.06 * w, 0.02 * h))
-                groups = {'cyan': [], 'cyan2': [], 'green': [], 'orange': []}
-                for side in (0, 1):
-                    for i in range(4):
-                        s = 0.62 ** i
-                        rw, rh = 0.15 * w * s, 0.58 * h * s
-                        x = (0.03 + 0.115 * i) * w if side == 0 else \
-                            w - (0.03 + 0.115 * i) * w - rw
-                        y = 0.12 * h
-                        Color(*dim('panel', 0.45 + 0.55 * (1 - s)))  # 近亮远暗（AMB-06①）
-                        Rectangle(pos=(x, y), size=(rw, rh))
-                        Color(*COLORS['border'])
-                        Line(points=[x, y, x + rw, y, x + rw, y + rh, x, y + rh],
-                             close=True, width=2)
-                        for j in range(3 if i < 2 else 2):      # 指示灯 → 分相位组
-                            k = (i * 3 + j) % 10
-                            g = ('cyan', 'cyan2')[k % 2] if k < 6 else \
-                                ('green' if k < 8 else 'orange')  # ~70/20/10 配比
-                            gx = x + rw * (0.2 + 0.3 * j)
-                            gy = y + rh * (0.72 + 0.05 * j)
-                            groups[g] += [gx, gy]
-                for g, pts in groups.items():                   # PFM-01 分组呼吸
-                    if not pts:
-                        continue
-                    cname = 'orange' if g == 'orange' else \
-                        ('green' if g == 'green' else 'cyan')
-                    col = Color(*alpha(cname, 0.5))
-                    Point(pointsize=3.0, points=pts)
-                    self._lamps.append([col, random.random(), 1.2 + random.random(),
-                                        g])
-                self._fan_rot = Rotate(angle=0, origin=(0.5 * w, 0.64 * h))
-                Color(*alpha('text_dim', 0.7))
-                Line(points=[0.47 * w, 0.61 * h, 0.53 * w, 0.67 * h], width=2)
-                Line(points=[0.47 * w, 0.67 * h, 0.53 * w, 0.61 * h], width=2)
-                if monitors:                                    # 3 台死掉的显示器
-                    for k in range(3):
-                        mx = (0.08 + 0.13 * k) * w
-                        Color(*dim('bg', 0.6))
-                        Rectangle(pos=(mx, 0.16 * h), size=(0.10 * w, 0.09 * h))
-                        Color(*COLORS['border'])
-                        Line(points=[mx, 0.16 * h, mx + 0.10 * w, 0.16 * h,
-                                     mx + 0.10 * w, 0.25 * h, mx, 0.25 * h],
-                             close=True, width=2)
-            self._clocks.append(Clock.schedule_interval(self._lamps_tick, 1 / 30.0))
-
-
-    def _lamps_tick(self, dt):
-            """PFM-01：1 个 Clock 批量驱动全部灯 + 风扇旋转（30Hz）。"""
-            try:
-                self._t += dt
-                for col, phase, period, g in self._lamps:
-                    if g == 'orange' and not self._fan_on:
-                        col.a = 0.05                            # 故障灯熄灭
-                    elif self._lamp_calm:                       # 骤停后压振幅（§6.5）
-                        col.a = 0.15 + 0.10 * (0.5 + 0.5 * math.sin(
-                            2 * math.pi * self._t / 2.6 + phase))
-                    else:
-                        col.a = 0.15 + 0.80 * math.sin(
-                            2 * math.pi * self._t / period + phase) ** 2
-                if self._fan_rot is not None and self._fan_on:
-                    self._fan_rot.angle = (self._fan_rot.angle + 90 * dt) % 360
-            except Exception:
-                pass
-            return True
+    非 _shot_* 的辅助方法（_rack_scene/_lamps_tick/_halt/_pop_icon/_slam/
+    _spinner/_publish/_slide_in/_gold_scan/_rename/_end_grey/_panel_out/_sil_*）
+    已于 2026-09-14 迁至 intro.IntroPlayer —— 守 800 行门禁。
+    """
 
 
     def _shot_rack(self, shot):
@@ -119,16 +41,6 @@ class IntroShotsMixin(object):
                 lambda _dt: Animation(opacity=1, d=0.8).start(sub), 1.2))
             self._push(4.0, 1.0, 1.07, fx=0.5, fy=0.56, kind='lin')   # 匀速缓推
             self._clocks.append(Clock.schedule_once(lambda _dt: self._halt(), 3.0))
-
-
-    def _halt(self):
-            """3.0s 风扇骤停：声画四件事同帧（机器「死掉」的视觉信号，§6.5）。"""
-            self._fan_on = False
-            self._lamp_calm = True
-            self._dust_speed = 4
-            self._set_vig(0.62)
-            sfx.stop_loop('machine_run')       # 硬停，不淡出（音频设计对齐）
-            self._hum(0.08)
 
 
     def _shot_boot(self, shot):
@@ -190,20 +102,16 @@ class IntroShotsMixin(object):
                 Color(*COLORS['cyan'])
                 Line(points=[0.88 * w, 0.12 * h, 0.88 * w, 0.88 * h], width=1)
             self._set_fx(scan=0.03, vig=0.35, band=True)
-            box = FloatLayout(size_hint=(None, None), size=(260, 90),
-                              pos=(w / 2 - 130, h * 0.46))
-            self.content.add_widget(box)
-            h1 = mk_label('03', font_size=42, color=COLORS['cyan'],
-                          size_hint=(None, None), size=(90, 60), pos=(0, 15),
-                          halign='right')
-            colon = mk_label(':', font_size=42, color=COLORS['cyan'],
-                             size_hint=(None, None), size=(30, 60), pos=(90, 15),
-                             halign='center')
-            h2 = mk_label('37', font_size=42, color=COLORS['cyan'],
-                          size_hint=(None, None), size=(90, 60), pos=(120, 15),
-                          halign='left')
-            for c in (h1, colon, h2):
-                box.add_widget(c)
+            cx, by = w / 2, h * 0.46                            # 与辉光框同心
+            fw = 0.70 * 56                                      # 单字估宽（fs56 峰值）
+            # P0-3：3 个 Label 直接绝对居中部（原嵌套 FloatLayout 的「容器内相对
+            # 坐标」在真机上落到屏幕左下角）；右/左对齐锚定 → 对焦跳字号仍居中。
+            h1 = self._lbl('03', 42, COLORS['cyan'], (cx - 2 * fw - 24, by),
+                           w=2 * fw, h=90, halign='right')
+            colon = self._lbl(':', 42, COLORS['cyan'], (cx - 24, by),
+                              w=48, h=90, halign='center')
+            h2 = self._lbl('37', 42, COLORS['cyan'], (cx + 24, by),
+                           w=2 * fw, h=90, halign='left')
             glow = Widget(size_hint=(None, None), size=(280, 110),
                           pos=(w / 2 - 140, h * 0.46 - 10))
             with glow.canvas:
@@ -215,10 +123,13 @@ class IntroShotsMixin(object):
             up.opacity = 0
             self._clocks.append(Clock.schedule_interval(                # PFM-02 冒号 1Hz
                 lambda _dt: setattr(colon, 'opacity', 1 - colon.opacity), 0.5))
-            self._clocks.append(Clock.schedule_once(                    # 对焦硬跳
-                lambda _dt: self._jump_font(h1, 56), 0.30))
-            self._clocks.append(Clock.schedule_once(
-                lambda _dt: self._jump_font(h2, 56), 0.30))
+
+            def _focus(_dt):                        # 对焦硬跳（只改字号，无补间）
+                try:
+                    h1.font_size = h2.font_size = 56
+                except Exception:
+                    pass
+            self._clocks.append(Clock.schedule_once(_focus, 0.30))
             self._clocks.append(Clock.schedule_once(                    # 外发光呼吸
                 lambda _dt: (Animation(a=0.20, d=0.15) +
                              Animation(a=0.0, d=0.15)).start(gcol), 0.60))
@@ -239,7 +150,7 @@ class IntroShotsMixin(object):
                 Color(*alpha('cyan', 0.04))
                 for gx in range(1, 10):
                     Line(points=[gx * w / 10.0, 0, gx * w / 10.0, h], width=1)
-                self._tbar_col = Color(*COLORS['panel'])
+                self._tbar_col = Color(*PANEL_LIT)                      # P1-1：任务栏底提亮
                 self._tbar = Rectangle(pos=(0, 0), size=(0, 34))        # 任务栏画出
                 Color(*alpha('cyan', 0.6))
                 Line(points=[0, 34, w, 34], width=1)
@@ -255,13 +166,17 @@ class IntroShotsMixin(object):
             for i, (cname, yr) in enumerate(icons):                     # PFM-04 预建
                 ic = Widget(size_hint=(None, None), size=(48, 64),
                             pos=(0.08 * w, yr * h), opacity=0)
-                with ic.canvas:
-                    Color(*COLORS[cname])
-                    Rectangle(pos=(4, 20), size=(40, 40))
+
+                def _draw_ic(_a=None, wd=ic, cn=cname):                 # P0-2：绝对坐标
+                    Color(*COLORS[cn])
+                    Rectangle(pos=(wd.x + 4, wd.y + 20), size=(40, 40))
+                self._bind_draw(ic, _draw_ic)                           # 位移即重绘
                 lb = mk_label(names[i], font_size=16, color=COLORS['text_dim'],
                               size_hint=(None, None), size=(80, 20),
-                              pos=(-16, 0), halign='center')
+                              pos=(ic.x - 16, ic.y), halign='center')   # P0-2：绝对 pos
                 ic.add_widget(lb)
+                ic.bind(pos=lambda _w, v, _lb=lb: setattr(
+                    _lb, 'pos', (v[0] - 16, v[1])))                     # 标签跟图标位移
                 self.content.add_widget(ic)
                 last = ic
                 self._clocks.append(Clock.schedule_once(
@@ -273,26 +188,37 @@ class IntroShotsMixin(object):
                 lambda _dt: sfx.play('error'), 2.14))
 
 
-    def _pop_icon(self, wd, y0):
-            sfx.play('click', 0.30)
-            wd.opacity = 0
-            wd.y = y0 - 8
-            Animation(opacity=1, d=0.06).start(wd)
-            Animation(y=y0, d=0.18, t='out_back').start(wd)
-
-
     def _shot_whoami(self, shot):
             w, h = self.size
+            with self.bg.canvas:                                        # P2-2：被压暗的桌面
+                Color(*PANEL_LIT)
+                Rectangle(pos=(0, 0), size=(w, 34))                     # 任务栏（随景深压暗）
+                Color(*alpha('cyan', 0.04))
+                for gx in range(1, 10):                                 # 桌面像素网格
+                    Line(points=[gx * w / 10.0, 0, gx * w / 10.0, h], width=1)
             dimw = Widget(size_hint=(1, 1))
             with dimw.canvas:
                 Color(0, 0, 0, 0.62)                                    # 桌面压暗（景深）
                 Rectangle(pos=(0, 0), size=(w, h))
             self.content.add_widget(dimw)
+            ic = Widget(size_hint=(None, None), size=(48, 64),
+                        pos=(0.06 * w, 0.20 * h))
+            with ic.canvas:                                             # 左下角仍亮的 ??
+                ic_col = Color(*COLORS['pink'])                         # （它是窗口的主人）
+                Rectangle(pos=(ic.x + 4, ic.y + 20), size=(40, 40))
+            self.content.add_widget(ic)
+            self._lbl('???', 14, COLORS['pink'], (ic.x - 16, ic.y), w=80, h=18)
+
+            def _pulse(_dt):                        # 3.45s 起图标脉动加快（0.3s 周期）
+                a = Animation(a=0.35, d=0.3) + Animation(a=1.0, d=0.3)
+                a.repeat = True
+                a.start(ic_col)
+            self._clocks.append(Clock.schedule_once(_pulse, 3.45))
             win = FloatLayout(size_hint=(None, None), size=(0.52 * w, 0.34 * h),
                               pos=(0.24 * w, 0.42 * h))
             state = {'rgb': COLORS['cyan'][:3]}
             def _draw_win():
-                Color(*COLORS['panel'])
+                Color(*PANEL_LIT)                                       # P1-1：窗口底提亮
                 Rectangle(pos=win.pos, size=win.size)
                 Color(*state['rgb'], 1.0)                               # 边框（可红闪）
                 Line(points=[win.x, win.y, win.x + win.width, win.y,
@@ -306,13 +232,16 @@ class IntroShotsMixin(object):
             self._lbl('???', 16, COLORS['pink'],
                       (win.x + 8, win.y + win.height - 20), w=80, h=18,
                       halign='left')
-            cur = self._lbl('_', 20, COLORS['cyan'], (win.x + 10, win.y + 8),
-                            w=20, h=24, halign='left')
+            cur = self._lbl('_', 20, COLORS['cyan'],               # 窗口内左上角光标
+                            (win.x + 12, win.y + win.height - 68),
+                            w=20, h=44, halign='left')
             self._set_fx(scan=0.03, vig=0.55, band=True)
             self._push(4.0, 1.0, 1.04, kind='lin')
+            # 额外修（超出报告 §5 清单）：原 pos.y=win.y+win.height-56 把「底边」
+            # 当「顶边」，正文被打到窗口**上方**悬浮；改窗口内顶部，文本落进载体。
             body = self._lbl('', 20, COLORS['text'],
-                             (win.x + 14, win.y + win.height - 56),
-                             w=win.width - 28, h=win.height - 70, halign='left')
+                             (win.x + 36, win.y + win.height - 68),
+                             w=win.width - 52, h=44, halign='left')
             self._clocks.append(Clock.schedule_interval(                # 光标闪
                 lambda _dt: setattr(cur, 'opacity', 1 - cur.opacity), 0.4))
             self._clocks.append(Clock.schedule_once(
@@ -402,22 +331,12 @@ class IntroShotsMixin(object):
             self._clocks.append(Clock.schedule_interval(_shatter, 1 / 30.0))
 
 
-    def _slam(self, lbl):
-            """PFM-13 大字砸下：y 过冲 + 闪帧；字号定值（禁补间），无强闪。"""
-            lbl.opacity = 1
-            y0 = lbl.y
-            Animation(y=y0 + 12, d=0.18, t='out_cubic').start(lbl)
-            Animation(y=y0, d=0.12).start(lbl)
-            self._flash(0.18, 0.08)
-            self._shake(self.content, amp=3, times=1, dur=0.05)
-
-
     def _shot_forum(self, shot):
             w, h = self.size
             self._set_fx(scan=0.03, vig=0.40, band=True, tint='blue', tint_a=0.04)
             head = Widget(size_hint=(1, 1))
             with head.canvas:
-                Color(*COLORS['panel'])
+                Color(*PANEL_LIT)                                       # P1-1：站名条提亮
                 Rectangle(pos=(0, h - 28), size=(w, 28))
             self.content.add_widget(head)
             self._lbl(t('intro_forum_name'), 16, COLORS['text_mute'],
@@ -428,9 +347,9 @@ class IntroShotsMixin(object):
             card = Widget(size_hint=(None, None), size=(0.60 * w, 130),
                           pos=(0.20 * w, h * 0.58))
             def _draw_card():
-                Color(*COLORS['panel_2'])
+                Color(*PANEL_LIT)                                       # P1-1：帖卡底提亮
                 Rectangle(pos=card.pos, size=card.size)
-                Color(*COLORS['border_2'])
+                Color(*COLORS['border_strong'])                         # P1-1：卡边 4.11:1
                 Line(points=[card.x, card.y, card.x + card.width, card.y,
                              card.x + card.width, card.y + card.height,
                              card.x, card.y + card.height], close=True, width=2)
@@ -484,41 +403,6 @@ class IntroShotsMixin(object):
                 lambda _dt: self._gold_scan(), 6.6))
 
 
-    def _spinner(self, lbl, frames):
-            try:
-                lbl.text = frames[0]
-                frames.append(frames.pop(0))
-            except Exception:
-                return False
-            return True
-
-
-    def _publish(self, spin):
-            sfx.play('confirm')
-            spin.opacity = 0
-
-
-    def _slide_in(self, row, x0, idx):
-            """PFM-10 逐条滑入；select 只在第 1/3/5/7 条播（R2 音效减半）。"""
-            if idx % 2 == 0:
-                sfx.play('select', 0.30)
-            row.x = x0 - 30
-            Animation(x=x0, d=0.12, t='out_cubic').start(row)
-            Animation(opacity=1, d=0.15).start(row)
-
-
-    def _gold_scan(self):
-            sfx.play('unlock')
-            w, h = self.size
-            ln = Widget(size_hint=(None, None), size=(0.56 * w, 3),
-                        pos=(0.22 * w, h * 0.30))
-            with ln.canvas:
-                Color(*COLORS['yellow'])
-                Rectangle(pos=(0, 0), size=ln.size)
-            self.content.add_widget(ln)
-            Animation(y=h * 0.52, d=0.4).start(ln)
-
-
     def _shot_gold(self, shot):
             w, h = self.size
             self._set_fx(scan=0.03, vig=0.60, band=True)
@@ -526,7 +410,7 @@ class IntroShotsMixin(object):
                           pos=(0.17 * w, h * 0.40))
             state = {'a': 1.0}
             def _draw_card():
-                Color(*COLORS['panel_2'])
+                Color(*PANEL_LIT)                                       # P1-1：金卡底提亮
                 Rectangle(pos=card.pos, size=card.size)
                 Color(*COLORS['yellow'][:3], state['a'])                # 金边（可闪）
                 Line(points=[card.x, card.y, card.x + card.width, card.y,
@@ -601,9 +485,9 @@ class IntroShotsMixin(object):
                          pos=(0.10 * w, h * 0.24), opacity=0)
             st = {'cpu_w': 0.0, 'cpu_rgb': COLORS['green'][:3]}
             def _draw_pan():
-                Color(*COLORS['bg'])
+                Color(*PANEL_LIT)                                       # P1-1：面板底提亮
                 Rectangle(pos=pan.pos, size=pan.size)
-                Color(*COLORS['border_2'])
+                Color(*COLORS['border_strong'])                         # P1-1：面板边 4.11:1
                 Line(points=[pan.x, pan.y, pan.x + pan.width, pan.y,
                              pan.x + pan.width, pan.y + pan.height,
                              pan.x, pan.y + pan.height], close=True, width=2)
@@ -689,39 +573,6 @@ class IntroShotsMixin(object):
                 lambda _dt: self._push(1.9, 1.0, 1.08), 3.1))
 
 
-    def _rename(self, lbl, old, new):
-            """逐字擦除 → 空档 → 逐字打出（间隔 0.045s，纹理重建可控）。"""
-            st = {'i': len(old), 'ph': 0, 'j': 0}
-            def _tick(dt):
-                try:
-                    if st['ph'] == 0:
-                        st['i'] -= 1
-                        lbl.text = old[:max(st['i'], 0)]
-                        if st['i'] <= 0:
-                            st['ph'] = 1
-                    elif st['ph'] == 1:
-                        st['ph'] = 2
-                    else:
-                        st['j'] += 1
-                        lbl.text = new[:st['j']]
-                        if st['j'] >= len(new):
-                            return False
-                except Exception:
-                    return False
-                return True
-            self._clocks.append(Clock.schedule_interval(_tick, 0.045))
-
-
-    def _end_grey(self, btn):
-            self._set_vig(0.50)
-            Animation(opacity=0.45, d=0.15).start(btn)
-
-
-    def _panel_out(self, pan):
-            Animation(opacity=0.15, d=0.4).start(pan)
-            Animation(y=pan.y + 20, d=0.4).start(pan)
-
-
     def _shot_handoff(self, shot):
             self._set_fx(scan=0.0, vig=0.55, band=False)   # 唯一关扫描线的镜
             w, h = self.size
@@ -752,8 +603,10 @@ class IntroShotsMixin(object):
                 Rectangle(pos=cur.pos, size=cur.size)
             self.content.add_widget(cur)
             def _cursor():
-                try:                            # 光标跟在文字末尾（纹理宽度定位）
-                    cur.x = prompt.center_x + prompt.texture_size[0] / 2 + 6
+                try:            # P2-3：固定字宽估算跟句末（不依赖 texture_size 兜底）
+                    tw = sum(26.0 if ord(c) > 0x2E80 else 14.3
+                             for c in prompt.text)
+                    cur.x = prompt.center_x + tw / 2 + 6
                 except Exception:
                     pass
             self._typewriter(prompt, t(shot['keys'][0]), window=1.7,
@@ -768,33 +621,3 @@ class IntroShotsMixin(object):
                 lambda _dt: setattr(cur, 'opacity', 1 - cur.opacity), 0.25))
             self._clocks.append(Clock.schedule_once(lambda _dt: (sfx.play('page', 0.30),
                 Animation(opacity=0.85, d=0.55).start(self)), 4.1))   # A：交棒 page
-
-
-    def _sil_one(self, n):
-            try:
-                col = self._sil_cols[n]
-                Animation(a=1.0, d=0.15).start(col)
-                self._clocks.append(Clock.schedule_once(
-                    lambda _dt: Animation(a=0.25, d=0.15).start(col), 0.19))
-            except Exception:
-                pass
-
-
-    def _sil_all(self, a):
-            try:
-                for col in self._sil_cols:
-                    Animation(a=a, d=0.15).start(col)
-            except Exception:
-                pass
-
-
-    def _sil_breathe(self, dt):
-            """定格段微呼吸：剪影依次 0.22↔0.30（+光标 = 画面不死，N-6）。"""
-            try:
-                self._bt = getattr(self, '_bt', 0) + 1
-                for i, col in enumerate(self._sil_cols):
-                    col.a = 0.26 + 0.04 * math.sin(
-                        2 * math.pi * (self._bt * 0.5 + i * 0.2))
-            except Exception:
-                return False
-            return True

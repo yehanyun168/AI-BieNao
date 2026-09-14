@@ -24,6 +24,18 @@ def mix(n1, n2, k):
     return tuple(a[i] + (b[i] - a[i]) * k for i in range(3)) + (1.0,)
 
 
+# —— 界面骨架层对比度修正（P1-1，2026-09-14）——
+# 硬约束：**不得改 pixel_ui.COLORS 全局令牌**（牵动全游戏与既有无障碍对比度校验）。
+# 结构面只能用本家族派生色。修前根因：所有结构面对底色都 <1.3:1 → 机房读成空线框、
+# 论坛/任务栏/面板像没画。修后（对 bg #0d1117 实算）：
+#   panel 底   1.12:1 → PANEL_LIT  2.22:1（任务栏 / 面板底 / 卡片底，可辨）
+#   边框       1.55~2.35:1 → border_strong 4.11:1（达 WCAG 图形 3:1）
+#   机柜填充   1.01:1 → dim('border_strong', 0.45+0.55*s) 近亮远暗（近 4.11 / 远 1.94）
+#   机柜描边   border 1.55:1 → RACK_EDGE（叠底色 5.63:1）
+PANEL_LIT = mix('panel', 'border_strong', 0.55)
+RACK_EDGE = alpha('cyan', 0.75)
+
+
 # —— 声明式镜头表（01_storyboard §2/§3 的机读版；kind ↔ _shot_* 渲染器）——
 INTRO_SHOTS = [
     {'kind': 'rack',    'dur': 4.0, 'keys': ('intro_s1',)},             # SHOT01
