@@ -45,7 +45,7 @@
 **无需安装 Python，无需任何依赖 —— 下载一个 exe，双击即玩：**
 
 1. 前往 [**Releases 页面（点此直达最新版）**](https://github.com/yehanyun168/AI-BieNao/releases/latest)
-2. 下载资产里的 **`AI别闹.exe`**（约 40 MB）
+2. 下载资产里的 **`AI-BieNao-v0.4.0.exe`**（约 39 MB）
 3. 双击运行（首次启动需解压，黑屏 5–10 秒属正常）
 4. 存档、设置、崩溃日志都写在 exe 同目录，删掉即重置
 
