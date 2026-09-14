@@ -1162,6 +1162,7 @@ class KvGrid(GridLayout):
     def __init__(self, rows: Sequence[str] = (), row_h: int = 17, **kwargs):
         super().__init__(cols=2, spacing=2, size_hint_y=None, **kwargs)
         self.row_h = row_h
+        self._base_row_h = row_h      # 基准行高（refresh_scale 的缩放原点）
         self._values: Dict[str, PixelLabel] = {}
         for key in rows:
             k = mk_label(key, font_size=FS_CAP, color=COLORS['text_dim'],
@@ -1179,7 +1180,7 @@ class KvGrid(GridLayout):
             lbl.text = text
 
     def refresh_scale(self, scale: float) -> None:
-        self.row_h = 17 * scale
+        self.row_h = getattr(self, '_base_row_h', 17) * scale
         for child in self.children:
             child.height = self.row_h
             child.font_size = FS_CAP * scale
@@ -1286,8 +1287,18 @@ class SkillBarCard(Widget):
         cost_left = x + w - pad - fs_w
         name_left = x + pad + kw + 4 * s
         self.lbl_name.pos = (name_left, top - row_h)
-        self.lbl_name.size = (max(cost_left - name_left - 4 * s, 1), row_h)
-        self.lbl_name.text_size = self.lbl_name.size
+        # shrink-to-fit：技能名在任意卡宽下都完整显示（不再被裁切）。
+        # 先按 FS_CAP 估算文字宽度（CJK≈1em、ASCII≈0.55em），若超出可用宽则
+        # 等比缩小字号到能容纳为止（下限 FS_TINY*0.85）。avail 留 0.92 安全余量。
+        avail = max(cost_left - name_left - 4 * s, 1)
+        fs = FS_CAP * s
+        txt = self.lbl_name.text or ''
+        need = sum((fs if ord(c) > 0x2E80 else fs * 0.55) for c in txt)
+        if need > avail and need > 0:
+            fs = max(fs * (avail * 0.92) / need, FS_TINY * 0.85 * s)
+        self.lbl_name.font_size = fs
+        self.lbl_name.size = (avail, row_h)
+        self.lbl_name.text_size = (avail, row_h)
         self.lbl_cost.pos = (cost_left, top - row_h)
         self.lbl_cost.size = (fs_w, row_h)
         self.lbl_cost.text_size = (fs_w, row_h)

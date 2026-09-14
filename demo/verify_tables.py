@@ -584,14 +584,20 @@ section("[8] 单文件行数 ≤ 800（P2-1 守卫）")
 #     而是把"每次放行"显式留痕。
 FILE_LINE_LIMIT = 800
 LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 实测）
-    'pixel_assets.py':   2353,    # 2026-09-12 再登记（原 2352）：台湾归属修正，gen_pixel_map.py 并入 6 格致游程换行 +1；自动生成的游程素材数据，重构 = 换生成器
+    'pixel_assets.py':   2364,    # 2026-09-14 再登记（原 2353）：中国国旗五角星重算
+                                  #    —— 大星由菱形改为真五角星、4 小星由单点改为小
+                                  #    五角星（栅格化重算 +11 行）；自动生成素材，重构=换生成器
+                                  #    （原 2353：台湾归属修正 +1）
     # 'ui_v4_screens.py' 已于 2026-09-13 拆分为 6 个模块（common/panels/cards/
     #   canvas/syspages/screens，各自 267~532 行），不再超限 → 移出白名单。
     #   若后续任一拆分模块涨过 800 行，需按「再登记约定」显式留痕后重新登记。
-'ui_v4.py':          1995,    # 2026-09-14 再登记（原 1980）：PxChip Clock 死循环修复
-                                  #    —— texture_size 正反馈链改为 Clock.create_trigger
-                                  #    debounce，每帧最多合并一次 _resize；进局后
-                                  #    主循环从「每帧 941 条 CRITICAL」降回 0 条
+'ui_v4.py':          2006,    # 2026-09-14 三度登记（原 1995）：底部技能带技能名
+                                  #    shrink-to-fit 防裁切（窄卡不再切字）＋KvGrid
+                                  #    行高改按基准值等比缩放（原 refresh_scale 写死 17）
+                                  #    （1995 = PxChip Clock 死循环修复：texture_size
+                                  #     正反馈链改 Clock.create_trigger debounce，每帧
+                                  #     最多合并一次 _resize；进局后主循环从「每帧
+                                  #     941 条 CRITICAL」降回 0 条）
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
     'main.py':           1512,    # 2026-09-14 再登记：跨对局设置移植（+9 行）

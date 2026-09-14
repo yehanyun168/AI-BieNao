@@ -29,6 +29,7 @@ from ui_v4 import mk_label, FS_H3, FS_BODY, FS_CAP, MK, ST_FILL
 from ui_modal import auto_h_label    # 自增高正文（text_size=(w,None)，绝不裁切）
 import engine
 import save_manager
+import sfx
 
 if TYPE_CHECKING:
     from main import GameUI
@@ -318,6 +319,7 @@ class TutorialController:
         btn.color = (COLORS['text_mute'] if tone == 'plain' else COLORS['cyan'])
         add_pixel_border(btn, color=(COLORS['border_2']
                                      if tone == 'plain' else _HILITE))
+        btn.bind(on_press=lambda *_: sfx.play('click'))
         btn.bind(on_release=cb)
         return btn
 

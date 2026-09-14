@@ -87,7 +87,7 @@ class InspectorPanel(StrokePanel):
         self.add_widget(scroll)
 
         # --- 身份行 ---
-        idrow = FloatLayout(size_hint_y=None, height=48)
+        idrow = FloatLayout(size_hint_y=None, height=56)
         self.flag = FlagWidget(code='CN', size_hint=(None, None), size=(64, 43),
                                pos_hint={'x': 0, 'top': 1})
         self.lbl_name = mk_label('', font_size=FS_H3, markup=True,
@@ -104,23 +104,23 @@ class InspectorPanel(StrokePanel):
         # --- 感染进度 ---
         body.add_widget(self._section_label(i18n.t('insp_infection')))
         self.lbl_pct = mk_label('--', font_size=FS_H2, color=COLORS['cyan'],
-                                halign='right', size_hint_y=None, height=26)
+                                halign='right', size_hint_y=None, height=28)
         body.add_widget(self.lbl_pct)
         self.segbar = SegBar(segments=12, filled=0.0, threshold=None,
                              size_hint_y=None, height=14)
         body.add_widget(self.segbar)
         self.lbl_seg_scale = mk_label('', font_size=FS_TINY, color=COLORS['text_mute'],
-                                      size_hint_y=None, height=14)
+                                      size_hint_y=None, height=16)
         body.add_widget(self.lbl_seg_scale)
         self.lbl_seg_note = mk_label('', font_size=FS_CAP, markup=True,
-                                     size_hint_y=None, height=16)
+                                     size_hint_y=None, height=22)
         body.add_widget(self.lbl_seg_note)
         # --- 里程碑提示（玩家反馈 6：把「还差多少」直接写出来）---
         # 玩家看 12.34% 这个数字无感，但「距解锁还差 7.66%」是可执行的。
         # 里程碑口径来自引擎真实阈值：unlock_penetration_threshold=10%（解锁
         # 新国家）、block_threshold（进入阻止区间）、penetration_saturated=99%。
         self.lbl_milestone = mk_label('', font_size=FS_CAP, markup=True,
-                                      size_hint_y=None, height=32)
+                                      size_hint_y=None, height=44)
         body.add_widget(self.lbl_milestone)
 
         # --- 本国下载量 ---
@@ -145,7 +145,8 @@ class InspectorPanel(StrokePanel):
         body.add_widget(self.spark)
 
         # --- 政府状态键值表 ---
-        self.kv = KvGrid(['gov_status', 'doubt_thr', 'block_budget', 'neighbors'])
+        self.kv = KvGrid(['gov_status', 'doubt_thr', 'block_budget', 'neighbors'],
+                      row_h=22)
         body.add_widget(self.kv)
 
         # --- 阻止强度 ---
@@ -156,7 +157,7 @@ class InspectorPanel(StrokePanel):
         self.blockbar = BlockBar(0.0, size_hint_y=None, height=10)
         warn.add_widget(self.blockbar)
         self.lbl_block = mk_label('', font_size=FS_TINY, color=COLORS['text_mute'],
-                                  size_hint_y=None, height=12)
+                                  size_hint_y=None, height=16)
         warn.add_widget(self.lbl_block)
         body.add_widget(warn)
 
