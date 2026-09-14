@@ -329,5 +329,35 @@ class SessionMixin:
         self._reschedule_tick()
 
     # ========================================================
+    # Esc 兜底：暂停 + 设置页（替代原先的「直接回主菜单」）
+    # --------------------------------------------------------
+    # 语义：Esc 逐层退出保持不变（投放 → 全屏页 → 日志抽屉 → 检视卡），
+    # 只把最外层兜底改成「暂停并打开设置页」，避免误按 Esc 直接弃局。
+    # 回主菜单仍保留两条路径：① 结算弹窗「返回主菜单」按钮；
+    #                       ② game_over 状态下按 Esc（不再暂停，直接 exit）。
+    # ========================================================
+    def pause_menu(self) -> None:
+        """暂停（未暂停时）+ 打开设置页。pause 音由 toggle_pause 自带。"""
+        if not self.paused:
+            self.toggle_pause()          # 冻结剩余秒数 + 停 tick + 播音效
+        self._pause_menu = True
+        self.open_page('settings')
+
+    def _leave_pause_menu(self) -> None:
+        """离开「暂停态设置页」→ 恢复对局（仅当仍处于 paused，避免二次恢复）。"""
+        if not getattr(self, '_pause_menu', False):
+            return
+        self._pause_menu = False
+        if self.paused:
+            self.toggle_pause()          # 从冻结处续走 + 播音效
+
+    def _esc_fallback(self) -> None:
+        """Esc 最外层兜底：对局进行中 → 暂停 + 设置页；已结束 → 回主菜单。"""
+        if engine.player is not None and not engine.player.game_over:
+            self.pause_menu()
+        elif callable(self.on_exit):
+            self.exit_to_menu()
+
+    # ========================================================
     # 主循环
     # ========================================================

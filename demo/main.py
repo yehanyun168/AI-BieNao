@@ -429,6 +429,7 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self.drop_targets: list = []
 
         self._page = None                     # 当前全屏页
+        self._pause_menu = False              # 当前设置页是否由「Esc 暂停」打开
         self._inspector = None
         self._log_drawer = None
         self._reticles = []

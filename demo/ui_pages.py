@@ -55,10 +55,17 @@ class PagesMixin:
         self._refresh_page(name, page)
 
     def close_page(self) -> None:
+        # 「暂停态设置页」被关闭 = 离开暂停面 → 顺带恢复对局。
+        # 放这里（而非 _close_page_user）可覆盖三条关页路径：返回按钮 /
+        # Esc 关页 / open_page 切页；其它页与普通设置页不受影响。
+        was_pause_menu = (isinstance(self._page, S.SettingsPage)
+                          and getattr(self, '_pause_menu', False))
         if self._page is not None:
             self.remove_widget(self._page)
             self._page = None
         self.rail.set_active('none')
+        if was_pause_menu:
+            self._leave_pause_menu()
 
     def _close_page_user(self) -> None:
         """用户主动退出页面（点返回 / Esc）—— 补一个返回音。

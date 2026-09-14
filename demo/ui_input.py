@@ -781,7 +781,7 @@ class InputMixin:
                 self._confirm_drop()
             return True
         if key == 'escape':
-            # Esc 逐层退出：投放模式 → 全屏页 → 浮层 → 主菜单
+            # Esc 逐层退出：投放模式 → 全屏页 → 浮层 → 暂停 + 设置页
             if self.drop_mode:
                 self._cancel_drop()
                 return True
@@ -794,7 +794,6 @@ class InputMixin:
             if self._inspector is not None:
                 self._close_inspector()
                 return True
-            if callable(self.on_exit):
-                self.exit_to_menu()
+            self._esc_fallback()      # 兜底：暂停 + 设置页（已结束则回主菜单）
             return True
         return False

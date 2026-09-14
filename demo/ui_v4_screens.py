@@ -62,6 +62,99 @@ from ui_v4_canvas import TechNode, TechCanvas                    # noqa: F401
 from ui_v4_syspages import (HelpPage, SettingsPage,              # noqa: F401
                             SaveSlotRowSlot, OriginCard,
                             OriginPage, _ORIGIN_DIFF_TONE)
+from ui_v4 import fit_width                              # noqa: F401
+
+
+class SkillPreviewPanel(StrokePanel):
+    """右侧固定预览面板（2026-09-14）：展示当前悬停技能卡的 sk_full_<sid> 四段文案。
+
+    设计：
+      - AskUserQuestion 用户拍板「右侧固定预览面板（推荐）」—— 替代悬停浮窗，
+        优势：① 不遮挡其他卡；② 不越界；③ 鼠标可移出卡继续阅读（浮窗会消失）。
+      - 面板内容：名称 / 状态芯片 / 完整四段（一句话·数值·时机·风险）。
+      - 来源键：i18n.sk_full_<sid>（首选）/ sk_detail_<sid>（回退）/ 兜底。
+      - 冷启动默认展示第一张卡（SkillPage.ensure_cards 触发）。
+    """
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('size_hint_x', 0.3)
+        super().__init__(bg=COLORS['panel'], border=COLORS['border_strong'],
+                         spacing=10, padding=(14, 12), **kwargs)
+        self._sid = None
+        self.lbl_title = mk_label(i18n.t('sk_preview_empty'),
+                                  font_size=FS_H3, color=COLORS['cyan'],
+                                  markup=True)
+        fit_width(self.lbl_title, pad=8, min_w=80)
+        self.add_widget(self.lbl_title)
+        self.lbl_state = PxChip('', tone='plain', height=22)
+        self.add_widget(self.lbl_state)
+        self.add_widget(hline())
+        # 完整介绍（label.height 跟随 texture_size 自动扩容）
+        self.lbl_full = mk_label('', font_size=FS_CAP, color=COLORS['text'],
+                                 valign='top', markup=True)
+        self.lbl_full.size_hint_y = None
+        self.lbl_full.bind(texture_size=self._resize_full)
+        self.add_widget(self.lbl_full)
+
+    def _resize_full(self, inst, sz) -> None:
+        inst.height = sz[1] + 4 if sz[1] > 0 else 24
+
+    def set_skill(self, sid: str) -> None:
+        """根据技能 id 刷新预览面板（SkillPageCard.on_enter 触发）。"""
+        if sid == self._sid:
+            return
+        self._sid = sid
+        from data import SKILLS                        # 局部延迟导入，避循环
+        meta = SKILLS.get(sid)
+        if meta is None:
+            self.lbl_title.text = sid
+            self.lbl_full.text = i18n.t('sk_preview_missing')
+            return
+        # 名称：直接取 SKILLS.name（i18n 没有 sk_name_<sid>，名字在数据表里）
+        nm = getattr(meta, 'name', sid)
+        # 键位：优先 SKILL_ORDER 里的位次（1-9/'0'），缺失时留空
+        order_idx = ''
+        try:
+            from data import SKILL_ORDER
+            i = SKILL_ORDER.index(sid)
+            order_idx = str(i + 1) if i < 9 else '0'
+        except (ValueError, ImportError):
+            pass
+        self.lbl_title.text = (f"{nm}  [size={FS_CAP}][color={U.MK['yellow']}]"
+                               f"[{order_idx}][/color][/size]" if order_idx else nm)
+        # 状态芯片：来自 meta（数据表里有 state 字段时按映射；默认就绪）
+        state = getattr(meta, 'state', 'ready')
+        tone_map = {'ready': 'up', 'cd': 'sys', 'cost': 'cost', 'lock': 'lock'}
+        self.lbl_state.set_tone(tone_map.get(state, 'plain'),
+                                _safe_t(f'sk_state_{state}', i18n.t('sk_state_ready')))
+        # 完整介绍：sk_full_ 优先，缺键回退 sk_detail_，再缺则给兜底
+        self.lbl_full.text = _safe_t(f'sk_full_{sid}',
+                                     _safe_t(f'sk_detail_{sid}',
+                                             i18n.t('sk_preview_missing')))
+
+    def clear_if(self, sid: str) -> None:
+        """鼠标离开该卡时——若仍是这张则清空。
+
+        留 0.05s 缓冲让用户能把鼠标从卡移到面板上而不被清空
+        （on_leave 在卡边缘触发，面板在右边有一定距离）。
+        """
+        from kivy.clock import Clock
+        def _do(_dt):
+            if self._sid == sid:
+                self._sid = None
+                self.lbl_title.text = i18n.t('sk_preview_empty')
+                self.lbl_state.set_tone('plain', '')
+                self.lbl_full.text = ''
+        Clock.schedule_once(_do, 0.05)
+
+
+def _safe_t(key: str, default: str) -> str:
+    """i18n.t 缺键会抛 KeyError；本函数吞掉异常并返回 default，避免面板白屏。"""
+    try:
+        return i18n.t(key)
+    except KeyError:
+        return default
+
 
 class SkillPage(U.PageScreen):
     """全屏技能页（设计稿 S05）：3×2 卡片网格。
@@ -97,10 +190,32 @@ class SkillPage(U.PageScreen):
         #（"Too many children"）。改为 3 列 + 行数按技能总数动态计算
         #（3 列 10 张 = 4 行），并在 ensure_cards 里补足行数 ——
         # 以后再扩技能只需改 SKILL_ORDER，不用回来改这里。
-        grid = GridLayout(cols=3, rows=2, spacing=8)
+        #
+        # 方案 A（整页滚动）：10 张 → 3×4 共 4 行，当 body 可用高 < 928px 时
+        # 行高被压到卡片最小内容高 233 以下 → 名字被状态芯片遮、说明第 3 行
+        # 被裁（本 bug 的 (a)(c) 两处裁切）。改用 ScrollView + 网格固定高：
+        # size_hint_y=None + minimum_height→height，行高恒等于
+        # SkillPageCard.CARD_H，一屏放不下就纵向滚动。范式照抄 OriginPage
+        # （ui_v4_syspages.py）。卡片 height 变化会经 Layout.add_widget 绑定的
+        # child.size→_trigger_layout 自动重算 minimum_height，缩放无需手动。
+        #
+        # 2026-09-14：右侧固定预览面板。AskUserQuestion（用户拍板）确认
+        # 「右侧固定预览面板（推荐）」—— 悬停技能卡时实时显示 sk_full_<sid>
+        # 四段文案（一句话 / 数值 / 时机 / 风险），不再用浮窗（怕遮挡），
+        # 也避免滚动露出半截。Body 改为水平：左 ScrollView (~70%) + 右
+        # 预览面板 (~30%)；首屏默认高亮第一张技能（避免冷启动空白）。
+        scroll = ScrollView(bar_width=6, size_hint_x=0.7)
+        grid = GridLayout(cols=3, spacing=8, size_hint_y=None)
+        grid.bind(minimum_height=grid.setter('height'))
         self.cards: Dict[str, SkillPageCard] = {}
-        self.body.add_widget(grid)
+        scroll.add_widget(grid)
+        self._scroll = scroll
         self._grid = grid
+        self.preview = SkillPreviewPanel(size_hint_x=0.3)
+        body_row = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=1)
+        body_row.add_widget(scroll)
+        body_row.add_widget(self.preview)
+        self.body.add_widget(body_row)
 
     def _pick_sort(self, key: str) -> None:
         if key == 'ready':
@@ -113,20 +228,27 @@ class SkillPage(U.PageScreen):
     def ensure_cards(self, skill_ids: Sequence[str]) -> None:
         """按技能 id 列表懒建卡片（数量固定，只建一次）。
 
-        T11：卡片总数超过初始 3×2 时自动补行（10 张 → 4 行），
-        避免 GridLayoutException("Too many children")。
+        方案 A 后网格放进 ScrollView：cols=3 固定、**rows 不设**（由卡片数
+        自动增长），故不会再触发 GridLayoutException("Too many children")，
+        也不再需要 T11 那套手工撑行数。每张卡给固定高 CARD_H，让行高确定、
+        网格 minimum_height 可算（放不下就靠 ScrollView 滚）。
+
+        2026-09-14：每张卡的 on_enter 联动 SkillPage.preview，让鼠标悬停
+        即可切换右侧预览面板（替代浮窗，不遮挡、不越界、不跟着卡移动）。
         """
-        # 先按最终卡片数把行数撑够（向上取整），再建卡
-        want = len(set(skill_ids) | set(self.cards))
-        if want > self._grid.cols * self._grid.rows:
-            self._grid.rows = -(-want // self._grid.cols)   # 向上取整
         for sid in skill_ids:
             if sid in self.cards:
                 continue
             card = SkillPageCard(
-                on_action=lambda s=sid: self._on_action and self._on_action(s, 'auto'))
+                on_action=lambda s=sid: self._on_action and self._on_action(s, 'auto'),
+                size_hint_y=None, height=SkillPageCard.CARD_H)
+            card.bind(on_enter=lambda *_, s=sid: self.preview.set_skill(s))
+            card.bind(on_leave=lambda *_, s=sid: self.preview.clear_if(s))
             self.cards[sid] = card
             self._grid.add_widget(card)
+        # 首屏默认高亮第一张（避免冷启动时右侧空白）
+        if skill_ids and self.preview._sid is None:
+            self.preview.set_skill(skill_ids[0])
 
     def set_sort_visual(self, active: str) -> None:
         for key, b in self.sort_btns.items():

@@ -508,6 +508,9 @@ TRANSLATIONS[LANG_ZH].update({
     'sk_action_drop': '投放到 {code}', 'sk_action_cast': '立即释放',
     'sk_state_ready': '就绪', 'sk_state_cd': '冷却中', 'sk_state_no_compute': '算力不足',
     'sk_state_lock': '未解锁',
+    # ---- 右侧预览面板（2026-09-14）----
+    'sk_preview_empty': '悬停技能卡查看完整介绍',
+    'sk_preview_missing': '（暂无介绍文案）',
     # ---- P1-2 技能预览（投放前就能看到"会怎样"）----
     'sk_pv': '预览',
     'sk_pv_dl': '下载 {d}',
@@ -832,6 +835,9 @@ TRANSLATIONS[LANG_EN].update({
     'sk_action_drop': 'Drop to {code}', 'sk_action_cast': 'Cast now',
     'sk_state_ready': 'Ready', 'sk_state_cd': 'Cooling', 'sk_state_no_compute': 'No compute',
     'sk_state_lock': 'Locked',
+    # ---- Right preview panel (2026-09-14) ----
+    'sk_preview_empty': 'Hover a skill card to see the full briefing.',
+    'sk_preview_missing': '(no briefing yet)',
     # ---- P1-2 skill preview (see "what happens" before casting) ----
     'sk_pv': 'Preview',
     'sk_pv_dl': 'DL {d}',
@@ -846,7 +852,7 @@ TRANSLATIONS[LANG_EN].update({
     'sk_benefit': 'Gain', 'sk_cost': 'Cost',
     # 2026-09-14 shortened to a single line (mirrors the zh revision)
     'sk_detail_push_song': 'Zero-cost small pull — the always-safe card.',
-    'sk_detail_algo_top': 'Mid-cost hard push — downloads and regulators both.',
+    'sk_detail_algo_top': 'Mid-cost hard push, loud.',
     'sk_detail_stealth': 'Disguised stealing — steal ×2, susp growth −50%.',
     'sk_detail_hit_maker': 'Strongest single-tick pull — priciest and loudest.',
     'sk_detail_bypass': 'Break the per-user cap — steal more this tick.',

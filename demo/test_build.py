@@ -195,7 +195,7 @@ assert 'f11' in inspect.getsource(main_module.GameUI._on_keyboard_down), \
 for k in ('tab', "f1", 'escape', '+', '-'):
     assert k in inspect.getsource(main_module.GameUI._on_keyboard_down), \
         f"快捷键 {k} 应绑定在键盘处理里"
-print("   ■ F11 快捷键齐全（F11 全屏 / Tab 大洲 / +/- 缩放 / Esc 菜单 / F1 帮助）")
+print("   ■ F11 快捷键齐全（F11 全屏 / Tab 大洲 / +/- 缩放 / Esc 暂停·设置 / F1 帮助）")
 
 # --- 12. 计划书验收数量断言（F02 / F05 / F08 / F09）---
 import data, endings as endings_mod, achievements as ach_mod

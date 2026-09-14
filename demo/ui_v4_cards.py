@@ -43,7 +43,27 @@ from ui_v4 import (
 from ui_v4_common import UiStats, small_btn  # noqa: F401
 class SkillPageCard(StrokePanel):
     """技能页大卡（设计稿 .skcard）：图标/名字/键位/状态 + 效果 chips +
-    3 个统计数字 + 12 周期使用柱 + 底部动作。"""
+    3 个统计数字 + 12 周期使用柱 + 底部动作。
+
+    ⚠️ 卡片内部分段高度全部走下面的类常量（单一来源），refresh_scale 按同一
+    组常量缩放；技能页把卡片放进 ScrollView 并给固定高，故这里必须有确定的
+    高度，不能再依赖父容器均分。
+    """
+
+    # 分段高度（单一来源）。内容最小高 = HEAD 32 + body 183 + FOOT 30 = 245
+    #   其中 body 183 = padding 12 + CHIPS 34 + DESC 84 + STATS 16 + SPARK 22
+    #                  + spacing 5×3 = 15
+    # DESC_H=84 是 2026-09-14 上调（原 72）：英文 detail + benefit/cost 行在
+    #   1680×980 窄卡片下需要 4 行（≈76px），原 72 触发 test_skill_card_geom
+    #   「裁字」断言。中英文 i18n 都保持同等文案密度，扩 12px 收口所有语种
+    #   的窄窗口溢出，并保证几何测试的「不裁字」契约。
+    CARD_H = 252        # 整卡基础高（≥ 内容最小高 245，留 7px 呼吸）
+    HEAD_H = 32         # 标题行（图标 + 名称 + 状态芯片）
+    CHIPS_H = 34        # 效果 chips 行
+    DESC_H = 84         # 说明区：detail 3 行 + 数值行 1 行（英文窄窗口 4 行）
+    STATS_H = 16        # 统计行（释放/累计贡献/单次均值）
+    SPARK_H = 22        # 12 周期使用柱
+    FOOT_H = 30         # 底栏（预览文案 + 动作按钮）
 
     def __init__(self, on_action: Callable = None, **kwargs):
         super().__init__(bg=COLORS['panel'], border=COLORS['border_2'],
@@ -51,7 +71,7 @@ class SkillPageCard(StrokePanel):
         self._on_action = on_action
 
         # 标题
-        hd = FloatLayout(size_hint_y=None, height=32)
+        self._hd = hd = FloatLayout(size_hint_y=None, height=self.HEAD_H)
         self.lbl_ico = mk_label('', font_size=FS_SM, color=COLORS['yellow'],
                                 halign='center', size_hint=(None, None),
                                 size=(26, 26), pos_hint={'x': 0, 'center_y': 0.5})
@@ -68,26 +88,31 @@ class SkillPageCard(StrokePanel):
 
         # 正文
         body = BoxLayout(orientation='vertical', spacing=5, padding=(8, 6))
-        self.chips = ChipRow([], height=34)
+        self._body = body
+        self.chips = ChipRow([], height=self.CHIPS_H)
         body.add_widget(self.chips)
         self.lbl_desc = mk_label('', font_size=FS_CAP, color=COLORS['text_mute'],
-                                 valign='top', size_hint_y=None, height=48,
-                                 markup=True)
+                                 valign='top', size_hint_y=None,
+                                 height=self.DESC_H, markup=True)
         body.add_widget(self.lbl_desc)
         self.lbl_stats = mk_label('', font_size=FS_CAP, markup=True,
-                                  size_hint_y=None, height=16)
+                                  size_hint_y=None, height=self.STATS_H)
         body.add_widget(self.lbl_stats)
-        self.spark = Spark([0.0] * 12, size_hint_y=None, height=22,
+        self.spark = Spark([0.0] * 12, size_hint_y=None, height=self.SPARK_H,
                            fill_hex=ST_FILL['on'])
         body.add_widget(self.spark)
         self.add_widget(body)
 
         # 底栏
+        # ⚠️ 这里**不能**再放全弹性 Widget() spacer：旧写法让它与 lbl_ft 平分
+        # 宽度（cardW=549 时 lbl_ft 只剩 212px），预览文案「怀疑 0→0 · 算力
+        # 100→104 · 距危机 80」约 250px 被折成 2 行塞进 22px 盒高 → 上下被裁成
+        # 「半截字」。改为 lbl_ft 独占剩余宽度 + 单行 shorten（放不下用省略号）。
         ft = BoxLayout(orientation='horizontal', spacing=6, size_hint_y=None,
-                       height=30, padding=(8, 4))
-        self.lbl_ft = mk_label('', font_size=FS_CAP, color=COLORS['text_mute'])
+                       height=self.FOOT_H, padding=(8, 4))
+        self.lbl_ft = mk_label('', font_size=FS_CAP, color=COLORS['text_mute'],
+                               shorten=True, max_lines=1)
         ft.add_widget(self.lbl_ft)
-        ft.add_widget(Widget())
         self.btn = Button(text='', font_size=FS_CAP, size_hint=(None, None),
                           size=(96, 24), background_normal='')
         self.btn.background_color = (0.078, 0.188, 0.173, 1)
@@ -97,6 +122,31 @@ class SkillPageCard(StrokePanel):
         ft.add_widget(self.btn)
         self._ft = ft
         self.add_widget(ft)
+
+    def refresh_scale(self, scale: float) -> None:
+        """F12/窗口缩放：卡片「分段高度 + 字号」按同一系数整体同步缩放。
+
+        ⚠️ 必须整体同步：只缩 self.height 会让内部固定高控件溢出、只缩字号
+        会裁字 —— 两者一起走才等价于整卡等比。技能页把卡片放进 ScrollView
+        并给固定高，所以这里缩放 self.height 后，网格 minimum_height 会自动
+        跟着重算，滚动条随之适配。
+        """
+        s = float(scale)
+        self.height = self.CARD_H * s
+        self._hd.height = self.HEAD_H * s
+        self.lbl_ico.font_size = FS_SM * s
+        self.lbl_nm.font_size = FS_BODY * s
+        self.chip_state.refresh_scale(s)
+        self.chips.height = self.CHIPS_H * s
+        self.chips.refresh_scale(s)
+        self.lbl_desc.font_size = FS_CAP * s
+        self.lbl_desc.height = self.DESC_H * s
+        self.lbl_stats.font_size = FS_CAP * s
+        self.lbl_stats.height = self.STATS_H * s
+        self.spark.height = self.SPARK_H * s
+        self._ft.height = self.FOOT_H * s
+        self.lbl_ft.font_size = FS_CAP * s
+        self.btn.font_size = FS_CAP * s
 
     def update(self, skill, icon: str, name: str, key_hint: str,
                chips: Sequence[Tuple[str, str]], desc: str,
