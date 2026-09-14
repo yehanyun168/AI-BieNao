@@ -270,7 +270,10 @@ class SkillPage(U.PageScreen):
             card = SkillPageCard(
                 on_action=lambda s=sid: self._on_action and self._on_action(s, 'auto'),
                 size_hint_y=None, height=SkillPageCard.CARD_H)
-            card.bind(on_touch_down=lambda touch, c=card, s=sid:
+            # ⚠️ Kivy 绑定回调签名是 (instance, touch)：第一个参数是控件本身，
+            # 第二个才是 touch。曾误写成 (touch, ...) → 把 card 当成 touch、
+            # 把 touch 当成 card → card.collide_point 不存在 → 点击即闪退。
+            card.bind(on_touch_down=lambda inst, touch, c=card, s=sid:
                       self._card_select(touch, c, s))
             self.cards[sid] = card
             self._grid.add_widget(card)

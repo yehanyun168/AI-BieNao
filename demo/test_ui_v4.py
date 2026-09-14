@@ -100,6 +100,36 @@ def main():
     check('SkillPageCard', lambda: S.SkillPageCard().update(
         None, '↑↑', '主动推送', '1', [('a', 'up')], 'desc', 28, '46.2M', '1.65M',
         [0.1] * 12, 'ready', '就绪', '投放到 CN', True, '当前选中国家：中国 CN'))
+    def t_skill_preview_click():
+        # 守卫1：绑定回调签名必须是 (inst, touch)——Kivy 传 (instance, touch)。
+        # 曾误写成 (touch, ...) → card 变成 touch、touch 变成 card →
+        # card.collide_point 不存在 → 点击技能卡即闪退。
+        import inspect
+        if 'lambda inst, touch, c=card, s=sid' not in inspect.getsource(S):
+            raise AssertionError(
+                "on_touch_down 回调签名必须是 (inst, touch)（Kivy 传 instance,touch）")
+        # 守卫2：卡体点击确实切换右侧预览
+        p = S.SkillPage()
+        p.ensure_cards(['push_song', 'algo_top', 'stealth'])
+        p.preview._sid = None
+
+        class _Card:
+            class btn:
+                @staticmethod
+                def collide_point(x, y):
+                    return False
+
+            @staticmethod
+            def collide_point(x, y):
+                return True
+
+        class _Touch:
+            pos = (10, 10)
+
+        p._card_select(_Touch(), _Card(), 'algo_top')
+        if p.preview._sid != 'algo_top':
+            raise AssertionError(f"点击卡未切换预览：{p.preview._sid}")
+    check('SkillPage 点击卡切换预览 + 回调签名守卫', t_skill_preview_click)
     check('TechPage', lambda: (lambda p: (p.ensure_slots(tech_tree.TECH_TREE,
                                                          lambda s: None),
                                           p.set_main_action('升级', lambda: None)))(S.TechPage()))
