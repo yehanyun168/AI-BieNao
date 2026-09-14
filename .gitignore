@@ -24,12 +24,15 @@ crash.log
 tools/data/playtest_reports/
 
 # ===== 生成截图 / 一次性调试产物 =====
+#   （2026-09-14 扩写：探针除 .py/.txt 外还会落 .png 截图与 .log，
+#    原先只覆盖 .py/.txt，导致 _probe*.png 会被 git 误收）
 _v4shots/
 _v4shots_backup_*/
 _crops/
-demo/_probe*.py
-demo/_probe*.txt
-demo/_crop*.py
+demo/_tmp*
+demo/_probe*
+demo/_crop*
+demo/_t13*
 
 # ===== IDE / 操作系统 =====
 .idea/
