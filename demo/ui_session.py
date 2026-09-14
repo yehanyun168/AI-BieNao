@@ -151,6 +151,8 @@ class SessionMixin:
         for sid, btn in self.rail.buttons.items():
             pass
         self.lbl_logo.text = f"[b]{t('app_title')}[/b]"
+        self.lbl_tick_cap.text = t('stats_tick')
+        U.fit_width(self.lbl_tick_cap, pad=6)
         self.lbl_grey.text = t('drop_grey_note')
         self.drop_hint.set_tone('on', t('drop_click_hint'))
         self.layer_hud.seg.set_options([t(LAYER_LABEL_KEY[k]) for k in LAYER_KEYS])
@@ -158,7 +160,9 @@ class SessionMixin:
         self._sync_pause_button()
         self._sync_region_tabs()
         self._apply_layer()
+        self._stat_prev.clear()
         self.refresh_all()
+        self._refresh_tech_page()
 
     def _sync_pause_button(self) -> None:
         """底部暂停按钮文案的唯一来源（玩家反馈 #1）。

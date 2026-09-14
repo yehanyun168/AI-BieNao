@@ -245,10 +245,13 @@ class PagesMixin:
                                  f"[color={U.MK['yellow']}]{engine.player.compute:.0f}[/color]")
 
         states = {}
+        lang = get_lang()
         for slot in TECH_TREE:
             done = pt.t0_unlocked.get(slot.slot_id, False)
             # --- T0 节点 ---
             tk = f"t0:{slot.slot_id}"
+            if tk in page.canvas_view.nodes:
+                page.canvas_view.nodes[tk].name = slot.name_for(lang)
             if done:
                 t_state, t_sub = 'done', t('tt_picked')
             elif pt.can_unlock_t0(slot.slot_id):
@@ -258,7 +261,7 @@ class PagesMixin:
             else:
                 t_state = 'lock'
                 pre = SLOT_MAP.get(slot.prereq_slot) if slot.prereq_slot else None
-                t_sub = (t('tt_need_pre').format(n=pre.name) if pre
+                t_sub = (t('tt_need_pre').format(n=pre.name_for(lang)) if pre
                          else f"{slot.t0_cost:.0f}")
             states[tk] = {'state': t_state, 'level': 1 if done else 0,
                           'cost': 0.0 if done else slot.t0_cost, 'sub': t_sub}
@@ -266,6 +269,8 @@ class PagesMixin:
             for br in slot.branches:
                 lv = pt.branch_levels.get(br.branch_id, 0)
                 bk = f"br:{br.branch_id}"
+                if bk in page.canvas_view.nodes:
+                    page.canvas_view.nodes[bk].name = br.name_for(lang)
                 if not done:
                     b_state, b_sub = 'lock', ''
                 elif lv >= 3:
@@ -285,7 +290,7 @@ class PagesMixin:
         if nd is not None:
             if nd.kind == 't0':
                 slot = SLOT_MAP.get(nd.slot_id)
-                nd.desc = (slot.description if slot else '')
+                nd.desc = (slot.description_for(lang) if slot else '')
             else:
                 nd.desc = self._branch_desc(nd.slot_id, nd.branch_id)
         page._sync_detail_from_node()
@@ -300,7 +305,7 @@ class PagesMixin:
                 continue
             lv = engine.player.tech.branch_levels.get(branch_id, 0)
             eff = self._branch_effect(br, min(lv, 2))
-            return f"{br.description}\\n{lv}/3 · {eff}"
+            return f"{br.description_for(get_lang())}\\n{lv}/3 · {eff}"
         return ''
 
     def _reset_tech(self) -> None:

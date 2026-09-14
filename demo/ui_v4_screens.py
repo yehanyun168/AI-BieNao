@@ -1128,7 +1128,7 @@ class TechCanvas(FloatLayout):
         for i, slot in enumerate(slots):
             cx = left_pad + step * i
             key = f"t0:{slot.slot_id}"
-            nd = TechNode(key, 't0', slot.slot_id, slot.name,
+            nd = TechNode(key, 't0', slot.slot_id, slot.name_for(i18n.get_lang()),
                           (slot.icon or slot.slot_id[:2]).upper(), cx, self.MAIN_Y)
             nd.w, nd.h = self.NODE_W, self.NODE_H   # 命中矩形（缺省 0×0 = 永远点不中）
             self.nodes[key] = nd
@@ -1142,7 +1142,7 @@ class TechCanvas(FloatLayout):
             for j, br in enumerate(slot.branches):
                 offset = (j - (m - 1) / 2.0) * br_step
                 bkey = f"br:{br.branch_id}"
-                bn = TechNode(bkey, 'branch', slot.slot_id, br.name,
+                bn = TechNode(bkey, 'branch', slot.slot_id, br.name_for(i18n.get_lang()),
                               (br.icon or br.branch_id[:2]).upper(),
                               cx + offset, self.BRANCH_Y)
                 bn.branch_id = br.branch_id
