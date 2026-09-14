@@ -16,6 +16,7 @@ ui_v4.py - AI 别闹 v0.4 交互界面组件库
    所以自绘背景一律用 self.pos / self.size（它们是父坐标系下的绝对坐标），
    绝不能写局部坐标 (0,0)。
 """
+import math
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from kivy.graphics import Color, Line, Rectangle
@@ -26,6 +27,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
+import i18n
 import sfx
 
 from pixel_ui import (COLORS, PixelLabel, add_pixel_border, hex_rgba,
@@ -165,6 +167,23 @@ MK['susp_high'] = MK['bad']
 def rgba(name: str) -> Tuple[float, float, float, float]:
     """按令牌名取色（'cyan' / 'yellow' …）"""
     return COLORS[name]
+
+
+def line_h(font_size: float, lines: int = 1) -> float:
+    """一行文字的**真实占用高度**（Kivy 默认字体行高 ≈ 字号 × 1.34）。
+
+    ⚠️ 千万不要拿「字号」当行高用。FS_CAP 实际是 18.4px，但一行 18.4px 的
+    字要 24.6px 才不被上下裁掉 —— 历史上有好几处把 height 写成 15/16/22
+    （小于行高），字形上下被切，中文尤其明显（观感像「错别字」）。
+
+    实测（MicrosoftYaHei / Roboto，texture_size[1]）：
+        FS_TINY 16.1 → 22   |  FS_CAP 18.4 → 24~25
+        FS_H2 32.2   → 43   |  22px 数字   → 30
+    本函数给的是「够用且不虚胖」的值（≈ 实测 +1px 余量）。
+
+    所有承载文字的控件高度都应该走这里，不要再手写魔数。
+    """
+    return math.ceil(float(font_size) * 1.34) * int(lines) + 1
 
 
 def _bind_text_size(label: Label) -> Label:
@@ -1164,21 +1183,34 @@ class KvGrid(GridLayout):
     """两列键值表：左列静音、右列主色右对齐。
 
     Args:
-        rows: 键名列表；值用 ``set_value(key, text)`` 更新。
+        rows: **i18n 键名**列表；左列显示 ``i18n.t(键名)``，值用
+              ``set_value(key, text)`` 更新（仍按原键名索引）。
+        row_h: 行高；默认按 ``FS_CAP`` 的实际行高算，别传小于行高的值。
+
+    ⚠️ 历史 bug：左列直接显示 ``rows`` 里的键名原文，从不调 ``i18n.t()``，
+    于是中文环境下出现 ``gov_status`` / ``doubt_thr`` 这种代码串。
+    这些键在 i18n 里**早就有**中文，只是从来没被查表。
     """
 
-    def __init__(self, rows: Sequence[str] = (), row_h: int = 17, **kwargs):
+    def __init__(self, rows: Sequence[str] = (), row_h: float = None, **kwargs):
         super().__init__(cols=2, spacing=2, size_hint_y=None, **kwargs)
+        if row_h is None:
+            row_h = line_h(FS_CAP)
         self.row_h = row_h
         self._base_row_h = row_h      # 基准行高（refresh_scale 的缩放原点）
         self._values: Dict[str, PixelLabel] = {}
+        self._labels: Dict[str, PixelLabel] = {}
         for key in rows:
-            k = mk_label(key, font_size=FS_CAP, color=COLORS['text_dim'],
-                         size_hint_y=None, height=row_h)
+            # 左列：查 i18n（缺键时 t() 会回落成键名本身，不会崩）
+            k = mk_label(i18n.t(key), font_size=FS_CAP, color=COLORS['text_dim'],
+                         size_hint_y=None, height=row_h,
+                         shorten=True, shorten_from='right')
             v = mk_label('--', font_size=FS_CAP, color=COLORS['text'],
-                         halign='right', markup=True, size_hint_y=None, height=row_h)
+                         halign='right', markup=True, size_hint_y=None,
+                         height=row_h, shorten=True, shorten_from='right')
             self.add_widget(k)
             self.add_widget(v)
+            self._labels[key] = k
             self._values[key] = v
         self.bind(minimum_height=self.setter('height'))
 
@@ -1187,8 +1219,19 @@ class KvGrid(GridLayout):
         if lbl is not None:
             lbl.text = text
 
+    def refresh_lang(self) -> None:
+        """语言切换后重查左列文案。
+
+        左列文案在构造时就定死成 ``i18n.t(key)``，而本控件会被宿主面板
+        缓存复用（如检视卡挂在 map_stage 上跨 rebuild 存活），不重查就会
+        在中英切换后继续显示旧语种。键名现存于 ``_labels``，顺序即行序。
+        """
+        for key, lbl in self._labels.items():
+            lbl.text = i18n.t(key)
+
     def refresh_scale(self, scale: float) -> None:
-        self.row_h = getattr(self, '_base_row_h', 17) * scale
+        """跟随 F12 缩放：行高等比缩，但**永不低于**该字号的实际行高。"""
+        self.row_h = max(line_h(FS_CAP * scale), self._base_row_h * scale)
         for child in self.children:
             child.height = self.row_h
             child.font_size = FS_CAP * scale

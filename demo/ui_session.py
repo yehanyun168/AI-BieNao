@@ -152,6 +152,9 @@ class SessionMixin:
     def _rebuild_lang(self) -> None:
         """切换语言后重建所有带文案的控件"""
         page_name = getattr(self._page, 'page_name', None)
+        # 科技页是「选节点 → 看描述」，重建会丢选中项 → 切完语言详情面板
+        # 变成「未选中任何节点」。记住 key 重开后补回去（其它页无此属性）。
+        page_sel = getattr(self._page, 'selected_key', None)
         _update_window_title()
         self.lang_switch.set_tone('plain', LANG_CHIP_TAG[get_lang()])
         self.help_chip.set_tone('plain', '? ' + t('rail_help'))
@@ -172,9 +175,13 @@ class SessionMixin:
         self._stat_prev.clear()
         self.refresh_all()
         self._refresh_tech_page()
+        self._refresh_lang_panels()
         if page_name:
             self.close_page()
             self.open_page(page_name)
+            if page_sel and hasattr(self._page, 'selected_key'):
+                self._page.selected_key = page_sel
+                self._refresh_page(page_name, self._page)
         evt = getattr(self, '_active_choice_event', None)
         popup = getattr(self, '_active_choice_popup', None)
         if evt is not None and popup is not None:

@@ -593,13 +593,17 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
     # 'ui_v4_screens.py' 已于 2026-09-13 拆分为 6 个模块（common/panels/cards/
     #   canvas/syspages/screens，各自 267~532 行），不再超限 → 移出白名单。
     #   若后续任一拆分模块涨过 800 行，需按「再登记约定」显式留痕后重新登记。
-'ui_v4.py':          2016,    # 2026-09-14 四度登记（原 2006）：v4 UI 控件点击音
-                                  #    效接线（PxChip 区域页签 / SegSwitch 分段开关 /
-                                  #    OptButton 选项按钮 + import sfx，原三者全静默）
-                                  #    （原 2006 = 底部技能带技能名 shrink-to-fit
-                                  #    防裁切 ＋ KvGrid 行高按基准值等比缩放）
-                                  #    shrink-to-fit 防裁切（窄卡不再切字）＋KvGrid
-                                  #    行高改按基准值等比缩放（原 refresh_scale 写死 17）
+'ui_v4.py':          2058,    # 2026-09-14 五度登记（原 2016）：检视卡/科技描述中文化
+                                  #    —— 新增 line_h(字号,行数) 真实行高助手（Kivy 行高
+                                  #    ≈字号×1.34，旧代码一律把 height 写小于真实行高 →
+                                  #    字形上下被裁；+6 行）＋ KvGrid 支持 refresh_lang
+                                  #    （原左列直接显示键名原文 gov_status，且语言切换
+                                  #    后从不重查；+17 行）＋ import math/i18n 与说明注释
+                                  #    （原 2016 = v4 UI 控件点击音效接线：PxChip 区域页签 /
+                                  #     SegSwitch 分段开关 / OptButton 选项按钮 + import
+                                  #     sfx，原三者全静默）
+                                  #    （原 2006 = 底部技能带技能名 shrink-to-fit 防裁切
+                                  #     ＋ KvGrid 行高改按基准值等比缩放，原写死 17）
                                   #    （1995 = PxChip Clock 死循环修复：texture_size
                                   #     正反馈链改 Clock.create_trigger debounce，每帧
                                   #     最多合并一次 _resize；进局后主循环从「每帧
@@ -613,8 +617,12 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     设置页 values 传参；1523 = 音频启动加载前移）
     'ui_input.py':        801,    # 2026-09-14 登记（原走 800 默认上限）：
                                   #    合并协作者分支（事件暂停 +1 行）
-    'i18n.py':           1387,    # 2026-09-14 再登记（原 1381）：右侧预览面板兜底文案
-                                  #    sk_preview_empty / sk_preview_missing ×2 语
+    'i18n.py':           1414,    # 2026-09-14 三度登记（原 1387）：科技树分支效果中文化
+                                  #    —— tt_fx_* 家族 11 键 ×2 语（9 种 effect.type 的
+                                  #    中文名 + 未知兜底 + scope 括号格式；中文界面里
+                                  #    分支描述曾出现 type；value ×1.10 这类英文代码串）
+                                  #    （原 1387：右侧预览面板兜底文案
+                                  #     sk_preview_empty / sk_preview_missing ×2 语）
                                   #    （原 1381：技能完整介绍 sk_full_* + sk_detail_*
                                   #     精简为单行）
     'ui_hud.py':          922,    # 2026-09-14 三度登记（原 916）：右侧指令栏 RailBar

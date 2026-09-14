@@ -78,7 +78,10 @@ class SkillPageCard(StrokePanel):
         self.lbl_nm = mk_label('', font_size=FS_BODY, markup=True,
                                pos_hint={'x': 0, 'center_y': 0.5})
         self.lbl_nm.size_hint = (1, 1)
-        self.lbl_nm.padding_x = 66
+        # 四元组：只左缩进 66px 给图标。用 ``padding_x = 66`` 会**右侧也缩 66px**
+        # （Kivy 的 padding_x 是单值），与下方 _fit_name 的「右留 80px」叠加，
+        # 白丢 66px 可用宽；且 padding_x 已被 Kivy 标记弃用（构造即告警）。
+        self.lbl_nm.padding = [66, 0, 0, 0]
         self.chip_state = PxChip('', tone='up', height=20)
         self.chip_state.pos_hint = {'right': 1, 'center_y': 0.5}
         hd.add_widget(self.lbl_ico)

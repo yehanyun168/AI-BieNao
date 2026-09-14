@@ -324,7 +324,10 @@ class PagesMixin:
                 continue
             lv = engine.player.tech.branch_levels.get(branch_id, 0)
             eff = self._branch_effect(br, min(lv, 2))
-            return f"{br.description_for(get_lang())}\\n{lv}/3 · {eff}"
+            # ⚠️ 这里曾是 ``\\n``（双反斜杠）→ 源码里是字面量「反斜杠+n」，
+            #    描述与「n/3 · 效果」被粘成一行、屏幕上还印出一个可见的 \n。
+            #    必须是单反斜杠才是真换行。
+            return f"{br.description_for(get_lang())}\n{lv}/3 · {eff}"
         return ''
 
     def _reset_tech(self) -> None:
@@ -357,20 +360,58 @@ class PagesMixin:
 
     @staticmethod
     def _branch_effect(branch, idx: int) -> str:
-        """把分支的 L{n} 效果 dict 压成一行短文案"""
+        """把分支的 L{n} 效果压成一行**本地化**短文案。
+
+        ⚠️ 旧实现遍历 ``eff.items()`` 取前两个键，把**键名当文案**拼出来
+        （`type；value ×1.10`），中文环境照样是英文 —— 这就是「科技描述显示
+        英文」的根因。现在统一走 ``_effect_text`` 查 i18n。
+        """
         try:
             eff = branch.effects_per_level[idx]
         except Exception:
-            return '--'  # 等级越界/结构异常 → 显示占位符，不崩科技页
+            return '--'          # 等级越界/结构异常 → 占位符，不崩科技页
         if not isinstance(eff, dict):
-            return str(eff)[:18]
-        parts = []
-        for k, v in list(eff.items())[:2]:
-            if isinstance(v, (int, float)):
-                parts.append(f"{k} ×{v:.2f}")
-            else:
-                parts.append(f"{k}")
-        return "；".join(parts)[:22] or '--'
+            return str(eff)
+        return PagesMixin._effect_text(eff) or '--'
+
+    # 效果 dict['type'] → i18n 文案键。
+    # ⚠️ tech_tree 里新增效果类型时必须在这里同步登记，否则会退化成
+    #    tt_fx_unknown（宁可显示「效果」也不能漏英文键名给玩家）。
+    #    守卫：test_tech_effect_i18n.py 会遍历 TECH_TREE 校验覆盖完整。
+    _FX_TYPE_KEYS = {
+        'block_resist': 'tt_fx_block_resist',
+        'compute_per_user_mult': 'tt_fx_compute_per_user_mult',
+        'downloads_mult': 'tt_fx_downloads_mult',
+        'event_weight': 'tt_fx_event_weight',
+        'global_downloads_mult': 'tt_fx_global_downloads_mult',
+        'stealth_ratio_bonus': 'tt_fx_stealth_ratio_bonus',
+        'suspicion_mult': 'tt_fx_suspicion_mult',
+        'unlock_regions': 'tt_fx_unlock_regions',
+        'unlock_function': 'tt_fx_unlock_function',
+    }
+    # 加法型效果（引擎里是 += 绝对值）→ 用「+N%」；其余乘法型用「×N.NN」
+    _FX_ADDITIVE = ('block_resist', 'stealth_ratio_bonus')
+
+    @staticmethod
+    def _effect_text(eff) -> str:
+        """把一个效果 dict 压成一行本地化文案（名称 + 数值 + 作用范围）。"""
+        if not isinstance(eff, dict):
+            return str(eff)
+        ftype = eff.get('type', '')
+        key = PagesMixin._FX_TYPE_KEYS.get(ftype)
+        name = t(key) if key else t('tt_fx_unknown')
+        val = eff.get('value')
+        if not isinstance(val, (int, float)):
+            return name
+        if ftype in PagesMixin._FX_ADDITIVE:
+            txt = f"{name} +{val * 100:.0f}%"
+        else:
+            txt = f"{name} ×{val:.2f}"
+        scope = eff.get('scope')
+        # scope='unlocked' 表示「所有已解锁国家」，是默认口径，不必标注
+        if scope and scope != 'unlocked':
+            txt += t('tt_fx_scope_fmt').format(s=scope)
+        return txt
 
     # ---- S10 成就页 ----
     def _refresh_ach_page(self, filt=None, page=None) -> None:
@@ -536,6 +577,20 @@ class PagesMixin:
         if self._inspector is not None:
             self.map_stage.remove_widget(self._inspector)
             self._inspector = None
+
+    def _refresh_lang_panels(self) -> None:
+        """语言切换后刷新**缓存在 map_stage 上的浮层**文案。
+
+        检视卡 / 投放预览 / 日志抽屉都是「首次打开时建、关闭才销毁」的常驻
+        浮层，语言切换走的 ``_rebuild_lang()`` 只重建带页码的页面，碰不到它们
+        —— 不显式重查，中英切换后这三块会继续显示旧语种（实测：EN 下左列仍是
+        「政府状态」「邻国」）。面板自带 ``refresh_lang()``，这里只负责派发。
+        """
+        for attr in ('_inspector', '_drop_preview', '_log_drawer'):
+            panel = getattr(self, attr, None)
+            fn = getattr(panel, 'refresh_lang', None)
+            if callable(fn):
+                fn()
 
     def _on_inspector_focus(self, code: str) -> None:
         self.map_widget.set_selected(code)

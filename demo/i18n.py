@@ -588,6 +588,21 @@ TRANSLATIONS[LANG_ZH].update({
     'tt_btn_locked': '前置未满足',
     'tt_branch_progress': '分支 {a} / {b} 已投入',
     'tt_need_pre': '← {n}',
+    # 科技效果类型（tech_tree 的 effect dict['type'] → 可读文案）。
+    # ⚠️ 分支详情以前把 dict 的**键名**直接拼进文案，中文环境会显示
+    # `type；value ×1.10` 这类英文/代码串；现在统一走这些键。
+    # 新增效果类型必须在这里同步登记，否则会退化成 tt_fx_unknown。
+    'tt_fx_block_resist': '阻止抗性',
+    'tt_fx_compute_per_user_mult': '人均算力',
+    'tt_fx_downloads_mult': '区域下载量',
+    'tt_fx_event_weight': '事件权重',
+    'tt_fx_global_downloads_mult': '全球下载量',
+    'tt_fx_stealth_ratio_bonus': '隐蔽率',
+    'tt_fx_suspicion_mult': '怀疑度增速',
+    'tt_fx_unlock_regions': '解锁区域',
+    'tt_fx_unlock_function': '解锁功能',
+    'tt_fx_unknown': '效果',
+    'tt_fx_scope_fmt': '（{s}）',
 
     # ---- S10 成就面板 ----
     'ach_page_title': '成就 · ACHIEVEMENTS',
@@ -800,7 +815,7 @@ TRANSLATIONS[LANG_EN].update({
     'insp_drop': '⊕ Drop skill here',
     'per_tick': 'tick',
     'gov_idle': 'Unwatched', 'gov_watching': 'Watching', 'gov_blocking': 'Blocking',
-    'gov_status': 'Gov status', 'doubt_thr': 'Suspicion / threshold',
+    'gov_status': 'Gov status', 'doubt_thr': 'Susp / threshold',
     'targets': 'Targets', 'cost': 'Compute cost', 'remain': 'Compute left',
 
     # ---- S04 drop mode ----
@@ -913,6 +928,20 @@ TRANSLATIONS[LANG_EN].update({
     'tt_btn_locked': 'Prereq missing',
     'tt_branch_progress': 'Branches invested {a} / {b}',
     'tt_need_pre': '← {n}',
+    # Tech effect types (tech_tree effect dict['type'] → readable text).
+    # Kept 1:1 with the zh block above; a new effect type must be registered
+    # here too, otherwise it degrades to tt_fx_unknown.
+    'tt_fx_block_resist': 'Block resistance',
+    'tt_fx_compute_per_user_mult': 'Compute per user',
+    'tt_fx_downloads_mult': 'Regional downloads',
+    'tt_fx_event_weight': 'Event weight',
+    'tt_fx_global_downloads_mult': 'Global downloads',
+    'tt_fx_stealth_ratio_bonus': 'Stealth ratio',
+    'tt_fx_suspicion_mult': 'Suspicion growth',
+    'tt_fx_unlock_regions': 'Unlocks regions',
+    'tt_fx_unlock_function': 'Unlocks function',
+    'tt_fx_unknown': 'Effect',
+    'tt_fx_scope_fmt': ' ({s})',
 
     # ---- S10 achievements ----
     'ach_page_title': 'ACHIEVEMENTS',

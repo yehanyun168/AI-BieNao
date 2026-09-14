@@ -46,7 +46,7 @@ import ui_v4 as U
 from ui_v4 import (
     AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
     KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, ST_FILL,
+    StrokePanel, mk_label, line_h, ST_FILL,
     PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
     SPR_ROBOT, PAL_ROBOT,
 )
@@ -344,7 +344,8 @@ class TechPage(U.PageScreen):
         self.add_head_widget(self.chip_full)
         self.add_head_widget(self.lbl_compute)
         self.add_head_widget(small_btn(i18n.t('tt_reset'), 'plain',
-                                       lambda: on_reset and on_reset()))
+                                       lambda: on_reset and on_reset(),
+                                       height=line_h(FS_SM)))
 
         # ---- 图例（色盲辅助：形状 + 颜色双编码）----
         self.legend = BoxLayout(orientation='horizontal', spacing=10,
@@ -374,8 +375,11 @@ class TechPage(U.PageScreen):
                                   size_hint_y=None, height=self.DETAIL_H)
         drow = BoxLayout(orientation='horizontal', spacing=10)
         dleft = BoxLayout(orientation='vertical', spacing=4)
+        # 标题固定成一行高，剩下的高度**全部**留给描述 —— 否则两个 size_hint_y=1
+        # 的 Label 对半分 134px，描述（3~4 行）必被裁尾。
         self.lbl_d_title = mk_label('', font_size=FS_H3, color=COLORS['cyan'],
-                                    markup=True)
+                                    markup=True, size_hint_y=None,
+                                    height=line_h(FS_H3))
         self.lbl_d_desc = mk_label('', font_size=FS_CAP,
                                    color=COLORS['text_mute'], valign='top')
         dleft.add_widget(self.lbl_d_title)
@@ -388,7 +392,7 @@ class TechPage(U.PageScreen):
         dright.add_widget(Widget())                  # 顶弹簧
         self.lbl_d_cost = mk_label('', font_size=FS_CAP,
                                    color=COLORS['text_dim'], halign='right',
-                                   size_hint_y=None, height=24)
+                                   size_hint_y=None, height=line_h(FS_CAP))
         self.btn_action = small_btn('', 'primary', self._do_action,
                                     height=44, font_size=FS_BODY)
         self.btn_action.size_hint_y = None
@@ -533,14 +537,20 @@ class TechPage(U.PageScreen):
         return False
 
     def refresh_scale(self, scale: float) -> None:
-        self.detail.height = max(self.DETAIL_H * scale, 108)
+        # 详情面板高度必须同时容下：标题(1 行) + 描述(最坏 3 行：
+        # 「种类·状态」行 + 分支描述行 + 「n/3 · 效果」行) + padding16 + spacing4。
+        # 只按 DETAIL_H*scale 会在大/小档位把描述裁尾。
+        self.detail.height = max(self.DETAIL_H * scale,
+                                 line_h(FS_H3 * scale) + line_h(FS_CAP * scale) * 3 + 20)
         self.legend.height = 24 * scale
         for lb in self._legend_labels:
             lb.font_size = FS_CAP * scale
         self.lbl_hint.font_size = FS_CAP * scale
         self.lbl_d_title.font_size = FS_H3 * scale
+        self.lbl_d_title.height = line_h(FS_H3 * scale)
         self.lbl_d_desc.font_size = FS_CAP * scale
         self.lbl_d_cost.font_size = FS_CAP * scale
+        self.lbl_d_cost.height = line_h(FS_CAP * scale)
         self.canvas_view.refresh_scale(scale)
 
 
