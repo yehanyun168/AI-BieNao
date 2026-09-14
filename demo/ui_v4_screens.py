@@ -2214,7 +2214,7 @@ class LogDrawer(StrokePanel):
         self.add_widget(hd)
 
         self.scroll = ScrollView(bar_width=4)
-        self.box = BoxLayout(orientation='vertical', spacing=3, size_hint_y=None,
+        self.box = BoxLayout(orientation='vertical', spacing=5, size_hint_y=None,
                              padding=(6, 6))
         self.box.bind(minimum_height=self.box.setter('height'))
         self.scroll.add_widget(self.box)
