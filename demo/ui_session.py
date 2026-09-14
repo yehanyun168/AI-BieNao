@@ -146,18 +146,19 @@ class SessionMixin:
             self._notify(save_manager.load_fail_text(reason))
 
     def toggle_lang(self) -> None:
-        set_lang(LANG_EN if get_lang() == LANG_ZH else LANG_ZH)
-        self._rebuild_lang()
+        self._set_lang_idx(1 if get_lang() == LANG_ZH else 0)
 
     def _rebuild_lang(self) -> None:
         """切换语言后重建所有带文案的控件"""
+        page_name = getattr(self._page, 'page_name', None)
         _update_window_title()
         self.lang_switch.set_tone('plain', LANG_CHIP_TAG[get_lang()])
         self.help_chip.set_tone('plain', '? ' + t('rail_help'))
         for sid, card in self.skill_cards.items():
             card.set_texts(self._skill_name(sid), self._skill_desc(sid))
         for sid, btn in self.rail.buttons.items():
-            pass
+            btn._caption = '' if sid == 'help' else t(f'rail_{sid}')
+            btn._sync_text()
         self.lbl_logo.text = f"[b]{t('app_title')}[/b]"
         self.lbl_tick_cap.text = t('stats_tick')
         U.fit_width(self.lbl_tick_cap, pad=6)
@@ -171,6 +172,9 @@ class SessionMixin:
         self._stat_prev.clear()
         self.refresh_all()
         self._refresh_tech_page()
+        if page_name:
+            self.close_page()
+            self.open_page(page_name)
 
     def _sync_pause_button(self) -> None:
         """底部暂停按钮文案的唯一来源（玩家反馈 #1）。

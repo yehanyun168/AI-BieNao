@@ -2023,7 +2023,7 @@ class SettingsPage(U.PageScreen):
                                color=COLORS['cyan'], size_hint_y=None, height=28))
         left.add_widget(lt)
 
-        self.lbl_lang_val = SegSwitch([i18n.t('lang_zh'), i18n.t('lang_en')], 0,
+        self.lbl_lang_val = SegSwitch([i18n.t('lang_zh'), i18n.t('lang_en')], 1 if i18n.get_lang() == i18n.LANG_EN else 0,
                                       on_change=lambda i: on_lang and on_lang(i))
         left.add_widget(self._row('set_lang', self.lbl_lang_val,
                                   i18n.t('set_lang_hint')))

@@ -721,12 +721,12 @@ class MainMenu(FloatLayout):
 
     def rebuild(self) -> None:
         """语言切换后整页重建（文案全在控件上）。"""
-        keep_overlay = self._overlay is not None
-        if keep_overlay:
+        reopen_settings = isinstance(self._overlay, S.SettingsPage)
+        if self._overlay is not None:
             self._close_overlay()
         self._build()
         self._apply_scale()
-
+        if reopen_settings: self._open_settings()
     # --------------------------------------------------------
     # 布局
     # --------------------------------------------------------
