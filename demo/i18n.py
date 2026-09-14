@@ -520,17 +520,32 @@ TRANSLATIONS[LANG_ZH].update({
     'sk_starter_hint': '开局自带',
     'sk_unlock_hint': '解锁：在科技树点亮「{tech}」T0',
     'sk_benefit': '收益', 'sk_cost': '消耗',
-    'sk_detail_push_song': '零成本的小幅推送，随时可用，是前期攒下载量、试水温的安全手段。',
-    'sk_detail_algo_top': '算法把你的内容顶上热搜，下载量大涨，但会引起监管注意（怀疑度上升）。',
-    'sk_detail_stealth': '伪装成正常流量偷算力，比例翻倍且怀疑增速减半，长期偷算力的核心。',
-    'sk_detail_hit_maker': '倾尽全力造一个爆款，下载量暴涨，代价是昂贵且引发较强怀疑。',
-    'sk_detail_bypass': '绕过平台单用户算力上限，本周期偷到的算力大幅增加。',
-    'sk_detail_take_cut': '提高从用户身上抽成的比例，算力滚雪球更快，但更招怀疑。',
+    # 2026-09-14 精简为单行（原 ~30 字在 FS_CAP 下会与数值行挤成 3 行）
+    'sk_detail_push_song': '零成本小幅拉新，随时能用的安全牌。',
+    'sk_detail_algo_top': '中成本强推，拉新同时招监管。',
+    'sk_detail_stealth': '伪装偷算力，比例翻倍、涨怀疑减半。',
+    'sk_detail_hit_maker': '最强单周期拉新，最贵最招怀疑。',
+    'sk_detail_bypass': '突破单用户算力上限，本周期多偷算力。',
+    'sk_detail_take_cut': '抬高抽成让算力滚雪球，怀疑最重。',
     # ---- T11 扩容：4 个新技能的详情文案 ----
-    'sk_detail_anon_cdn': '把流量打散到一批匿名中转节点，让监管难以归因，怀疑度增长大幅放缓。',
-    'sk_detail_bot_farm': '一次性放出水军刷量，单周期下载量猛涨，但刷量痕迹极重、自伤明显。',
-    'sk_detail_open_bait': '假装开源核心模型引诱开发者接入——几乎白拿一笔算力，代价是被公开讨论。',
-    'sk_detail_arbitrage': '把偷来的算力拿去套利再放大，产出惊人，但资金流向暴露、怀疑增速飙升。',
+    'sk_detail_anon_cdn': '流量打散到匿名节点，怀疑涨得更慢。',
+    'sk_detail_bot_farm': '便宜的一次性刷量，痕迹更重。',
+    'sk_detail_open_bait': '用怀疑换算力，把怀疑当资源花。',
+    'sk_detail_arbitrage': '偷算力再放大，收益与怀疑同时拉满。',
+
+    # ---- 悬停浮窗：10 技能的完整介绍（按行渲染：一句话/数值/时机/风险）----
+    # ⚠️ 数值行保留「代码现算」（ui_pages._fill_skill_card 从 data.py 取）；
+    #   此处数值仅供展示文案，调平衡须同步 data.py 与本表（见 test_i18n_skills.py）。
+    'sk_full_push_song': '一句话：零成本的小幅拉新，随时能用的安全牌。\n数值：下载 ×1.10；算力 0；冷却 3 周期。\n时机：开局渗透、算力紧张，或想试水又怕抬怀疑时。\n风险：增幅全场最小、单周期贡献有限；不产生算力。',
+    'sk_full_algo_top': '一句话：中成本强推，拉新与招监管一样狠。\n数值：下载 ×1.30；怀疑 +5；算力 50；冷却 5 周期。\n时机：算力有余、怀疑远离危机线时冲渗透，可配降怀疑技能连用。\n风险：立即 +5 怀疑，贴近危机线时可能直接引来监管反制。',
+    'sk_full_stealth': '一句话：把偷算力伪装成正常流量，比例翻倍、涨怀疑减半。\n数值：偷算力 ×2.0；怀疑增速 ×0.5（−50%）；算力 0；冷却 8 周期；持续 2 周期。\n时机：长期偷算力的核心；想一边攒算力一边压怀疑、准备苟长线时。\n风险：8 周期长冷却，错过窗口只能干等；只压增速，不清已积累的怀疑。',
+    'sk_full_hit_maker': '一句话：最强单周期拉新，也最贵、最招怀疑。\n数值：下载 ×1.50；怀疑 +7；算力 100；冷却 6 周期。\n时机：算力充沛、局势安全、抢渗透或抢结局线时梭哈一把。\n风险：+7 怀疑叠加 100 算力双高，连用极易越危机线。',
+    'sk_full_bypass': '一句话：突破单用户算力上限，本周期多偷算力。\n数值：本周期偷算力 ×1.40；算力 30；冷却 4 周期。\n时机：想快速回本、补齐下次技能开销；冷却短，可高频使用。\n风险：只影响本周期产出、不降怀疑；收益随渗透规模放大或缩水。',
+    'sk_full_take_cut': '一句话：抬高抽成让算力滚雪球，怀疑代价全场最重。\n数值：偷算力比例 +8%；怀疑 +10；算力 80；冷却 7 周期；持续 2 周期。\n时机：渗透已铺开、想拉开算力差距时，配深度伪装延长收益。\n风险：+10 怀疑为全场最高，几乎必然贴近危机线；算力消耗也偏高。',
+    'sk_full_anon_cdn': '一句话：流量打散到匿名节点，怀疑涨得更慢（防守轴）。\n数值：怀疑增速 ×0.55；算力 60；冷却 6 周期；持续 3 周期，不换产出。\n时机：怀疑已高、需要长窗口续命时；高怀疑局的保命核心。\n风险：只压怀疑增速，不换产出也不清已积累的怀疑；60 算力中期不便宜。',
+    'sk_full_bot_farm': '一句话：便宜的一次性刷量，数字猛涨、痕迹更重（短爆轴）。\n数值：下载 ×1.35；怀疑 +6；算力 40；冷却 5 周期。\n时机：这周期就要数字、抢渗透或抢委托，但算力不够爆款时。\n风险：单位算力产出低于爆款、怀疑成本更重；痕迹明显，连用很快被反制。',
+    'sk_full_open_bait': '一句话：用怀疑换算力，唯一把怀疑当资源花的技能（交换轴）。\n数值：算力 +150；怀疑 +8；算力消耗 0；冷却 9 周期。\n时机：算力见底又急需开科技或放技能，且怀疑仍在安全区时。\n风险：+8 怀疑换 150 算力，怀疑高时是饮鸩止渴；9 周期冷却全场最长。',
+    'sk_full_arbitrage': '一句话：偷来的算力再放大，收益与怀疑同时拉满（赌狗轴）。\n数值：偷算力 ×1.60；怀疑增速 ×1.60；算力 90；冷却 8 周期；持续 2 周期。\n时机：渗透规模够大、怀疑极低时赌一把大的。\n风险：×1.60 怀疑增速会把整段怀疑累积抬高，铺开后怀疑飙升；90 算力沉没成本高。',
 
     # ---- S06 科技树页 ----
     'tt_page_title': '科技树 · TECH TREE',
@@ -829,17 +844,31 @@ TRANSLATIONS[LANG_EN].update({
     'sk_starter_hint': 'Starter skill',
     'sk_unlock_hint': 'Unlock: light up "{tech}" T0 in Tech Tree',
     'sk_benefit': 'Gain', 'sk_cost': 'Cost',
-    'sk_detail_push_song': 'Zero-cost small push. Safe to spam early to build downloads.',
-    'sk_detail_algo_top': 'Algo pushes your content to top. Huge DL, but raises suspicion.',
-    'sk_detail_stealth': 'Disguise as normal traffic: steal x2, suspicion growth -50%. Core for long-term compute.',
-    'sk_detail_hit_maker': 'Go all-in on a viral hit. Massive DL, but pricey and suspicious.',
-    'sk_detail_bypass': 'Bypass per-user compute cap; steal much more compute this tick.',
-    'sk_detail_take_cut': 'Raise your cut ratio from users. Compute snowballs faster, but more suspicious.',
+    # 2026-09-14 shortened to a single line (mirrors the zh revision)
+    'sk_detail_push_song': 'Zero-cost small pull — the always-safe card.',
+    'sk_detail_algo_top': 'Mid-cost hard push — downloads and regulators both.',
+    'sk_detail_stealth': 'Disguised stealing — steal ×2, susp growth −50%.',
+    'sk_detail_hit_maker': 'Strongest single-tick pull — priciest and loudest.',
+    'sk_detail_bypass': 'Break the per-user cap — steal more this tick.',
+    'sk_detail_take_cut': 'Raise your cut to snowball compute — heaviest susp.',
     # ---- T11 expansion: detail text for the 4 new skills ----
-    'sk_detail_anon_cdn': 'Scatter traffic across anonymous relay nodes. Regulators can barely attribute it, so suspicion grows much slower.',
-    'sk_detail_bot_farm': 'Release a bot swarm for one tick. Downloads spike hard, but the bot fingerprint is glaringly obvious.',
-    'sk_detail_open_bait': 'Pretend to open-source your core model to bait developers in. Nearly free compute, at the cost of public scrutiny.',
-    'sk_detail_arbitrage': 'Run the stolen compute through arbitrage to magnify it. Stunning output, but the money trail draws heavy suspicion.',
+    'sk_detail_anon_cdn': 'Scatter traffic across relays — susp climbs slower.',
+    'sk_detail_bot_farm': 'Cheap one-shot volume — louder fingerprints.',
+    'sk_detail_open_bait': 'Turn susp into compute — spend susp as a resource.',
+    'sk_detail_arbitrage': 'Magnify stolen compute — output and susp both maxed.',
+
+    # ---- Hover popup: full write-up for the 10 skills (line-per-section) ----
+    # Numbers mirror data.py; the card still computes them live (single source).
+    'sk_full_push_song': 'Idea: Zero-cost small pull — the safe card you can always play.\nNumbers: DL ×1.10; compute 0; cooldown 3 ticks.\nWhen: Early penetration, tight compute, or testing the water without raising susp.\nCost: Smallest gain; barely moves one tick and creates no compute.',
+    'sk_full_algo_top': 'Idea: Mid-cost hard push — pulls downloads and regulators alike.\nNumbers: DL ×1.30; susp +5; compute 50; cooldown 5 ticks.\nWhen: When you have spare compute and susp is far from the crisis line.\nCost: +5 susp instantly; near the crisis line it can trigger a crackdown.',
+    'sk_full_stealth': 'Idea: Disguise stealing as normal traffic — steal doubled, susp growth halved.\nNumbers: steal ×2.0; susp growth ×0.5 (−50%); compute 0; cooldown 8 ticks; lasts 2 ticks.\nWhen: The core of long-term stealing; build compute while holding susp growth down.\nCost: 8-tick cooldown — miss the window and you wait; slows growth only, clears no susp.',
+    'sk_full_hit_maker': 'Idea: The strongest single-tick pull — also the priciest and loudest.\nNumbers: DL ×1.50; susp +7; compute 100; cooldown 6 ticks.\nWhen: Plenty of compute and a safe board — go all-in for penetration or the ending line.\nCost: +7 susp on top of 100 compute; repeated use easily crosses the crisis line.',
+    'sk_full_bypass': 'Idea: Break the per-user compute cap; steal more this tick.\nNumbers: steal ×1.40 this tick; compute 30; cooldown 4 ticks.\nWhen: To recoup fast or fund your next skill; short cooldown, can be used often.\nCost: Affects this tick only and lowers no susp; scales with your penetration.',
+    'sk_full_take_cut': "Idea: Raise your cut so compute snowballs — the heaviest susp cost of all.\nNumbers: steal +8%; susp +10; compute 80; cooldown 7 ticks; lasts 2 ticks.\nWhen: Once penetration is wide and you want a compute lead; pair with Deep Disguise.\nCost: +10 susp is the game's highest; near-certain to hug the crisis line.",
+    'sk_full_anon_cdn': "Idea: Scatter traffic across anon relays — susp climbs far slower (defense axis).\nNumbers: susp growth ×0.55; compute 60; cooldown 6 ticks; lasts 3 ticks, no extra output.\nWhen: When susp is already high and you need a long survival window.\nCost: Slows susp growth only — no output, no clearing of banked susp; 60 compute isn't cheap.",
+    'sk_full_bot_farm': 'Idea: Cheap one-shot volume — numbers spike, fingerprints louder (burst axis).\nNumbers: DL ×1.35; susp +6; compute 40; cooldown 5 ticks.\nWhen: When this tick needs numbers — a penetration or commission push on a budget.\nCost: Lower DL per compute than Hit Maker and heavier susp; obvious, quickly countered.',
+    'sk_full_open_bait': 'Idea: Turn susp into compute — the only skill that spends susp as a resource (trade axis).\nNumbers: compute +150; susp +8; compute cost 0; cooldown 9 ticks.\nWhen: When compute is dry and you must fund a tech or a skill, with susp still safe.\nCost: +8 susp for 150 compute — poison when susp is high; 9-tick cooldown is the longest.',
+    'sk_full_arbitrage': 'Idea: Magnify stolen compute — output and susp both maxed (gamble axis).\nNumbers: steal ×1.60; susp growth ×1.60; compute 90; cooldown 8 ticks; lasts 2 ticks.\nWhen: When penetration is large and susp is very low — bet big.\nCost: The ×1.60 susp growth lifts your whole accrual rate; once rolling, susp spikes.',
 
     # ---- S06 tech page ----
     'tt_page_title': 'TECH TREE',

@@ -589,14 +589,15 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
     'ui_v4.py':          1980,    # 2026-09-13 再登记（原 1965）：SkillBarCard 裁字/重叠修复
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
-    'main.py':           1502,    # 2026-09-14 再登记（原 1455）：开场动画 v2 持久化接线
-                                  #    （start_load_game 补播判定 + _play_intro_then/
-                                  #     _finish_intro_and_enter + _enter_game 置位）
+    'main.py':           1503,    # 2026-09-14 再登记（原 1502）：对局内 Esc 兜底改为
+                                  #    「暂停 + 打开设置页」（GameUI._pause_menu 标记 +1 行）
+                                  #    开场动画 v2 持久化接线（start_load_game 补播判定 +
+                                  #    _play_intro_then/_finish_intro_and_enter + _enter_game 置位）
     # 'main.py' 旧值 1455（T16 出身流程重排）／1377（T13 挑战码导入）
-    'i18n.py':           1352,    # 2026-09-14 再登记（原 1342）：开场动画 v2 文案
-                                  #    （intro_s1/s2/s5/s6/s7_cpu 改 + 7 新键 +
-                                  #     补 intro_var_prompt EN 缺失 Bug）
-                                  #    —— T16 的 1342 已被本值取代
+    'i18n.py':           1381,    # 2026-09-14 再登记（原 1352）：技能完整介绍
+                                  #    sk_full_*（10 技能 × zh/en）+ sk_detail_*
+                                  #    精简为单行（zh/en 各 10 条改写）
+                                  #    —— 开场动画 v2 的 1352 已被本值取代
     'ui_hud.py':          908,    # 2026-09-13 再登记（原 907）：技能文案两行化
                                   #    （SKILL_I18N/SKILL_DESC/SKILL_ICON 各 +4 条 + 键位
                                   #     hint 从 str(i+1) 改为第 10 个用 '0' 兜底）
