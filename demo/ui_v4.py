@@ -345,9 +345,24 @@ class PxChip(PixelLabel):
         self._on_press = on_press
         self._syncing = False
         self._apply_tone()
-        self.bind(pos=self._redraw, size=self._redraw,
-                  texture_size=self._resize)
-        self._resize()
+        # 2026-09-14：PxChip 之前在进局后陷入 Clock 过度迭代根因：
+        # `texture_size` → `_resize` 是正反馈链——
+        #   _resize 改 size/text_size → texture_update 调度
+        #   → texture_size 变 → _resize 又跑 → 至少 3 次 texture_update/次，
+        #   单帧 12 个 chip 把主循环顶死（HEAD 也复现，pre-existing 严重 bug）。
+        # 修法：debounce——所有「可能触发 _resize」的信号（texture_size/size/pos）
+        # 汇到一个 Clock.create_trigger 上，每帧最多合并为一次 _resize。
+        # _syncing 旗只防同步重入（_resize 内部多次属性写），debounce 防异步循环。
+        from kivy.clock import Clock as _KClock
+        self._trigger_resize = _KClock.create_trigger(self._resize, 0)
+        self.bind(pos=self._on_pos_size, size=self._on_pos_size,
+                  texture_size=self._trigger_resize, text=self._trigger_resize)
+        self._trigger_resize()
+
+    def _on_pos_size(self, *_args) -> None:
+        """pos/size 改变只触发 _redraw（绘制跟随），不必重测量。
+        _resize 仅在 pos/size 外部赋值后真需要时才调，由 _trigger_resize 兜底。"""
+        self._redraw()
 
     def _apply_tone(self) -> None:
         fg_name, bg_name = CHIP_TONES.get(self.tone, CHIP_TONES['plain'])

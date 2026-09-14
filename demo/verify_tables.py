@@ -586,18 +586,21 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
     # 'ui_v4_screens.py' 已于 2026-09-13 拆分为 6 个模块（common/panels/cards/
     #   canvas/syspages/screens，各自 267~532 行），不再超限 → 移出白名单。
     #   若后续任一拆分模块涨过 800 行，需按「再登记约定」显式留痕后重新登记。
-    'ui_v4.py':          1980,    # 2026-09-13 再登记（原 1965）：SkillBarCard 裁字/重叠修复
+'ui_v4.py':          1995,    # 2026-09-14 再登记（原 1980）：PxChip Clock 死循环修复
+                                  #    —— texture_size 正反馈链改为 Clock.create_trigger
+                                  #    debounce，每帧最多合并一次 _resize；进局后
+                                  #    主循环从「每帧 941 条 CRITICAL」降回 0 条
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
     'main.py':           1503,    # 2026-09-14 再登记（原 1502）：对局内 Esc 兜底改为
                                   #    「暂停 + 打开设置页」（GameUI._pause_menu 标记 +1 行）
                                   #    开场动画 v2 持久化接线（start_load_game 补播判定 +
                                   #    _play_intro_then/_finish_intro_and_enter + _enter_game 置位）
-    # 'main.py' 旧值 1455（T16 出身流程重排）／1377（T13 挑战码导入）
-    'i18n.py':           1381,    # 2026-09-14 再登记（原 1352）：技能完整介绍
-                                  #    sk_full_*（10 技能 × zh/en）+ sk_detail_*
-                                  #    精简为单行（zh/en 各 10 条改写）
-                                  #    —— 开场动画 v2 的 1352 已被本值取代
+                                  # 'main.py' 旧值 1455（T16 出身流程重排）／1377（T13 挑战码导入）
+    'i18n.py':           1387,    # 2026-09-14 再登记（原 1381）：右侧预览面板兜底文案
+                                  #    sk_preview_empty / sk_preview_missing ×2 语
+                                  #    （原 1381：技能完整介绍 sk_full_* + sk_detail_*
+                                  #     精简为单行）
     'ui_hud.py':          908,    # 2026-09-13 再登记（原 907）：技能文案两行化
                                   #    （SKILL_I18N/SKILL_DESC/SKILL_ICON 各 +4 条 + 键位
                                   #     hint 从 str(i+1) 改为第 10 个用 '0' 兜底）
