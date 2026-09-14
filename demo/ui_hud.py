@@ -43,6 +43,11 @@ STATE_SHAPE = {'on': U.SYM['a11y_on'], 'sel': U.SYM['a11y_sel'],
 SCALE_SHAPE = ('○', '◇', '◆', '●')
 
 
+# 顶栏火花线按指标语义着色（玩家反馈：四根全青无法区分「哪条在动」）。
+# 算力=黄 / 下载=粉 / 怀疑度=红 / 解锁国=青。键即 _stat 传入的 color_name。
+_SPARK_HEX = {'yellow': '#dcdcaa', 'pink': '#f97583', 'red': '#ff7b72',
+              'text': '#4ec9b0', 'cyan': '#4ec9b0'}
+
 # ============================================================
 # 倒计时进度条（P0-4：顶部状态条「下个周期倒计时」细进度条）
 # ============================================================
@@ -561,7 +566,10 @@ class HudMixin:
         # 玩家反馈 #2：旧高度 10px × 12 根柱 → 每根柱仅 ~3px 宽，
         # 玩家根本看不出形状。这里加高到 14px、并让柱子数量与宽度
         # 一起决定可见性（Spark._redraw 里按宽度算柱宽）。
-        spark = Spark(values=[], size_hint=(None, None), height=14)
+        # 按指标语义着色：四根火花线不再是统一青色，算力=黄 / 下载=粉 /
+        # 怀疑度=红 / 解锁国=青，玩家一眼区分「哪条在动、往哪走」。
+        spark = Spark(values=[], size_hint=(None, None), height=14,
+                      fill_hex=_SPARK_HEX.get(color_name, '#4ec9b0'))
         spark.size_hint_y = None
         self._register(spark, height=14)
         col.add_widget(spark)

@@ -601,10 +601,9 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #    sk_preview_empty / sk_preview_missing ×2 语
                                   #    （原 1381：技能完整介绍 sk_full_* + sk_detail_*
                                   #     精简为单行）
-    'ui_hud.py':          908,    # 2026-09-13 再登记（原 907）：技能文案两行化
-                                  #    （SKILL_I18N/SKILL_DESC/SKILL_ICON 各 +4 条 + 键位
-                                  #     hint 从 str(i+1) 改为第 10 个用 '0' 兜底）
-                                  #    —— Mixin 拆分仍属独立重构工作
+    'ui_hud.py':          916,    # 2026-09-14 再登记（原 908）：顶栏火花线按指标语义着色
+                                  #    （_SPARK_HEX 字典 + _stat 传 fill_hex，算力=黄/下载=粉/
+                                  #     怀疑度=红/解锁国=青，修复「四根全青无法区分涨落」）
 }
 
 line_violations = []
