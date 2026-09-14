@@ -34,7 +34,10 @@ ROOT = os.path.abspath(os.path.join(HERE, '..'))
 SRC = os.path.join(ROOT, 'assets_library', 'audio', 'sfx', 'sci-fi-sounds',
                    'Audio')
 OUT = os.path.join(ROOT, 'demo', 'assets', 'sfx')
-SR = 44100
+# ⚠️ 采样率必须 = 22050：本机 sdl2 音频后端**无法播放 44100 Hz 的 WAV/OGG**
+# （实测定性：12 个 22050 基础音效正常，16 个 44100 音效全部静默，文件与
+# 触发链均无问题，根因是采样率）。故全部音效统一 22050 mono，与 gen_sfx.py 基线一致。
+SR = 22050
 TARGET_RMS = 10.0 ** (-18.0 / 20.0)      # -18 dBFS RMS（LUFS 近似）
 RNG = np.random.default_rng(20260914)     # 固定种子：产物可复现
 
