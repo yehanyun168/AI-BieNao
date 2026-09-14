@@ -52,6 +52,19 @@ class PreferencesTests(unittest.TestCase):
 
         self.assertEqual(loaded, preferences.DEFAULTS)
 
+    def test_default_language_is_zh(self):
+        """守卫：全新安装（无 settings.json）默认语言必须是简体中文。
+
+        2026-09-15 用户指令「启动/登录界面默认语言改简体中文」的防回归锚点。
+        preferences.DEFAULTS['language'] 曾一度被设为 'en' 的风险在此拦截；
+        遗留的 settings.json 里 'en' 仍会被尊重（用户主动切换过的选择），
+        本测试只锁「缺省回落」这一个行为。
+        """
+        self.assertEqual(preferences.DEFAULTS['language'], 'zh')
+
+        loaded = preferences.load()   # setUp 已把路径指向不存在的临时文件
+        self.assertEqual(loaded['language'], 'zh')
+
     def test_settings_page_reflects_saved_choices(self):
         values = dict(preferences.DEFAULTS, speed_idx=3, grid_mode=2,
                       reduce_motion=True, sound_on=False, ui_scale=1.3)
