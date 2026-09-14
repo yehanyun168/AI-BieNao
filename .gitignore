@@ -17,6 +17,7 @@ share/*.zip
 
 # ===== 运行时数据 / 日志（存档属玩家数据，不入库）=====
 demo/saves/
+demo/settings.json
 *.log
 crash.log
 

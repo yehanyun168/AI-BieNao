@@ -14,6 +14,7 @@ import engine
 import save_manager
 import sfx
 import bgm
+import preferences
 import ui_v4 as U
 import ui_v4_screens as S
 import ui_shared as ST
@@ -71,7 +72,6 @@ class SessionMixin:
 
     def _fit_after_resize(self, _dt) -> None:
         self._resize_fit_event = None
-        self.user_scale = 1.0
         self._apply_scale()
 
     def _zoom_btn(self, delta: float) -> None:
@@ -80,6 +80,7 @@ class SessionMixin:
         else:
             self.user_scale = min(max(self.user_scale + delta, 0.70), 1.60)
         self._apply_scale()
+        preferences.update(ui_scale=self.user_scale)
         self._notify(f"{t('scale_label')} ×{self.user_scale:.2f}")
 
     def adjust_scale(self, delta: float) -> None:
@@ -284,12 +285,14 @@ class SessionMixin:
         self.speed_idx = max(0, min(int(i), len(ST.SPEED_STEPS) - 1))
         self.speed_mult = ST.SPEED_STEPS[self.speed_idx]
         ST.CURRENT_SPEED_IDX = self.speed_idx
+        preferences.update(speed_idx=self.speed_idx)
         self._reschedule_tick()
         self.refresh_all()
 
     def _set_motion_idx(self, i: int) -> None:
         """动效开关：0=完整 / 1=减弱（P0-5）。"""
         ST.REDUCE_MOTION = bool(int(i))
+        preferences.update(reduce_motion=ST.REDUCE_MOTION)
         self._reschedule_countdown()
 
     def _cd_interval(self) -> float:
@@ -306,16 +309,19 @@ class SessionMixin:
     def _set_a11y_idx(self, i: int) -> None:
         """色盲辅助开关：0=关 / 1=开（P0-5）。"""
         ST.A11Y_SHAPES = bool(int(i))
+        preferences.update(a11y_shapes=ST.A11Y_SHAPES)
         if getattr(self, 'legend_hud', None) is not None:
             self.legend_hud.apply_a11y()
 
     def _set_sound_idx(self, i: int) -> None:
         """音效开关：0=关 / 1=开（P0-5）。"""
         sfx.set_enabled(bool(int(i)))
+        preferences.update(sound_on=sfx.SFX_ON)
 
     def _set_music_idx(self, i: int) -> None:
         """音乐开关：0=关 / 1=开（T09）。关闭停播，开启按当前怀疑度补播。"""
         bgm.set_enabled(bool(int(i)))
+        preferences.update(music_on=bgm.BGM_ON)
 
     def exit_to_menu(self) -> None:
         self.stop_ticking()

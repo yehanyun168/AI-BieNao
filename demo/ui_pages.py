@@ -16,6 +16,7 @@ from tech_tree import TECH_TREE, SLOT_MAP
 from balance import TUNE
 from data import SKILLS, SKILL_ORDER, SKILL_UNLOCK
 import save_manager
+import preferences
 import achievements as achievements_mod
 import ui_v4 as U
 import ui_v4_screens as S
@@ -90,6 +91,7 @@ class PagesMixin:
                 on_a11y=self._set_a11y_idx, on_motion=self._set_motion_idx,
                 on_sound=self._set_sound_idx,
                 on_music=self._set_music_idx,
+                values=preferences.get(),
                 on_tutorial=self.tutorial.replay,
                 slot_actions=self._slot_actions,
                 on_reset=lambda: self._notify(t('set_restore')))
@@ -477,9 +479,13 @@ class PagesMixin:
 
     def _set_lang_idx(self, idx: int) -> None:
         set_lang(LANG_EN if idx == 1 else LANG_ZH)
+        preferences.update(language=get_lang())
         self._rebuild_lang()
 
     def _set_grid(self, idx: int) -> None:
+        import ui_shared as ST
+        ST.GRID_MODE = max(0, min(int(idx), 2))
+        preferences.update(grid_mode=ST.GRID_MODE)
         self.map_widget.set_grid_mode(idx)
 
     # ========================================================

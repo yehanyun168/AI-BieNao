@@ -2005,9 +2005,9 @@ class SettingsPage(U.PageScreen):
                  on_sound: Callable = None,
                  on_music: Callable = None,
                  on_tutorial: Callable = None,
-                 slot_actions: Callable = None, on_reset: Callable = None,
+                 slot_actions: Callable = None, on_reset: Callable = None, values: dict = None,
                  **kwargs):
-        super().__init__(title=i18n.t('set_page_title'), **kwargs)
+        super().__init__(title=i18n.t('set_page_title'), **kwargs); values = values or {}
         self.add_head_widget(small_btn(i18n.t('set_restore'), 'plain',
                                        lambda: on_reset and on_reset(),
                                        height=32, font_size=FS_CAP))
@@ -2027,7 +2027,7 @@ class SettingsPage(U.PageScreen):
                                       on_change=lambda i: on_lang and on_lang(i))
         left.add_widget(self._row('set_lang', self.lbl_lang_val,
                                   i18n.t('set_lang_hint')))
-        self.sw_speed = SegSwitch(['×0.5', '×1', '×2', '×4'], 1,
+        self.sw_speed = SegSwitch(['×0.5', '×1', '×2', '×4'], values.get('speed_idx', 1),
                                   on_change=lambda i: on_speed and on_speed(i))
         left.add_widget(self._row('set_speed', self.sw_speed, ''))
 
@@ -2040,11 +2040,11 @@ class SettingsPage(U.PageScreen):
         _tf = [i18n.t('set_off'), i18n.t('set_on')]      # 通用开/关
         _mf = [i18n.t('set_motion_full'), i18n.t('set_motion_low')]
         _gf = [i18n.t('set_grid_off'), i18n.t('set_grid_dim'), i18n.t('set_grid_strong')]
-        self.sw_motion = _seg('set_motion', _mf, 0, on_motion)
-        self.sw_grid = _seg('set_grid', _gf, 1, on_grid)
-        self.sw_a11y = _seg('set_a11y', _tf, 1, on_a11y)
-        self.sw_sound = _seg('set_sound', _tf, 1, on_sound)
-        self.sw_music = _seg('set_music', _tf, 1, on_music)
+        self.sw_motion = _seg('set_motion', _mf, int(values.get('reduce_motion', False)), on_motion)
+        self.sw_grid = _seg('set_grid', _gf, values.get('grid_mode', 1), on_grid)
+        self.sw_a11y = _seg('set_a11y', _tf, int(values.get('a11y_shapes', True)), on_a11y)
+        self.sw_sound = _seg('set_sound', _tf, int(values.get('sound_on', True)), on_sound)
+        self.sw_music = _seg('set_music', _tf, int(values.get('music_on', True)), on_music)
 
         # UI 缩放行
         zoom = BoxLayout(orientation='horizontal', spacing=8,
