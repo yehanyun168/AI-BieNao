@@ -46,12 +46,27 @@ _DEV_PREFIXES = ('test_', 'verify_', 'make_screenshots')
 _SFX_SRC = 'demo/assets/sfx'
 _SFX_DST = 'assets/sfx'   # 对齐 demo/sfx.py::_base_dir()
 
+# BGM 整目录随包（对齐 demo/bgm.py::_base_dir() 的 _MEIPASS/assets/bgm）
+_BGM_SRC = 'demo/assets/bgm'
+_BGM_DST = 'assets/bgm'
+
+# 封面资产随包（关于页/自制物料可读；也保证资源目录自描述）
+_COVER_SRC = 'demo/assets/cover'
+_COVER_DST = 'assets/cover'
+
 # 构建期自检：缺 wav 直接中止打包，而不是静默产出一个「哑掉」的 exe
 _SFX_FILES = sorted(glob.glob(_SFX_SRC + '/*.wav'))
 if not _SFX_FILES:
     raise SystemExit(
         '[spec] 打包中止：%s 下没有找到任何 .wav（当前工作目录=%s）'
         % (_SFX_SRC, os.getcwd())
+    )
+
+_BGM_FILES = sorted(glob.glob(_BGM_SRC + '/*.ogg'))
+if not _BGM_FILES:
+    raise SystemExit(
+        '[spec] 打包中止：%s 下没有找到任何 .ogg（当前工作目录=%s）'
+        % (_BGM_SRC, os.getcwd())
     )
 
 
@@ -70,13 +85,16 @@ _seen_src = {_norm(src) for src, _dst in _EXPLICIT_DATAS}
 datas = (
     _EXPLICIT_DATAS
     + [e for e in _auto_py if e[0] not in _seen_src]
-    + [(_SFX_SRC, _SFX_DST)]   # 音效：整目录携带，8 个 wav 自动跟随
+    + [(_SFX_SRC, _SFX_DST)]    # 音效：整目录携带，全部 wav/ogg 自动跟随
+    + [(_BGM_SRC, _BGM_DST)]    # BGM：整目录携带（calm/tense/menu + CREDITS）
+    + [(_COVER_SRC, _COVER_DST)]  # 封面资产：主视觉 + 图标 PNG
 )
 
 print('[spec] 随包音效：%d 个 wav -> %s（%s）'
       % (len(_SFX_FILES), _SFX_DST, ', '.join(os.path.basename(f) for f in _SFX_FILES)))
-print('[spec] datas 条目合计：%d（显式 %d + 自动 %d + 音效目录 1）'
-      % (len(datas), len(_EXPLICIT_DATAS), len(datas) - len(_EXPLICIT_DATAS) - 1))
+print('[spec] 随包 BGM：%d 个 ogg -> %s' % (len(_BGM_FILES), _BGM_DST))
+print('[spec] datas 条目合计：%d（显式 %d + 自动 %d + 目录 3）'
+      % (len(datas), len(_EXPLICIT_DATAS), len(datas) - len(_EXPLICIT_DATAS) - 3))
 
 # Kivy 资源 + demo 数据
 a = Analysis(
@@ -131,11 +149,17 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+# ---------------------------------------------------------------------------
+# 单文件模式（onefile）：用户下载一个 exe 双击即玩，无需安装运行环境。
+# 代价是启动时解压到临时目录（约 5-10 秒），换来零依赖分发。
+# ---------------------------------------------------------------------------
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
     [],
-    exclude_binaries=True,
     name='AI别闹',
     debug=False,
     bootloader_ignore_signals=False,
@@ -146,16 +170,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon='ai_bienao.ico',  # 如果有图标就启用
-)
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='AI别闹',
+    icon='AI别闹.ico',  # 封面派生的多尺寸图标（tools/make_cover_assets.py 产出）
 )
