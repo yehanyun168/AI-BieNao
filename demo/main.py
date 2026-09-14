@@ -675,9 +675,6 @@ class MainMenu(FloatLayout):
         except Exception:
             self._keyboard = None  # 拿不到键盘 = 本机不支持键位操作，鼠标仍可用
 
-    # --------------------------------------------------------
-    # 缩放
-    # --------------------------------------------------------
     def _compute_scale(self) -> float:
         w = Window.width or self.DESIGN_W
         h = Window.height or self.DESIGN_H
@@ -692,6 +689,14 @@ class MainMenu(FloatLayout):
         return widget
 
     def _on_resize(self, *_a) -> None:
+        pending = getattr(self, '_resize_fit_event', None)
+        if pending is not None:
+            pending.cancel()
+        self._resize_fit_event = Clock.schedule_once(self._fit_after_resize, 0.15)
+
+    def _fit_after_resize(self, _dt) -> None:
+        self._resize_fit_event = None
+        self.user_scale = 1.0
         self._apply_scale()
 
     def _apply_scale(self) -> None:

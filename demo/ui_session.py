@@ -64,6 +64,14 @@ class SessionMixin:
             self._walk_refresh(ch, depth + 1)
 
     def _on_window_resize(self, window, w, h) -> None:
+        pending = getattr(self, '_resize_fit_event', None)
+        if pending is not None:
+            pending.cancel()
+        self._resize_fit_event = Clock.schedule_once(self._fit_after_resize, 0.15)
+
+    def _fit_after_resize(self, _dt) -> None:
+        self._resize_fit_event = None
+        self.user_scale = 1.0
         self._apply_scale()
 
     def _zoom_btn(self, delta: float) -> None:
