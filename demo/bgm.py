@@ -72,6 +72,7 @@ _order = {}                # 池名 -> 打乱后的待播队列（stem 列表）
 _playing = None            # 当前正在播放的 stem
 _advance_ev = None         # 下一次换曲的 Clock 事件
 _gap_ev = None             # 停顿期间的 Clock 事件
+_paused = False            # 游戏暂停态：与音乐开关 BGM_ON 独立，pause()/resume() 用
 
 
 def _base_dir() -> str:
@@ -280,10 +281,42 @@ def set_enabled(on: bool) -> None:
     if not BGM_ON:
         _cancel_timers()
         _pause()
-    elif _current:
+    elif _current and not _paused:
+        # 暂停态下重新开音乐：保持静音，等 resume() 续播，避免「暂停中却响起 BGM」
         state = _current
         globals()['_current'] = None
         update(state)
+
+
+def pause() -> None:
+    """暂停 BGM（保留当前曲池与正在播放的曲目，供 resume 续播）。失败安全。
+
+    游戏「暂停按钮」调用 —— 与 set_enabled 的音乐开关相互独立：
+    暂停游戏时停 BGM，恢复游戏时由 resume() 接着播同一首（从头）。
+    """
+    global _paused
+    if _paused or not _current or not _LOADED:
+        return
+    _paused = True
+    _cancel_timers()
+    _pause()                        # 停掉当前曲目，_current / _playing 保留
+
+
+def resume() -> None:
+    """从 pause() 续播当前曲池（同一首从头，或池内下一首）。失败安全。"""
+    global _paused
+    if not _paused:
+        return
+    _paused = False
+    if not _current or not _LOADED or not BGM_ON:
+        return                      # 暂停期间被关音乐 / 未加载：保持静音
+    stem = _playing
+    if stem and _SOUNDS.get(stem) is not None:
+        _start_stem(stem, fade=True)
+    else:
+        q = _shuffle(_current)
+        if q:
+            _start_stem(q.pop(0), fade=True)
 
 
 def _pause() -> None:

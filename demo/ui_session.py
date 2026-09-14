@@ -190,12 +190,14 @@ class SessionMixin:
         if self.paused:
             self.paused = False
             self._resume_from_pause()
+            bgm.resume()                 # 随游戏一同恢复 BGM
         else:
             self.paused = True
             # 冻结剩余时间（下限 0，防止负值导致立即触发）
             self._paused_remaining = max(
                 0.0, self._tick_deadline - Clock.get_time())
             self.stop_ticking()
+            bgm.pause()                  # 随游戏一同暂停 BGM
         self.refresh_all()
 
     def _resume_from_pause(self) -> None:
