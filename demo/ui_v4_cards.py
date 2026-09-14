@@ -86,6 +86,15 @@ class SkillPageCard(StrokePanel):
         hd.add_widget(self.chip_state)
         self.add_widget(hd)
 
+        # 名称避让：左留 66px 给图标、右留 ~80px 给状态芯片（chip_state 在
+        # right:1 叠在名称上方）。把文字框收进这段区间，超长省略而非被芯片遮。
+        def _fit_name(*_a) -> None:
+            avail = self._hd.width - 66 - 80
+            if avail > 24:
+                self.lbl_nm.text_size = (avail, self._hd.height)
+        self._hd.bind(size=_fit_name)
+        _fit_name()
+
         # 正文
         body = BoxLayout(orientation='vertical', spacing=5, padding=(8, 6))
         self._body = body
