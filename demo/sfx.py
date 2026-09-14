@@ -108,6 +108,12 @@ def play(name: str, volume: float = 1.0) -> None:
         snd.volume = max(0.0, min(1.0, volume))
         if getattr(snd, 'state', 'stop') == 'play':
             snd.stop()
+        # 防御性归零：部分后端（gstplayer/ffpyplayer）播完后 position 不自动复位，
+        # 不 seek 会导致「再播一次静音」。sdl2 虽自动复位，这里统一兜底、零风险。
+        try:
+            snd.seek(0)
+        except Exception:
+            pass
         snd.play()
     except Exception:
         pass

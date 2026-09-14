@@ -85,6 +85,12 @@ class SkillPreviewPanel(StrokePanel):
                                   font_size=FS_H3, color=COLORS['cyan'],
                                   markup=True)
         fit_width(self.lbl_title, pad=8, min_w=80)
+        # 标题高度自适应（1~2 行都不裁切），剩余空间全给下方滚动区
+        self.lbl_title.size_hint_y = None
+        self.lbl_title.height = 36
+        self.lbl_title.bind(
+            texture_size=lambda inst, sz: setattr(
+                inst, 'height', max(sz[1], 36)))
         self.add_widget(self.lbl_title)
         self.lbl_state = PxChip('', tone='plain', height=22)
         self.add_widget(self.lbl_state)
