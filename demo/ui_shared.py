@@ -36,6 +36,7 @@ DEFAULT_SPEED_IDX: int = 1
 CURRENT_SPEED_IDX: int = DEFAULT_SPEED_IDX   # 跨 GameUI / 主菜单共享的速度档
 REDUCE_MOTION: bool = False                   # 动效减弱（设置页 on_motion）
 A11Y_SHAPES: bool = False                     # 色盲辅助 ○●▲×（设置页 on_a11y）
+GRID_MODE: int = 1                             # 网格显示模式（设置页 on_grid，跨对局持久化）
 
 
 def _update_window_title() -> None:

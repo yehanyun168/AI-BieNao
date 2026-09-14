@@ -371,6 +371,9 @@ from tutorial import TutorialController   # P0-1 新手引导步骤机
 # ============================================================
 import ui_shared as ST
 from ui_shared import COLORS, Panel, _update_window_title
+# 跨对局设置：从 settings.json 读取并应用到运行时全局（分支 _r_i18n 移植）
+from ui_preferences import (load_and_apply, set_language, set_sound, set_music,
+                            set_motion, set_a11y, set_speed, set_grid)
 from ui_modal import (make_button, make_modal, modal_header, auto_h_label)
 from ui_v4 import hline
 from ui_hud import HudMixin
@@ -1093,19 +1096,19 @@ class MainMenu(FloatLayout):
 
     # 主菜单设置浮层回调：音效/音乐/动效/色盲/速度（进游戏时 GameUI 读取）
     def _set_sound_idx(self, i: int) -> None:
-        sfx.set_enabled(bool(int(i)))
+        set_sound(i)
 
     def _set_music_idx(self, i: int) -> None:
-        bgm.set_enabled(bool(int(i)))
+        set_music(i)
 
     def _set_motion_idx(self, i: int) -> None:
-        ST.REDUCE_MOTION = bool(int(i))
+        set_motion(i)
 
     def _set_a11y_idx(self, i: int) -> None:
-        ST.A11Y_SHAPES = bool(int(i))
+        set_a11y(i)
 
     def _set_speed_idx(self, i: int) -> None:
-        ST.CURRENT_SPEED_IDX = max(0, min(int(i), len(ST.SPEED_STEPS) - 1))
+        set_speed(i)
 
     # --------------------------------------------------------
     # 浮层页（设置 / 成就 / 帮助）
@@ -1208,11 +1211,11 @@ class MainMenu(FloatLayout):
 
     def _reset_settings(self) -> None:
         self.user_scale = 1.0
-        self.sil_map.set_grid_mode(1)
+        set_grid(1, self.sil_map)
         self._apply_scale()
 
     def _set_lang_idx(self, idx: int) -> None:
-        set_lang(LANG_EN if idx == 1 else LANG_ZH)
+        set_language(LANG_EN if idx == 1 else LANG_ZH)
         _update_window_title()
         self.rebuild()
 
@@ -1452,6 +1455,12 @@ class AIBienaoApp(App):
     """《AI 别闹》v2 收口版 —— v0.4 界面（对齐 design/ui_design_v0.4.html）。"""
 
     def build(self):
+        # 跨对局设置：在菜单/游戏 UI 构建前应用已持久化的偏好
+        # （语言/速度/动效/色盲/音效/音乐/grid_mode），无 settings.json 时回默认。
+        try:
+            load_and_apply()
+        except Exception:
+            pass  # 偏好加载失败安全：回退到 ui_shared 默认值，不影响开局
         _register_fonts()
         engine.init_game()
         self.root_view = RootView()

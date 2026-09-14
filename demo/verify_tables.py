@@ -357,6 +357,7 @@ LAYERS = {
     'challenge.py':       0,   # T13：挑战码编解码 + 战绩账本（只依赖标准库）。
                                #       刻意不 import save_manager —— 账本目录由调用方
                                #       传入，保持 L0 零项目依赖，也不与 L4 成环
+    'preferences.py':     0,   # 跨对局设置：settings.json 持久化（仅标准库），零项目依赖
     'origins.py':         0,   # T16：觉醒出身声明式表（只依赖 typing）。
                                #       难度 id 用字符串字面量不 import balance，
                                #       避免 L0 内部循环；balance.apply_origin 反向引用它属
@@ -409,6 +410,7 @@ LAYERS = {
     'cursor_fx.py':       7,   # 2026-09-13：光标语义层（只依赖 kivy Window，零项目依赖，
                                #       与 ui_fx/ui_modal 同级；由 main 在 GameUI/MainMenu 装配）
     'ui_modal.py':        7,
+    'ui_preferences.py':  7,   # 跨对局设置应用：依赖 ui_shared(L6)/bgm/sfx(L1)/i18n/preferences(L0)
     'ui_hud.py':          8,
     'ui_pages.py':        9,
     'ui_drop.py':         9,
@@ -592,7 +594,7 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #    主循环从「每帧 941 条 CRITICAL」降回 0 条
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
-    'main.py':           1503,    # 2026-09-14 再登记（原 1502）：对局内 Esc 兜底改为
+    'main.py':           1512,    # 2026-09-14 再登记：跨对局设置移植（+9 行）
                                   #    「暂停 + 打开设置页」（GameUI._pause_menu 标记 +1 行）
                                   #    开场动画 v2 持久化接线（start_load_game 补播判定 +
                                   #    _play_intro_then/_finish_intro_and_enter + _enter_game 置位）
