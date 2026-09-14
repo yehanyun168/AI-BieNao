@@ -69,7 +69,7 @@ class PopupsMixin:
         不渲染选项按钮，直接把事件描述与影响效果摊开，配一个「知道了」确认键。
         结算仍走 resolve_choice(evt, 0)，与多选项路径共用同一套引擎逻辑。
         """
-        self.stop_ticking()
+        self._pause_for_event()
         p = engine.player
         opts = list(getattr(evt, 'options', []) or [])
         solo = (len(opts) == 1)
@@ -104,8 +104,6 @@ class PopupsMixin:
             if engine.player.game_over:
                 self.stop_ticking()
                 self.show_ending_popup(engine.player.ending)
-            else:
-                self._reschedule_tick()
 
         if solo:
             # 单选项：无选项按钮，直接展示影响效果 + 「知道了」确认键
@@ -147,6 +145,7 @@ class PopupsMixin:
 
     def show_crisis_popup(self) -> None:
         """S08 危机弹窗（lose 红皮肤 + 怀疑度条 + 3 条生路）"""
+        self._pause_for_event()
         sfx.play('crisis')
         p = engine.player
         content = BoxLayout(orientation='vertical', spacing=0, padding=0)

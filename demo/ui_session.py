@@ -210,6 +210,11 @@ class SessionMixin:
             self.stop_ticking()
         self.refresh_all()
 
+    def _pause_for_event(self) -> None:
+        """事件弹窗复用手动暂停流程；已暂停时保持原状态。"""
+        if not self.paused:
+            self.toggle_pause()
+
     def _resume_from_pause(self) -> None:
         """按暂停前冻结的剩余秒数恢复周期进度（而非重置为整周期）。"""
         self.stop_ticking()
