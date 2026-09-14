@@ -40,7 +40,9 @@ from ui_v4 import (
     PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
     SPR_ROBOT, PAL_ROBOT,
 )
-from ui_v4_common import UiStats, small_btn  # noqa: F401
+from ui_v4_common import UiStats, small_btn, _section_band  # noqa: F401
+
+
 class HelpPage(U.PageScreen):
     """全屏帮助页（设计稿 S11）：左快捷键栏 + 右玩法目标，填满无留白（参照设置/成就页）。"""
 
@@ -202,12 +204,7 @@ class SettingsPage(U.PageScreen):
         # 左：显示与操作
         left = StrokePanel(bg=COLORS['panel'], border=COLORS['border_2'],
                            spacing=10, padding=(10, 10))
-        lt = BoxLayout(orientation='horizontal', spacing=8,
-                       size_hint_y=None, height=28)
-        lt.add_widget(PixelSprite(SPR_GEAR, PAL_GEAR, scale=2))    # 24×24 美术
-        lt.add_widget(mk_label(i18n.t('set_display'), font_size=FS_SM,
-                               color=COLORS['cyan'], size_hint_y=None, height=28))
-        left.add_widget(lt)
+        left.add_widget(_section_band(i18n.t('set_display'), SPR_GEAR, PAL_GEAR))
 
         self.lbl_lang_val = SegSwitch([i18n.t('lang_zh'), i18n.t('lang_en')], 0,
                                       on_change=lambda i: on_lang and on_lang(i))
@@ -347,6 +344,17 @@ class SettingsPage(U.PageScreen):
         if hint:
             r.add_widget(mk_label(hint, font_size=FS_CAP,
                                   color=COLORS['text_mute']))
+        # 行底 1px 细分隔线：提升设置项可读性（令牌化 border，snap 对齐）。
+        # canvas.after 画在控件树之上，避免被面板背景盖住。
+        def _draw_sep(*_a) -> None:
+            r.canvas.after.clear()
+            if r.width < 4:
+                return
+            with r.canvas.after:
+                Color(*COLORS['border'])
+                Line(points=[r.x, r.y + 0.5, r.x + r.width, r.y + 0.5], width=1)
+        r.bind(pos=_draw_sep, size=_draw_sep)
+        _draw_sep()
         return r
 
     def set_zoom_text(self, text: str) -> None:

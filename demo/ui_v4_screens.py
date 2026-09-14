@@ -54,7 +54,7 @@ from ui_v4 import (
 # ============================================================
 # 兼容性转发：拆分前的符号全部可继续从本模块取（外部调用点零改动）
 # ============================================================
-from ui_v4_common import UiStats, small_btn                     # noqa: F401
+from ui_v4_common import UiStats, small_btn, _section_band      # noqa: F401
 from ui_v4_panels import InspectorPanel, DropPreview, LogDrawer  # noqa: F401
 from ui_v4_cards import (SkillPageCard, SlotRow, LinkBar,        # noqa: F401
                          LvRow, BranchCard)

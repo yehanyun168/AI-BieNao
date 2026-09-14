@@ -262,5 +262,40 @@ def small_btn(text: str, tone: str = 'plain', cb: Callable = None,
 
 
 # ============================================================
+# 分段标题带（设置页 / 成就页 / 系统页通用视觉锚点）
+# ============================================================
+
+def _section_band(title: str, sprite: str, pal: dict) -> Widget:
+    """设置/全屏页分段标题带：图标 + 青色标题 + 底部 2px 青色强调线。
+
+    统一一级分区的视觉锚点，替换原本零散的「图标+标签」行，强化信息层级
+    （令牌化：硬 2px 边、圆角 0、snap 对齐，不引入新配色）。
+    仅依赖 ui_v4 基元与 pixel_ui，保持 common 模块零家族内依赖（无循环）。
+    """
+    band = BoxLayout(orientation='vertical', spacing=0,
+                     size_hint_y=None, height=32)
+    row = BoxLayout(orientation='horizontal', spacing=8,
+                    size_hint_y=None, height=28)
+    row.add_widget(PixelSprite(sprite, pal, scale=2))      # 24×24 美术
+    row.add_widget(mk_label(title, font_size=FS_SM,
+                           color=COLORS['cyan'], size_hint_x=None))
+    band.add_widget(row)
+    line = Widget(size_hint_y=None, height=2, size_hint_x=1)
+    band.add_widget(line)
+
+    def _draw(*_a) -> None:
+        line.canvas.before.clear()
+        if band.width < 4:
+            return
+        with line.canvas.before:
+            Color(*COLORS['cyan'])
+            Line(points=[band.x, band.y + 1,
+                         band.x + band.width, band.y + 1], width=2)
+    band.bind(pos=_draw, size=_draw)
+    _draw()
+    return band
+
+
+# ============================================================
 # S05 技能页面
 # ============================================================
