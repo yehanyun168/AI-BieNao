@@ -277,6 +277,7 @@ class SlotRow(Widget):
 
     def on_touch_down(self, touch):
         if self._on_click and self.collide_point(*touch.pos):
+            sfx.play('select')   # 2026-09-14 修：原为零接线静默
             self._on_click()
             return True
         return super().on_touch_down(touch)
@@ -354,6 +355,7 @@ class LvRow(Widget):
 
     def on_touch_down(self, touch):
         if self._on_click and self.state != 'locked' and self.collide_point(*touch.pos):
+            sfx.play('click')    # 2026-09-14 修：原为零接线静默
             self._on_click()
             return True
         return super().on_touch_down(touch)

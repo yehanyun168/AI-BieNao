@@ -26,6 +26,7 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
+import sfx
 
 from pixel_ui import (COLORS, PixelLabel, add_pixel_border, hex_rgba,
                       snap, snap_pt)
@@ -419,6 +420,9 @@ class PxChip(PixelLabel):
 
     def on_touch_down(self, touch):
         if self._on_press and self.collide_point(*touch.pos):
+            # 点击音（2026-09-14 修）：PxChip 是区域页签 RegionTab 的基类，
+            # 原为零接线静默 —— 切区域点了没声，玩家会以为没点上。
+            sfx.play('click')
             self._on_press(self)
             return True
         return super().on_touch_down(touch)
@@ -1051,6 +1055,10 @@ class SegSwitch(FloatLayout):
             cw = self.width / n if n else 0
             if cw > 0:
                 idx = min(int((touch.x - self.x) // cw), n - 1)
+                # 切换音（2026-09-14 修）：原为零接线静默。只在「真的换档」
+                # 时响，点已选中的同一段不重复发声。
+                if idx != self.current:
+                    sfx.play('toggle')
                 self.set_current(idx, notify=True)
                 return True
         return super().on_touch_down(touch)
@@ -1467,6 +1475,8 @@ class OptButton(Widget):
         if self.collide_point(*touch.pos):
             if self.disabled:
                 return True
+            # 点击音（2026-09-14 修）：原为零接线静默；disabled 时已在上方 return，与视觉禁用态一致。
+            sfx.play('click')
             self._hover = True
             self._redraw()
             return True

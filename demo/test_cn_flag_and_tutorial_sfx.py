@@ -9,6 +9,7 @@
 
 不依赖 Kivy GUI，纯数据/源码断言，可 headless 跑。
 """
+import ast
 import io
 import os
 import sys
@@ -102,6 +103,42 @@ def test_menu_buttons_have_click_sfx():
     src = io.open(os.path.join(HERE, 'main.py'), encoding='utf-8').read()
     seg = src.split('def _menu_btn')[1].split('def _lang_row')[0]
     assert 'sfx.play(' in seg, 'main.py _menu_btn 丢失点击音效接线'
+
+
+def _method_src(path, cls, func):
+    """取指定类方法的源码（AST 定位，避免文本误伤同名片段）。"""
+    src = io.open(os.path.join(HERE, path), encoding='utf-8').read()
+    tree = ast.parse(src)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == cls:
+            for sub in node.body:
+                if isinstance(sub, ast.FunctionDef) and sub.name == func:
+                    return ast.get_source_segment(src, sub) or ''
+    return None
+
+
+def test_v4_ui_controls_have_click_sfx():
+    """v4 UI 交互控件 + 右侧指令栏必须有点击音效接线（防回归）。
+
+    这些控件原本全部零接线：RailButton 只 bind on_release 转发，玩家点右侧
+    指令栏「技能/科技/成就/帮助/设置/日志」与区域页签/开关时全程静默。
+    """
+    targets = [
+        ('ui_v4.py', 'PxChip', 'on_touch_down'),        # 区域页签 RegionTab 基类
+        ('ui_v4.py', 'SegSwitch', 'on_touch_down'),     # 分段开关
+        ('ui_v4.py', 'OptButton', 'on_touch_down'),     # 事件选项按钮
+        ('ui_v4_cards.py', 'SlotRow', 'on_touch_down'),
+        ('ui_v4_cards.py', 'LvRow', 'on_touch_down'),
+        ('ui_hud.py', 'RailBar', '_fire'),              # 右侧指令栏 6 枚菜单按钮
+    ]
+    for path, cls, func in targets:
+        seg = _method_src(path, cls, func)
+        assert seg is not None, '找不到 %s.%s（%s）' % (cls, func, path)
+        assert 'sfx.play(' in seg, '%s.%s 缺少点击音效接线 —— 点了会静默' % (cls, func)
+    # 三个文件都必须 import sfx，否则运行期直接 NameError
+    for path in ('ui_v4.py', 'ui_v4_cards.py', 'ui_hud.py'):
+        src = io.open(os.path.join(HERE, path), encoding='utf-8').read()
+        assert 'import sfx' in src, '%s 未 import sfx' % path
 
 
 if __name__ == '__main__':

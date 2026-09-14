@@ -591,7 +591,11 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
     # 'ui_v4_screens.py' 已于 2026-09-13 拆分为 6 个模块（common/panels/cards/
     #   canvas/syspages/screens，各自 267~532 行），不再超限 → 移出白名单。
     #   若后续任一拆分模块涨过 800 行，需按「再登记约定」显式留痕后重新登记。
-'ui_v4.py':          2006,    # 2026-09-14 三度登记（原 1995）：底部技能带技能名
+'ui_v4.py':          2016,    # 2026-09-14 四度登记（原 2006）：v4 UI 控件点击音
+                                  #    效接线（PxChip 区域页签 / SegSwitch 分段开关 /
+                                  #    OptButton 选项按钮 + import sfx，原三者全静默）
+                                  #    （原 2006 = 底部技能带技能名 shrink-to-fit
+                                  #    防裁切 ＋ KvGrid 行高按基准值等比缩放）
                                   #    shrink-to-fit 防裁切（窄卡不再切字）＋KvGrid
                                   #    行高改按基准值等比缩放（原 refresh_scale 写死 17）
                                   #    （1995 = PxChip Clock 死循环修复：texture_size
@@ -609,7 +613,10 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #    sk_preview_empty / sk_preview_missing ×2 语
                                   #    （原 1381：技能完整介绍 sk_full_* + sk_detail_*
                                   #     精简为单行）
-    'ui_hud.py':          916,    # 2026-09-14 再登记（原 908）：顶栏火花线按指标语义着色
+    'ui_hud.py':          922,    # 2026-09-14 三度登记（原 916）：右侧指令栏 RailBar
+                                  #    6 枚菜单按钮点击音效接线（原为零接线静默，
+                                  #    玩家点技能/科技/成就/帮助/设置/日志全无声）
+                                  #    （原 916 = 顶栏火花线按指标语义着色）
                                   #    （_SPARK_HEX 字典 + _stat 传 fill_hex，算力=黄/下载=粉/
                                   #     怀疑度=红/解锁国=青，修复「四根全青无法区分涨落」）
 }

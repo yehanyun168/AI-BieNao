@@ -11,6 +11,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
+import sfx
 from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
@@ -228,6 +229,11 @@ class RailBar(HudBox):
 
     def _fire(self, key: str) -> None:
         if self._on_pick:
+            # 点击音（2026-09-14 修）：右侧指令栏 6 枚菜单按钮原本**完全零
+            # 音效接线** —— RailButton 只 bind on_release 转发，玩家点「技能
+            # /科技/成就/帮助/设置/日志」全程静默（反馈问题「菜单按钮无音效」
+            # 的根因）。
+            sfx.play('click')
             self._on_pick(key)
 
     def set_handler(self, fn) -> None:
