@@ -41,7 +41,8 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 # 真随机、difficulty=标准）照常可读，语义与 P2-3 之前的对局完全一致。
 # T16：SAVE_VERSION 2 → 3。新增 player.origin（觉醒出身），v2 老档经
 # _v2_to_v3 补白板出身（garage，零行为变化——garage 对 TUNE 无修正）。
-SAVE_VERSION = 3
+# v4：新增游戏开局年月，日期随周期推进并可跨存档延续。
+SAVE_VERSION = 4
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
 DEFAULT_SLOT = 'slot1.json'
 CRASH_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -145,6 +146,8 @@ def save(path: str = None) -> str:
             'suspicion': p.suspicion,
             'suspicion_peak': getattr(p, 'suspicion_peak', 0.0),
             'tick_count': p.tick_count,
+            'start_year': p.start_year,
+            'start_month': p.start_month,
             'events_history': p.events_history,
             'skill_cooldowns': dict(p.skill_cooldowns),
             'selected_country': p.selected_country,
@@ -223,6 +226,8 @@ def _apply_save(data: dict) -> None:
     p.suspicion = ps['suspicion']
     p.suspicion_peak = ps.get('suspicion_peak', ps['suspicion'])
     p.tick_count = ps['tick_count']
+    p.start_year = ps['start_year']
+    p.start_month = ps['start_month']
     p.events_history = ps.get('events_history', [])
     p.skill_cooldowns = ps.get('skill_cooldowns', {})
     p.selected_country = ps.get('selected_country')
@@ -326,6 +331,20 @@ def _v2_to_v3(d: dict) -> dict:
 
 
 _MIGRATIONS[2] = _v2_to_v3
+
+
+def _v3_to_v4(d: dict) -> dict:
+    """v3 → v4：旧档以迁移时的设备年月作为游戏起始年月。"""
+    ps = d.get('player')
+    if isinstance(ps, dict):
+        now = datetime.now()
+        ps.setdefault('start_year', now.year)
+        ps.setdefault('start_month', now.month)
+    d['version'] = SAVE_VERSION
+    return d
+
+
+_MIGRATIONS[3] = _v3_to_v4
 
 
 def _migrate(data: dict, from_version: int) -> dict:

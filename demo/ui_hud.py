@@ -357,9 +357,8 @@ class LayerHud(HudBox):
         row = BoxLayout(orientation='horizontal', spacing=8,
                         size_hint=(None, None), height=26)
         self.btn_minus = PxChip(U.SYM['minus'], tone='plain', on_press=lambda *_: on_zoom and on_zoom(-0.10))
-        self.btn_fit = PxChip(t('zoom_fit'), tone='plain', on_press=lambda *_: on_zoom and on_zoom(0.0))
         self.btn_plus = PxChip(U.SYM['plus'], tone='plain', on_press=lambda *_: on_zoom and on_zoom(+0.10))
-        for b in (self.btn_minus, self.btn_fit, self.btn_plus):
+        for b in (self.btn_minus, self.btn_plus):
             row.add_widget(b)
         col.add_widget(row)
         self.add_widget(col)
@@ -369,8 +368,7 @@ class LayerHud(HudBox):
 
     def _sync(self, *_args) -> None:
         self.col.pos = (self.x + self.PAD, self.y + self.PAD)
-        # ⚠️ 外层面板宽度必须 ≥ 内容宽度：缩放行（减/适配窗口/加）加两个间距
-        # 实测需要约 312px，若面板只有 300px 会溢出 12px（「适配窗口」被裁）。
+        # 外层面板宽度取图层切换与缩放行的较大值，避免控件溢出。
         row = self.col.children[0] if self.col.children else None
         row_w = 0
         if row is not None:
@@ -470,18 +468,18 @@ class HudMixin:
             bar.add_widget(c)
         return holder
 
-    # ---- 右上角周期数（醒目方块，设计稿层级：标签小 + 数字大）----
     def _make_tick_box(self) -> Widget:
-        """顶栏右上角的周期数显示：小标签 + 大号等宽数字。
-
-        Args:
-            无（读取 ``engine.player.tick_count``，由 ``refresh_all`` 刷新）。
-        """
+        """顶栏游戏年月、周期标签和周期数。"""
         box = StrokePanel(bg=tuple(COLORS['panel_2']),
                           border=tuple(COLORS['cyan']),
                           spacing=0, padding=(10, 2),
                           orientation='horizontal',
                           size_hint=(None, None), height=MIN_TOUCH)
+        self.lbl_game_date = mk_label('0000-00', font_size=U.FS_SM,
+                                      color=COLORS['cyan'], size_hint_x=None)
+        fit_width(self.lbl_game_date, pad=8)
+        self._register(self.lbl_game_date, font=U.FS_SM)
+        box.add_widget(self.lbl_game_date)
         self.lbl_tick_cap = mk_label(t('stats_tick'), font_size=U.FS_CAP,
                                      color=COLORS['text_dim'],
                                      size_hint_x=None)
@@ -499,8 +497,10 @@ class HudMixin:
         # 宽度随内容自适应（数字变多位数时自动变宽）
         def _sync(*_a) -> None:
             gap = 6
-            w = self.lbl_tick_cap.width + self.lbl_tick_val.width + gap + 20
+            w = (self.lbl_game_date.width + self.lbl_tick_cap.width
+                 + self.lbl_tick_val.width + gap * 2 + 20)
             box.width = w
+        self.lbl_game_date.bind(width=lambda *_: _sync())
         self.lbl_tick_cap.bind(width=lambda *_: _sync())
         self.lbl_tick_val.bind(width=lambda *_: _sync())
         self._register(box, height=MIN_TOUCH)

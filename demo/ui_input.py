@@ -412,6 +412,8 @@ class InputMixin:
             self.stats_meta.text = (f"[color={U.MK['dim']}]{t('stat_countries')}"
                                     f"[/color]  [b]{unlocked}/{total}[/b]")
         # 右上角周期数（大号数字，仅数字变化，不重建文本）
+        game_year, game_month = engine.game_year_month()
+        self.lbl_game_date.text = f"{game_year:04d}-{game_month:02d}"
         self.lbl_tick_val.text = f"{p.tick_count}"
 
         # 暂停芯片（玩家反馈 #1）：暂停时显示「继续」，运行中显示「运行」，

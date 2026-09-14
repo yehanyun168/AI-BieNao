@@ -11,6 +11,7 @@ engine.py - Day 2 Demo 游戏引擎
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 import random
+from datetime import datetime
 
 import data
 import tech_tree
@@ -37,10 +38,6 @@ from balance import (TUNE, CRISIS_OPTIONS, DEFAULT_DIFFICULTY,
                      apply_difficulty, apply_origin_tune_mult,
                      current_difficulty, soft_cap_suspicion)
 
-
-# ============================================================
-# 运行时的国家状态
-# ============================================================
 @dataclass
 class CountryState:
     config: Country
@@ -55,14 +52,13 @@ class CountryState:
             return 0.0
         return self.downloads_m / self.config.population_m
 
-# ============================================================
-# 玩家状态
-# ============================================================
 @dataclass
 class PlayerState:
     compute: float = 100.0
     suspicion: float = 0.0
     tick_count: int = 0
+    start_year: int = 0
+    start_month: int = 0
     events_history: List[str] = field(default_factory=list)
     skill_cooldowns: Dict[str, float] = field(default_factory=dict)
     selected_country: Optional[str] = None
@@ -201,6 +197,7 @@ def init_game(seed: Optional[int] = None,
         player_countries.append(state)
 
     player = PlayerState()
+    player.start_year, player.start_month = datetime.now().timetuple()[:2]
     player.seed = seed
     player.difficulty = (difficulty if difficulty is not None
                          else current_difficulty())
@@ -225,9 +222,12 @@ def init_game(seed: Optional[int] = None,
     return player
 
 
-# ============================================================
-# 主循环
-# ============================================================
+def game_year_month() -> tuple[int, int]:
+    """当前游戏年月：开局设备年月 + 已完成周期数。"""
+    total = player.start_year * 12 + player.start_month - 1 + player.tick_count
+    year, month = divmod(total, 12)
+    return year, month + 1
+
 def tick_one_round(skill_in_use: Optional[str] = None,
                    auto_choice: bool = True,
                    dt_seconds: float = 1.0) -> Dict:
