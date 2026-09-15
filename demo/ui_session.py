@@ -94,7 +94,12 @@ class SessionMixin:
 
 
     def toggle_fullscreen(self) -> None:
-        Window.fullscreen = 'auto' if not Window.fullscreen else False
+        # 用 True 而不是 'auto'：'auto' 会按「显示器与窗口重叠面积」挑显示器，
+        # 多显示器且 DPI 不一致时容易选中副屏、或选到后分辨率与缩放对不上，
+        # 表现为按 F11 后画面糊/错位/跑到别块屏。True = 固定选当前那块。
+        Window.fullscreen = True if not Window.fullscreen else False
+        # 0.2s 后重算缩放：全屏切换是异步的，立刻读 Window.width/height
+        # 拿到的还是旧值，算出来的 scale 会错一档。
         Clock.schedule_once(lambda *_: self._apply_scale(), 0.2)
 
 

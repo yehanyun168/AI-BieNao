@@ -270,8 +270,68 @@ sys.excepthook = _crash_excepthook
 
 from kivy.config import Config
 Config.set('graphics', 'resizable', '1')
-Config.set('graphics', 'width', '1680')
-Config.set('graphics', 'height', '980')
+
+
+def _probe_screen() -> tuple:
+    """探测【屏幕逻辑可用区】，用于把开窗尺寸钳进屏幕内。
+
+    关键前提：本进程**不是** DPI 感知（没有 manifest），Windows 的 DWM
+    虚拟化会对未声明感知的进程上报「逻辑像素」。因此
+    ``GetSystemMetrics``（经 SPI 取工作区）与 Kivy 的 ``Window.system_size``
+    返回的**同一套坐标**，可以直接比较。
+
+    ⚠️ 不要在这里调 ``SetProcessDpiAwareness``：一旦声明感知，本进程拿到的
+    坐标会变成物理像素，而 Kivy/字体/纹理仍按原来那套理解，字体与布局会
+    整体错位。屏幕适配必须靠「钳窗口尺寸」，不能靠改 DPI 感知。
+
+    Returns:
+        (可用宽, 可用高, 来源说明)。任何一步失败都回退到常量默认值，
+        保证探测本身绝不会让游戏起不来。
+    """
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        spi_getworkarea = 0x0030
+        rect = wintypes.RECT()
+        ok = ctypes.windll.user32.SystemParametersInfoW(
+            spi_getworkarea, 0, ctypes.byref(rect), 0)
+        w = int(rect.right - rect.left)
+        h = int(rect.bottom - rect.top)
+        if ok and w > 0 and h > 0:
+            return w, h, 'workarea'
+    except Exception:
+        pass                          # 探测失败不致命，走下面的兜底
+    return 0, 0, 'fallback'
+
+
+# 设计基准：窗口按 1680×980 开。但**逻辑**屏幕宽不到 1680 的机器
+# （如 2560×1600@150% → 1707 逻辑宽尚可；2880×1612@200% → 仅 1440 逻辑宽）
+# 会把窗口撑出屏幕，左右两侧各被裁掉一截，表现为「标题被切、按钮右边框
+# 贴边、面板被挤压」。故开窗前先钳一次。
+_DESIGN_WIN_W, _DESIGN_WIN_H = 1680, 980
+_SCREEN_W, _SCREEN_H, _SCREEN_SRC = _probe_screen()
+# 留 2% 余量：既避开任务栏/窗口边框，也避免贴边导致 Windows 自动最大化。
+_MARGIN = 0.98
+if _SCREEN_W and _SCREEN_H:
+    # 找「能同时放进屏幕」的最大等比窗口：宽、高各自算出一个候选，
+    # 取小的那个，再乘回设计比例。**必须两步一起算** —— 先按宽钳再按高钳
+    # 会把宽高比压坏（实测 1440×806 屏上会得到 1.787 而非设计的 1.714，
+    # 画面被横向拉长）。test_window_fit 有断言守住。
+    _fit = min((_SCREEN_W * _MARGIN) / _DESIGN_WIN_W,
+               (_SCREEN_H * _MARGIN) / _DESIGN_WIN_H,
+               1.0)
+    _WIN_W = int(_DESIGN_WIN_W * _fit)
+    _WIN_H = int(_DESIGN_WIN_H * _fit)
+else:
+    _WIN_W, _WIN_H = _DESIGN_WIN_W, _DESIGN_WIN_H
+_WIN_W = max(_WIN_W, 960)         # 再窄也没法玩，宁可超出也不给没法用的窗口
+_WIN_H = max(_WIN_H, 540)
+_WIN_W -= _WIN_W % 4              # 宽度必须能被 4 整除（Kivy GL 布局约束）
+_WIN_H -= _WIN_H % 4
+
+Config.set('graphics', 'width', str(_WIN_W))
+Config.set('graphics', 'height', str(_WIN_H))
 Config.set('kivy', 'dpi', '144')
 Config.set('kivy', 'dpi_pixmap', '256')
 # Esc 交由游戏自己处理（逐层返回）；禁用 Kivy 默认「按 Esc 关闭窗口」，
@@ -682,7 +742,12 @@ class MainMenu(FloatLayout):
     def _compute_scale(self) -> float:
         w = Window.width or self.DESIGN_W
         h = Window.height or self.DESIGN_H
+        # 同时看宽和高：只看高的话，超宽/超窄屏（宽高比偏离 16:9）会算出
+        # 过大的 scale，左面板按比例撑出去 → 内容左右溢出被裁。
         base = min(w / self.DESIGN_W, h / self.DESIGN_H)
+        # 下限 0.62 是按「1680 逻辑宽 + 键盘到底 + 缩放 1.0」实测标定的：
+        # 再小左面板右缘就会压到世界地图。窗口被钳到更窄的机器上，
+        # 下限兜住，宁可略挤也不溢出。
         return min(max(base, 0.62), 1.85) * self.user_scale
 
     def _reg(self, widget, font=None, height=None):

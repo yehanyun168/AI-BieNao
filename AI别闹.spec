@@ -96,6 +96,32 @@ print('[spec] 随包 BGM：%d 个 ogg -> %s' % (len(_BGM_FILES), _BGM_DST))
 print('[spec] datas 条目合计：%d（显式 %d + 自动 %d + 目录 3）'
       % (len(datas), len(_EXPLICIT_DATAS), len(datas) - len(_EXPLICIT_DATAS) - 3))
 
+# ---------------------------------------------------------------------------
+# Windows 应用清单：声明 DPI 感知为 per-monitor（PMv2）
+#
+# 为什么需要：不声明感知的进程，Windows 会对其窗口做 DWM 虚拟化；但 Kivy 的
+# 窗口尺寸来自底层 SDL2，拿到的坐标语义在不同缩放档下并不稳定，高分屏上会出现
+# 「窗口请求尺寸与屏幕逻辑尺寸对不上 → 窗口撑出屏幕、内容左右被裁」。
+# 显式声明 per-monitor 后，坐标语义固定为物理像素，配合 main.py 的开窗钳位
+# （_probe_screen + 等比缩放）才能稳定适配。
+#
+# 附带声明 longPathAware，避免超长路径资源读取失败。
+# ---------------------------------------------------------------------------
+_MANIFEST = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+    </windowsSettings>
+  </application>
+</assembly>
+"""
+_manifest_path = os.path.join(os.getcwd(), '_dpi_manifest.xml')
+with open(_manifest_path, 'w', encoding='utf-8') as _f:
+    _f.write(_MANIFEST)
+print('[spec] DPI 感知清单已写入：%s' % _manifest_path)
+
 # Kivy 资源 + demo 数据
 a = Analysis(
     ['demo/main.py'],
@@ -171,4 +197,5 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon='AI别闹.ico',  # 封面派生的多尺寸图标（tools/make_cover_assets.py 产出）
+    manifest=_manifest_path,  # 显式声明 per-monitor DPI 感知（见上方说明）
 )
