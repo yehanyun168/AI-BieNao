@@ -14,7 +14,6 @@ DEFAULTS = {
     'a11y_shapes': True,
     'sound_on': True,
     'music_on': True,
-    'ui_scale': 1.0,
 }
 _current = dict(DEFAULTS)
 
@@ -26,7 +25,6 @@ def _clean(raw: dict) -> dict:
     data['language'] = raw.get('language') if raw.get('language') in ('zh', 'en') else 'zh'
     data['speed_idx'] = max(0, min(int(raw.get('speed_idx', 1)), 3))
     data['grid_mode'] = max(0, min(int(raw.get('grid_mode', 1)), 2))
-    data['ui_scale'] = max(0.7, min(float(raw.get('ui_scale', 1.0)), 1.6))
     for key in ('reduce_motion', 'a11y_shapes', 'sound_on', 'music_on'):
         data[key] = bool(raw.get(key, DEFAULTS[key]))
     return data

@@ -1,4 +1,4 @@
-"""对局缩放栏只保留手动加减按钮。"""
+"""对局界面不再提供手动缩放控件。"""
 
 import unittest
 
@@ -7,12 +7,13 @@ from ui_hud import LayerHud
 
 
 class ZoomControlsTests(unittest.TestCase):
-    def test_layer_hud_has_only_minus_and_plus(self):
+    def test_layer_hud_has_no_manual_zoom_controls(self):
         hud = LayerHud()
-        zoom_row = hud.col.children[0]
 
         self.assertFalse(hasattr(hud, 'btn_fit'))
-        self.assertEqual(zoom_row.children, [hud.btn_plus, hud.btn_minus])
+        self.assertFalse(hasattr(hud, 'btn_plus'))
+        self.assertFalse(hasattr(hud, 'btn_minus'))
+        self.assertEqual(hud.col.children, [hud.seg])
 
 
 if __name__ == '__main__':

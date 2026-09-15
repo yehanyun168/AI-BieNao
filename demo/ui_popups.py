@@ -105,6 +105,8 @@ class PopupsMixin:
             if engine.player.game_over:
                 self.stop_ticking()
                 self.show_ending_popup(engine.player.ending)
+            else:
+                self._resume_after_event()
 
         if solo:
             # 单选项：无选项按钮，直接展示影响效果 + 「知道了」确认键
@@ -186,6 +188,7 @@ class PopupsMixin:
                 self.stats.push_log(engine.player.tick_count, str(line), 'w')
             popup.dismiss()
             self.refresh_all()
+            self._resume_after_event()
 
         # 效果 chips 与 engine.CRISIS_OPTIONS 一一对应（单一数值来源在引擎）
         crisis_chips = [
@@ -439,7 +442,7 @@ class PopupsMixin:
             self.remove_widget(old)
         chip = self._build_top_toast(text, tone, detail)
         self._cap_toast_width(chip)
-        # P1-11 避让顶栏：inset = 顶栏真实下缘（随 F12 缩放自动正确）。
+        # P1-11 避让顶栏：inset = 顶栏真实下缘（随窗口缩放自动正确）。
         inset = self._topbar_inset(self)
         chip.pos_hint = {'center_x': 0.5,
                          'top': 1.0 - inset / max(float(self.height), 1.0)}

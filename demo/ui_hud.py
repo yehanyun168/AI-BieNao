@@ -350,13 +350,13 @@ class LegendBar(HudBox):
 
 
 class LayerHud(HudBox):
-    """右上角图层切换 + 缩放（设计稿 .hud.tr）"""
+    """右上角图层切换（设计稿 .hud.tr）。"""
 
     # 顶部额外下沉：右上 HUD 与顶栏「周期/暂停/帮助」chips 仅隔 6px，
     # HiDPI 下视觉上会贴在一起（用户反馈"按钮相互遮挡"）。整体下移让二者分离。
     TOP_GAP = 14
 
-    def __init__(self, on_layer=None, on_zoom=None, **kwargs):
+    def __init__(self, on_layer=None, **kwargs):
         super().__init__(anchor='tr', **kwargs)
         col = BoxLayout(orientation='vertical', spacing=12,
                         size_hint=(None, None), padding=0)
@@ -365,13 +365,6 @@ class LayerHud(HudBox):
         self.seg.size_hint = (None, None)
         col.add_widget(self.seg)
 
-        row = BoxLayout(orientation='horizontal', spacing=8,
-                        size_hint=(None, None), height=26)
-        self.btn_minus = PxChip(U.SYM['minus'], tone='plain', on_press=lambda *_: on_zoom and on_zoom(-0.10))
-        self.btn_plus = PxChip(U.SYM['plus'], tone='plain', on_press=lambda *_: on_zoom and on_zoom(+0.10))
-        for b in (self.btn_minus, self.btn_plus):
-            row.add_widget(b)
-        col.add_widget(row)
         self.add_widget(col)
         self.col = col
         self.bind(pos=self._sync, size=self._sync)
@@ -379,23 +372,17 @@ class LayerHud(HudBox):
 
     def _sync(self, *_args) -> None:
         self.col.pos = (self.x + self.PAD, self.y + self.PAD)
-        # 外层面板宽度取图层切换与缩放行的较大值，避免控件溢出。
-        row = self.col.children[0] if self.col.children else None
-        row_w = 0
-        if row is not None:
-            row_w = sum(c.width for c in row.children) + row.spacing * max(len(row.children) - 1, 0)
         seg_w = self.seg.width or 0
-        w = max(row_w, seg_w, 312)
-        self.seg.width = w          # 图层切换与缩放行等宽（避免挤成一小块）
-        row.height = 26
-        self.col.size = (w, 22 + 12 + 26)
+        w = max(seg_w, 312)
+        self.seg.width = w
+        self.col.size = (w, 22)
         # 内容高 + 上下 PAD；额外下沉 TOP_GAP 避免与顶栏 chips 贴住。
         # ⚠️ _sync 会被反复调用（pos/size 变化），必须「赋值」而非「累加」，
         # 否则 inset 会一次次叠加把 HUD 推到画面中部。
         base_inset = getattr(self, '_base_top_inset', 0)
         self._base_top_inset = base_inset       # 投放模式的额外 inset 由外部改写
         self._top_inset = base_inset + self.TOP_GAP
-        self.content_size(w, 60)
+        self.content_size(w, 34)
         self._redraw()
 
     def set_layer(self, idx: int) -> None:
@@ -445,6 +432,7 @@ class HudMixin:
 
         # ---- 右组：周期数（醒目，用户要求「右上角显示周期数」）----
         self.tick_box = self._make_tick_box()
+        self._refresh_speed_indicator()
         bar.add_widget(self.tick_box)
         bar.add_widget(self._sep())
 
@@ -464,50 +452,94 @@ class HudMixin:
                                   on_press=lambda *_: self.toggle_lang())
         self.pause_chip = PxChip(t('state_running'), tone='up',
                                  on_press=lambda *_: self.toggle_pause())
-        self.help_chip = PxChip('? ' + t('rail_help'), tone='plain',
-                                on_press=lambda *_: self.open_page('help'))
-        for c in (self.lang_switch, self.pause_chip, self.help_chip):
+        for c in (self.lang_switch, self.pause_chip):
             bar.add_widget(c)
         return holder
 
     def _make_tick_box(self) -> Widget:
-        """顶栏游戏年月、周期标签和周期数。"""
+        """顶栏调速减键、游戏年月、周期数和调速加键。"""
         box = StrokePanel(bg=tuple(COLORS['panel_2']),
                           border=tuple(COLORS['cyan']),
                           spacing=0, padding=(10, 2),
                           orientation='horizontal',
                           size_hint=(None, None), height=MIN_TOUCH)
+        self._speed_bar_states = [False] * len(ST.SPEED_STEPS)
+        self._speed_bar_colors = []
+        self._speed_bar_rects = []
+        with box.canvas.after:
+            for _ in ST.SPEED_STEPS:
+                self._speed_bar_colors.append(Color(*COLORS['border_2']))
+                self._speed_bar_rects.append(Rectangle(pos=(0, 0), size=(1, 1)))
+        self.btn_speed_down = PxChip(
+            U.SYM['minus'], tone='plain',
+            on_press=lambda *_: self.set_speed_idx(self.speed_idx - 1),
+            pos_hint={'center_y': 0.5})
+        box.add_widget(self.btn_speed_down)
         self.lbl_game_date = mk_label('0000-00', font_size=U.FS_SM,
-                                      color=COLORS['cyan'], size_hint_x=None)
+                                      color=COLORS['cyan'], size_hint_x=None,
+                                      pos_hint={'center_y': 0.5})
         fit_width(self.lbl_game_date, pad=8)
         self._register(self.lbl_game_date, font=U.FS_SM)
         box.add_widget(self.lbl_game_date)
         self.lbl_tick_cap = mk_label(t('stats_tick'), font_size=U.FS_CAP,
                                      color=COLORS['text_dim'],
-                                     size_hint_x=None)
+                                     size_hint_x=None,
+                                     pos_hint={'center_y': 0.5})
         fit_width(self.lbl_tick_cap, pad=6)
         self._register(self.lbl_tick_cap, font=U.FS_CAP)
         box.add_widget(self.lbl_tick_cap)
 
         self.lbl_tick_val = mk_label('0', font_size=U.FS_H2,
                                      color=COLORS['cyan'], halign='right',
-                                     size_hint_x=None)
+                                     size_hint_x=None,
+                                     pos_hint={'center_y': 0.5})
         fit_width(self.lbl_tick_val, pad=4, min_w=44)
         self._register(self.lbl_tick_val, font=U.FS_H2)
         box.add_widget(self.lbl_tick_val)
+        self.btn_speed_up = PxChip(
+            U.SYM['plus'], tone='plain',
+            on_press=lambda *_: self.set_speed_idx(self.speed_idx + 1),
+            pos_hint={'center_y': 0.5})
+        box.add_widget(self.btn_speed_up)
 
         # 宽度随内容自适应（数字变多位数时自动变宽）
         def _sync(*_a) -> None:
-            gap = 6
-            w = (self.lbl_game_date.width + self.lbl_tick_cap.width
-                 + self.lbl_tick_val.width + gap * 2 + 20)
+            gap = 5
+            w = (self.btn_speed_down.width + self.lbl_game_date.width
+                 + self.lbl_tick_cap.width + self.lbl_tick_val.width
+                 + self.btn_speed_up.width + gap * 4 + 20)
             box.width = w
+        self.btn_speed_down.bind(width=lambda *_: _sync())
         self.lbl_game_date.bind(width=lambda *_: _sync())
         self.lbl_tick_cap.bind(width=lambda *_: _sync())
         self.lbl_tick_val.bind(width=lambda *_: _sync())
+        self.btn_speed_up.bind(width=lambda *_: _sync())
         self._register(box, height=MIN_TOUCH)
+        box.bind(pos=self._refresh_speed_indicator,
+                 size=self._refresh_speed_indicator)
         _sync()
+        self._refresh_speed_indicator()
         return box
+
+    def _refresh_speed_indicator(self, *_args) -> None:
+        """在时间框正上方绘制四块固定宽度的速度档位指示条。"""
+        box = getattr(self, 'tick_box', None)
+        if box is None:
+            return
+        count = len(ST.SPEED_STEPS)
+        active = max(0, min(int(self.speed_idx) + 1, count))
+        self._speed_bar_states = [i < active for i in range(count)]
+        scale = max(float(getattr(self, 'scale', 1.0)), 0.1)
+        block_h, gap = 4 * scale, 3 * scale
+        block_w = max((box.width - gap * (count - 1)) / count, 1)
+        start_x = box.x
+        y = box.top + 3 * scale
+        for i, (color, rect) in enumerate(zip(
+                self._speed_bar_colors, self._speed_bar_rects)):
+            color.rgba = (COLORS['cyan'] if self._speed_bar_states[i]
+                          else COLORS['border_2'])
+            rect.pos = (start_x + i * (block_w + gap), y)
+            rect.size = (block_w, block_h)
 
     @staticmethod
     def _sep() -> Widget:
@@ -620,7 +652,7 @@ class HudMixin:
         stage.add_widget(self.region_hud)
 
         # HUD：图层（右上）
-        self.layer_hud = LayerHud(on_layer=self.set_layer, on_zoom=self._zoom_btn)
+        self.layer_hud = LayerHud(on_layer=self.set_layer)
         stage.add_widget(self.layer_hud)
 
         # HUD：图例（左下）

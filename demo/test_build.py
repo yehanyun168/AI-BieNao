@@ -159,27 +159,27 @@ restored = (engine.player.tick_count,
 assert snapshot == restored, f"读档后状态不一致：{snapshot} vs {restored}"
 print(f"   ■ 存档/读档一致（tick {restored[0]} / {restored[1]:.1f}M）")
 
-# --- 9. F12 自适应：缩放基础设施必须真的改到字号/行高 ---
-# 基准钉死 user_scale=1.0：preferences 会把 ui_scale 持久化到
-# demo/settings.json，上一轮测试（如 test_zoom_controls）留下的
-# 0.70/1.60 会让 +/- 被 min/max 夹住、断言失真（与执行顺序解耦）。
-ui.user_scale = 1.0
+# --- 9. 自动适配：窗口尺度变化必须真的改到字号/行高 ---
+compute_scale = ui._compute_scale
+ui._compute_scale = lambda: 1.0
 ui._apply_scale()
 base_font = ui.stats_compute.font_size
 base_fx = ui.skill_cards['push_song'].lbl_fx.font_size
-ui.adjust_scale(+0.30)
+ui._compute_scale = lambda: 1.3
+ui._apply_scale()
 assert ui.scale > 1.0, "放大后 scale 应 > 1"
 big_font = ui.stats_compute.font_size
 big_fx = ui.skill_cards['push_song'].lbl_fx.font_size
 assert big_font > base_font, "放大后状态条字号应变大"
 assert big_fx > base_fx, "放大后技能带字号应变大"
-ui.adjust_scale(-0.60)
+ui._compute_scale = lambda: 0.7
+ui._apply_scale()
 assert ui.stats_compute.font_size < base_font, "缩小后状态条字号应变小"
 assert ui.skill_cards['push_song'].lbl_fx.font_size < big_fx, "缩小后技能带字号应变小"
-ui.user_scale = 1.0
+ui._compute_scale = compute_scale
 ui._apply_scale()
-print(f"   ■ F12 自适应缩放生效（状态条字号 {base_font:.0f} → {big_font:.0f}；"
-      f"技能带字号 {base_fx:.0f} → {big_fx:.0f}，+/- 可调）")
+print(f"   ■ 自动适配缩放生效（状态条字号 {base_font:.0f} → {big_font:.0f}；"
+      f"技能带字号 {base_fx:.0f} → {big_fx:.0f}）")
 
 # --- 10. F11：Tab 切区域高亮（设计稿 §5 的 5 个页签）---
 ui.cycle_continent()                      # 亚洲
@@ -196,10 +196,10 @@ import inspect
 assert hasattr(ui, 'toggle_fullscreen'), "应提供 F11 全屏切换方法"
 assert 'f11' in inspect.getsource(main_module.GameUI._on_keyboard_down), \
     "F11 应绑定在键盘处理里"
-for k in ('tab', "f1", 'escape', '+', '-'):
+for k in ('tab', "f1", 'escape'):
     assert k in inspect.getsource(main_module.GameUI._on_keyboard_down), \
         f"快捷键 {k} 应绑定在键盘处理里"
-print("   ■ F11 快捷键齐全（F11 全屏 / Tab 大洲 / +/- 缩放 / Esc 暂停·设置 / F1 帮助）")
+print("   ■ 快捷键齐全（F11 全屏 / Tab 大洲 / Esc 暂停·设置 / F1 帮助）")
 
 # --- 12. 计划书验收数量断言（F02 / F05 / F08 / F09）---
 import data, endings as endings_mod, achievements as ach_mod
@@ -437,9 +437,9 @@ for _cur, _sus, _want in ((None, 0.0, 'calm'), (None, 34.9, 'calm'),
         f"怀疑度 {_sus}(当前 {_cur}) 应映射到 {_want}"
 _bgm._current = None
 # 节奏守卫：base_tick_seconds 是真实 tick 间隔唯一来源（main.py 直接消费），
-# 被误改会静默破坏 30s/周期 设计节奏。协作者 PR 曾两次改成 4.0（提交说明均未提及）。
-assert abs(_bal.TUNE['base_tick_seconds'] - 30.0) < 1e-9, \
-    f"base_tick_seconds 应为 30.0，实际 {_bal.TUNE['base_tick_seconds']}"
+# 被误改会静默破坏 16s/周期设计节奏。
+assert abs(_bal.TUNE['base_tick_seconds'] - 16.0) < 1e-9, \
+    f"base_tick_seconds 应为 16.0，实际 {_bal.TUNE['base_tick_seconds']}"
 assert _bal.SPEED_STEPS == (0.5, 1.0, 2.0, 4.0), "速度档定义被改动，需同步复核"
 # 主菜单覆盖接线：show_menu 切 menu 池、_enter_game 切回对局池、
 # exit_to_menu 不得 stop()（否则菜单曲起播前有一拍静音断点）

@@ -28,9 +28,9 @@ class PreferencesTests(unittest.TestCase):
         expected = {
             'language': 'en', 'speed_idx': 3, 'reduce_motion': True,
             'grid_mode': 2, 'a11y_shapes': False, 'sound_on': False,
-            'music_on': False, 'ui_scale': 1.3,
+            'music_on': False,
         }
-        preferences.save(expected)
+        preferences.save(dict(expected, ui_scale=1.3))
 
         loaded = ui_preferences.load_and_apply()
 
@@ -42,7 +42,7 @@ class PreferencesTests(unittest.TestCase):
         self.assertFalse(ST.A11Y_SHAPES)
         self.assertFalse(sfx.SFX_ON)
         self.assertFalse(bgm.BGM_ON)
-        self.assertEqual(preferences.get('ui_scale'), 1.3)
+        self.assertNotIn('ui_scale', loaded)
 
     def test_invalid_file_falls_back_to_defaults(self):
         with open(preferences.SETTINGS_PATH, 'w', encoding='utf-8') as f:
@@ -67,7 +67,7 @@ class PreferencesTests(unittest.TestCase):
 
     def test_settings_page_reflects_saved_choices(self):
         values = dict(preferences.DEFAULTS, speed_idx=3, grid_mode=2,
-                      reduce_motion=True, sound_on=False, ui_scale=1.3)
+                      reduce_motion=True, sound_on=False)
         page = SettingsPage(values=values)
 
         self.assertEqual(page.sw_speed.current, 3)

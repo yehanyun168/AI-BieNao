@@ -753,18 +753,8 @@ class InputMixin:
         if key == 'down':
             self.set_speed_idx(self.speed_idx - 1)
             return True
-        if key in ('+', '=', 'kp_add', 'numpadadd'):
-            self.adjust_scale(+0.10)
-            return True
-        if key in ('-', '_', 'kp_subtract', 'numpadsubtract'):
-            self.adjust_scale(-0.10)
-            return True
         if key == 'f11':
             self.toggle_fullscreen()
-            return True
-        if key == 'f12':
-            self.user_scale = 1.0
-            self._apply_scale()
             return True
         if key == 'f1':
             self.open_page('help')

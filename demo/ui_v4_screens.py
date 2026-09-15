@@ -468,6 +468,9 @@ class TechPage(U.PageScreen):
                                     if nd.kind == 't0' else
                                     i18n.t('tt_btn_level'))
             self.btn_action.disabled = False
+            self._action_cb = ((lambda: self._on_unlock(nd.slot_id))
+                               if nd.kind == 't0' else
+                               (lambda: self._on_level(nd.slot_id, nd.branch_id)))
             self._tone_btn('primary')
         else:
             self.btn_action.text = (i18n.t('tt_btn_need_more')

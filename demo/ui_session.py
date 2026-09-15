@@ -29,7 +29,7 @@ class SessionMixin:
     def _compute_scale(self) -> float:
         h = Window.height or self.DESIGN_HEIGHT
         base = min(max(h / self.DESIGN_HEIGHT, 0.68), 1.45)
-        return base * getattr(self, 'user_scale', 1.0)
+        return base
 
     def _register(self, widget, font=None, height=None):
         if font is not None:
@@ -73,18 +73,6 @@ class SessionMixin:
     def _fit_after_resize(self, _dt) -> None:
         self._resize_fit_event = None
         self._apply_scale()
-
-    def _zoom_btn(self, delta: float) -> None:
-        if delta == 0.0:
-            self.user_scale = 1.0
-        else:
-            self.user_scale = min(max(self.user_scale + delta, 0.70), 1.60)
-        self._apply_scale()
-        preferences.update(ui_scale=self.user_scale)
-        self._notify(f"{t('scale_label')} ×{self.user_scale:.2f}")
-
-    def adjust_scale(self, delta: float) -> None:
-        self._zoom_btn(delta)
 
     # ========================================================
     # 区域高亮（设计稿 S02 左上 HUD）
@@ -162,7 +150,6 @@ class SessionMixin:
         page_sel = getattr(self._page, 'selected_key', None)
         _update_window_title()
         self.lang_switch.set_tone('plain', LANG_CHIP_TAG[get_lang()])
-        self.help_chip.set_tone('plain', '? ' + t('rail_help'))
         for sid, card in self.skill_cards.items():
             card.set_texts(self._skill_name(sid), self._skill_desc(sid))
         for sid, btn in self.rail.buttons.items():
@@ -222,6 +209,7 @@ class SessionMixin:
         sfx.play('pause')                 # 点击暂停/继续的个性化音效
         if self.paused:
             self.paused = False
+            self._event_pause_owned = False
             self._resume_from_pause()
             bgm.resume()                 # 随游戏一同恢复 BGM
         else:
@@ -236,6 +224,14 @@ class SessionMixin:
     def _pause_for_event(self) -> None:
         """事件弹窗复用手动暂停流程；已暂停时保持原状态。"""
         if not self.paused:
+            self.toggle_pause()
+            self._event_pause_owned = True
+
+    def _resume_after_event(self) -> None:
+        """只恢复由事件造成的暂停；玩家原本手动暂停则保持不变。"""
+        owned = bool(getattr(self, '_event_pause_owned', False))
+        self._event_pause_owned = False
+        if owned and self.paused and not engine.player.game_over:
             self.toggle_pause()
 
     def _resume_from_pause(self) -> None:
@@ -301,6 +297,7 @@ class SessionMixin:
         ST.CURRENT_SPEED_IDX = self.speed_idx
         preferences.update(speed_idx=self.speed_idx)
         self._reschedule_tick()
+        self._refresh_speed_indicator()
         self.refresh_all()
 
     def _set_motion_idx(self, i: int) -> None:

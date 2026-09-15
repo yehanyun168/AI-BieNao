@@ -243,7 +243,7 @@ def fit_width(label: Label, pad: float = 0.0,
             label.height = float(label.texture_size[1]) + 2
 
     label.bind(text=_measure)
-    # 字号变化（F12 缩放 / refresh_scale）后必须重测，否则宽度与文字不匹配
+    # 字号随窗口缩放 / refresh_scale 变化后必须重测，否则宽度与文字不匹配
     label._fit_width_measure = _measure
     Clock.schedule_once(_measure, 0)     # 首帧尺寸未定，布局后再量一次
     _measure()
@@ -432,7 +432,7 @@ class PxChip(PixelLabel):
                  close=True, width=1)
 
     def refresh_scale(self, scale: float) -> None:
-        """F12 自适应：字号随窗口缩放，重新计算宽度"""
+        """窗口自适应：字号随窗口缩放，重新计算宽度。"""
         self.font_size = self._fs * scale
         self._h = self.BASE_H * scale
         self._resize()
@@ -1230,7 +1230,7 @@ class KvGrid(GridLayout):
             lbl.text = i18n.t(key)
 
     def refresh_scale(self, scale: float) -> None:
-        """跟随 F12 缩放：行高等比缩，但**永不低于**该字号的实际行高。"""
+        """跟随窗口缩放：行高等比缩，但**永不低于**该字号的实际行高。"""
         self.row_h = max(line_h(FS_CAP * scale), self._base_row_h * scale)
         for child in self.children:
             child.height = self.row_h
@@ -1306,7 +1306,7 @@ class SkillBarCard(Widget):
 
     # ---- 布局 ----
     def refresh_scale(self, scale: float) -> None:
-        """F12 自适应：技能卡内部字号与间距随全局缩放走。"""
+        """窗口自适应：技能卡内部字号与间距随全局缩放走。"""
         self.scale = scale
         # 效果/状态行与主行不同字号族（FS_TINY），与 __init__ 保持一致
         self.lbl_key.font_size = FS_CAP * scale

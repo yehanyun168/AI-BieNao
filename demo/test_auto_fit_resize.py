@@ -9,7 +9,6 @@ import main
 
 class AutoFitResizeTests(unittest.TestCase):
     def _assert_auto_fit(self, view, resize_method):
-        view.user_scale = 1.4
         resize_method(None, 1200, 800)
         event = getattr(view, '_resize_fit_event', None)
         self.assertIsNotNone(event)
@@ -18,8 +17,9 @@ class AutoFitResizeTests(unittest.TestCase):
         with patch.object(view, '_apply_scale') as apply_scale:
             view._fit_after_resize(0)
 
-        self.assertEqual(view.user_scale, 1.0)
         apply_scale.assert_called_once_with()
+
+        self.assertFalse(hasattr(view, 'user_scale'))
 
     def test_game_ui_auto_fits_after_resize(self):
         engine.init_game()

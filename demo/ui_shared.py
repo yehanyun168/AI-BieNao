@@ -30,7 +30,7 @@ COLORS.update({
 
 Panel = PixelPanel
 
-# ---- 节奏系统（P0-1：周期 30s，速度档 ×0.5/×1/×2/×4）----
+# ---- 节奏系统（P0-1：基础周期 16s，速度档 ×0.5/×1/×2/×4）----
 BASE_TICK_SECONDS: float = TUNE['base_tick_seconds']
 DEFAULT_SPEED_IDX: int = 1
 CURRENT_SPEED_IDX: int = DEFAULT_SPEED_IDX   # 跨 GameUI / 主菜单共享的速度档

@@ -103,7 +103,7 @@ class PagesMixin:
             return p
         if name == 'settings':
             p = S.SettingsPage(
-                on_lang=self._set_lang_idx, on_scale=self._zoom_btn,
+                on_lang=self._set_lang_idx,
                 on_speed=self.set_speed_idx, on_grid=self._set_grid,
                 on_a11y=self._set_a11y_idx, on_motion=self._set_motion_idx,
                 on_sound=self._set_sound_idx,
@@ -125,7 +125,6 @@ class PagesMixin:
         elif name == 'ach':
             self._refresh_ach_page(None, page)
         elif name == 'settings':
-            page.set_zoom_text(f"×{self.user_scale:.2f}")
             page.rebuild_slots(self._slot_rows())
 
     # ---- S05 技能页 ----
