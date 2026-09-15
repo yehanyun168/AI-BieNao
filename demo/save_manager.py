@@ -10,6 +10,7 @@ save_manager.py - 存档 / 读档
     save_manager.load_ex('save.json')  # 读档 + 失败原因（P0-2）
     save_manager.list_saves()          # 列出存档目录里的所有存档
     save_manager.log_crash(text)       # 崩溃钩子写入口（P0-3，与上面同一文件）
+    save_manager.migrate_legacy_data() # 把旧版 exe 同级数据迁到 APPDATA
 
 P0-2 读档容错约定：
     任何坏档（乱码 / 缺键 / 类型错 / 版本不符 / 文件不存在）都**不抛异常**，
@@ -49,25 +50,7 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 SAVE_VERSION = 4
 
 
-def _user_data_dir():
-    """持久化数据根目录（兼顾源码运行与 PyInstaller 单文件打包）。
-
-    与 preferences._user_data_dir 同义：源码运行落在 demo/，冻结态（单文件
-    exe）落在 exe 同级目录或 %APPDATA%/AI-BieNao，避免在 PyInstaller 临时
-    解压目录 sys._MEIPASS（退出即删）里写档导致存档 / 设置重启后丢失。
-    """
-    if getattr(sys, 'frozen', False):
-        base = os.path.dirname(os.path.abspath(sys.executable))
-        probe = os.path.join(base, '.write_test')
-        try:
-            with open(probe, 'w') as _f:
-                _f.write('')
-            os.unlink(probe)
-            return base
-        except OSError:
-            app = os.environ.get('APPDATA') or os.path.expanduser('~')
-            return os.path.join(app, 'AI-BieNao')
-    return os.path.dirname(os.path.abspath(__file__))
+from paths import _user_data_dir, migrate_legacy_data
 
 
 SAVE_DIR = os.path.join(_user_data_dir(), 'saves')

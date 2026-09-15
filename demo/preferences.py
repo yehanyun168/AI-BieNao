@@ -1,31 +1,8 @@
 """跨对局的玩家设置：独立于游戏存档，修改后立即写盘。"""
 import json
 import os
-import sys
 
-
-def _user_data_dir():
-    """持久化数据根目录（兼顾源码运行与 PyInstaller 单文件打包）。
-
-    - 源码运行：本模块所在目录（demo/），与现有开发 / git 约定一致。
-    - 打包为单文件 exe 后，所有脚本模块会被 PyInstaller 解压到临时目录
-      ``sys._MEIPASS``，该目录在进程退出时被删除。若把 settings.json
-      写在这里，设置会在重启后丢失。因此冻结态下改写到 exe 同级目录
-      （持久、可写）；若该目录不可写（如安装到 Program Files）则回退到
-      用户数据目录 ``%APPDATA%/AI-BieNao``。
-    """
-    if getattr(sys, 'frozen', False):
-        base = os.path.dirname(os.path.abspath(sys.executable))
-        probe = os.path.join(base, '.write_test')
-        try:
-            with open(probe, 'w') as _f:
-                _f.write('')
-            os.unlink(probe)
-            return base
-        except OSError:
-            app = os.environ.get('APPDATA') or os.path.expanduser('~')
-            return os.path.join(app, 'AI-BieNao')
-    return os.path.dirname(os.path.abspath(__file__))
+from paths import _user_data_dir
 
 
 SETTINGS_PATH = os.path.join(_user_data_dir(), 'settings.json')

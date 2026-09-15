@@ -1,0 +1,22 @@
+fix: 冻结态运行时数据统一放到 %APPDATA%/AI-BieNao，避免污染桌面
+
+问题：单文件 exe 运行时把 settings.json / saves / crash.log 写到 exe
+同级目录。用户把 exe 放桌面，一开游戏桌面就冒出两个文件。
+
+改动：
+- 新增 demo/paths.py：统一 _user_data_dir()，冻结态下使用
+  %APPDATA%/AI-BieNao；源码运行仍落在 demo/ 便于开发。
+- preferences.py / save_manager.py：从 paths.py 导入 _user_data_dir，
+  移除各自重复的探测逻辑。
+- save_manager.py：暴露 migrate_legacy_data()，在首次读档/读设置前把
+  旧版 exe 同级的 settings.json / saves / crash.log 复制到 APPDATA，
+  避免老玩家升级丢档。
+- main.py：在 ui_preferences.load_and_apply() 前调用迁移。
+- test_settings_persist_path.py：更新断言，冻结态路径应落在 APPDATA；
+  新增迁移用例验证旧数据可复制到新目录。
+
+验证：
+- test_settings_persist_path.py 4/4 通过
+- test_preferences.py 4/4 通过
+- test_build.py 全部通过
+- test_edge_cases.py 16/16 通过

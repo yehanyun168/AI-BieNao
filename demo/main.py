@@ -164,7 +164,7 @@ def _crash_write(header: str, body: str) -> bool:
         pass  # 崩溃上报自身已无路可报（写 crash.log 失败）；stderr 仍会打一份
     try:
         # 兜底写入口同样走持久化目录（冻结态下 _HERE 指向 _MEIPASS，退出即删，
-        # 必须用 save_manager.CRASH_LOG 落到 exe 同级 / %APPDATA%）
+        # 必须用 save_manager.CRASH_LOG 落到 %APPDATA%/AI-BieNao）
         with open(save_manager.CRASH_LOG, 'a', encoding='utf-8',
                   errors='replace') as f:
             f.write(text)
@@ -447,6 +447,10 @@ from ui_popups import PopupsMixin
 from ui_session import SessionMixin
 from ui_input import InputMixin
 from ui_commissions import CommissionMixin
+
+# v0.4.1+ 数据目录统一到 %APPDATA%/AI-BieNao；把旧版 exe 同级数据迁过来，
+# 避免老玩家升级后丢档 / 丢设置。必须在首次 load 之前执行。
+save_manager.migrate_legacy_data()
 
 ui_preferences.load_and_apply()
 _update_window_title()
