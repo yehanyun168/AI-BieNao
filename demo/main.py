@@ -163,7 +163,9 @@ def _crash_write(header: str, body: str) -> bool:
     except Exception:
         pass  # 崩溃上报自身已无路可报（写 crash.log 失败）；stderr 仍会打一份
     try:
-        with open(os.path.join(_HERE, 'crash.log'), 'a', encoding='utf-8',
+        # 兜底写入口同样走持久化目录（冻结态下 _HERE 指向 _MEIPASS，退出即删，
+        # 必须用 save_manager.CRASH_LOG 落到 exe 同级 / %APPDATA%）
+        with open(save_manager.CRASH_LOG, 'a', encoding='utf-8',
                   errors='replace') as f:
             f.write(text)
         return True
@@ -1232,7 +1234,8 @@ class MainMenu(FloatLayout):
 
     def _reset_settings(self) -> None:
         self.user_scale = 1.0
-        set_grid(1, self.sil_map)
+        preferences.update(ui_scale=1.0)          # 重置后必须落盘，否则重启仍读旧值
+        set_grid(1, self.sil_map)                 # 内部已 preferences.update(grid_mode=1)
         self._apply_scale()
     def _set_lang_idx(self, idx: int) -> None:
         set_language(LANG_EN if idx == 1 else LANG_ZH)

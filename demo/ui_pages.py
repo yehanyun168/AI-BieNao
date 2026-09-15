@@ -632,7 +632,9 @@ class PagesMixin:
             self._log_drawer.rebuild(self.stats.logs, 0)
 
     def _export_log(self) -> None:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+        # 落到持久化目录（冻结态下 __file__ 指向 _MEIPASS，退出即删，必须用
+        # save_manager 的持久化根目录），保证导出文件重启后仍在
+        path = os.path.join(os.path.dirname(save_manager.CRASH_LOG),
                             'event_log.txt')
         try:
             with open(path, 'w', encoding='utf-8') as f:

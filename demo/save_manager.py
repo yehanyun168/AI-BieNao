@@ -26,6 +26,7 @@ P1-9 写入 / 版本迁移约定：
 import json
 import os
 import random
+import sys
 from datetime import datetime
 from typing import List, Tuple
 
@@ -46,10 +47,32 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 # 老玩家下次继续游戏时补播一次新开场，此后不再重复。
 # v4（协作方改动）：新增游戏开局年月，日期随周期推进并可跨存档延续。
 SAVE_VERSION = 4
-SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'saves')
+
+
+def _user_data_dir():
+    """持久化数据根目录（兼顾源码运行与 PyInstaller 单文件打包）。
+
+    与 preferences._user_data_dir 同义：源码运行落在 demo/，冻结态（单文件
+    exe）落在 exe 同级目录或 %APPDATA%/AI-BieNao，避免在 PyInstaller 临时
+    解压目录 sys._MEIPASS（退出即删）里写档导致存档 / 设置重启后丢失。
+    """
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(os.path.abspath(sys.executable))
+        probe = os.path.join(base, '.write_test')
+        try:
+            with open(probe, 'w') as _f:
+                _f.write('')
+            os.unlink(probe)
+            return base
+        except OSError:
+            app = os.environ.get('APPDATA') or os.path.expanduser('~')
+            return os.path.join(app, 'AI-BieNao')
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+SAVE_DIR = os.path.join(_user_data_dir(), 'saves')
 DEFAULT_SLOT = 'slot1.json'
-CRASH_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                         'crash.log')
+CRASH_LOG = os.path.join(_user_data_dir(), 'crash.log')
 
 # —— 读档结果原因码（P0-2）——
 # 上层据此区分「全新玩家没存档」与「存档坏了」，避免一律弹吓人的"存档损坏"。
