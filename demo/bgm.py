@@ -358,17 +358,22 @@ def _fade_out(snd) -> None:
     if getattr(snd, 'state', 'stop') != 'play':
         return                    # 已经不在播了，没有可淡出的对象
     try:
-        steps = [6, 5, 4, 3, 2, 1, 0]
+        steps = [5, 4, 3, 2, 1, 0]
 
-        def _step(dt, i=0):
-            if i >= len(steps):
+        def _step(dt, i=[0]):
+            if i[0] >= len(steps):
                 try:
                     snd.stop()
                 except Exception:
                     pass
                 return False
             try:
-                snd.volume = VOLUME * (steps[i] / 6.0)
+                level = steps[i[0]]
+                i[0] += 1
+                snd.volume = VOLUME * (level / 6.0)
+                if level == 0:
+                    snd.stop()
+                    return False
             except Exception:
                 return False
             return True
