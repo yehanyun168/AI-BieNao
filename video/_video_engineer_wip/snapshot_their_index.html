@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>《AI 别闹》实机演示 · 视频工程（1920x1080 / 178s）</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; background:#000; overflow:hidden;
+    font-family:"Microsoft YaHei","微软雅黑",sans-serif; }
+  #wrap { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+  #stage { position:relative; width:1920px; height:1080px; background:#05070f;
+    transform-origin:center center; overflow:hidden; }
+
+  #bgLayer { position:absolute; inset:0; }
+  #bgLayer img { position:absolute; inset:0; width:1920px; height:1080px;
+    object-fit:cover; opacity:0; will-change:transform,opacity; }
+  #bgLayer img.on { opacity:1; }
+
+  #ovLayer { position:absolute; inset:0; width:1920px; height:1080px; pointer-events:none; }
+
+  /* 转场层 */
+  #fade  { position:absolute; inset:0; background:#000; opacity:0; pointer-events:none; }
+  #flash { position:absolute; inset:0; background:#fff; opacity:0; pointer-events:none; }
+
+  /* 字幕区 */
+  #subWrap { position:absolute; left:0; right:0; bottom:96px; text-align:center; pointer-events:none; }
+  #narrLine { display:none; margin:0 auto 14px; max-width:1500px; font-size:30px;
+    color:#cbd5e1; opacity:0.82; line-height:1.5; text-shadow:0 2px 10px rgba(0,0,0,.9); }
+  #subBox { display:inline-block; max-width:1600px; padding:16px 40px; border-radius:8px;
+    background:rgba(0,0,0,0.62); }
+  #subLine { font-size:46px; line-height:1.35; color:#fff; letter-spacing:2px;
+    text-shadow:0 3px 12px rgba(0,0,0,.95); white-space:pre-line; }
+  #subWrap.hide { display:none; }
+
+  /* 水印 / HUD */
+  #watermark { position:absolute; right:34px; bottom:34px; font-size:26px; color:#94a3b8;
+    opacity:.72; font-family:Consolas,monospace; letter-spacing:1px; }
+  #hud { position:fixed; left:0; right:0; bottom:0; height:46px; background:rgba(8,12,22,.92);
+    border-top:1px solid #1e293b; display:flex; align-items:center; gap:18px; padding:0 18px;
+    font-size:13px; color:#94a3b8; font-family:Consolas,monospace; }
+  #bar { flex:1; height:6px; background:#1e293b; border-radius:3px; overflow:hidden; }
+  #barIn { height:100%; width:0; background:linear-gradient(90deg,#38bdf8,#ffb648); }
+  #tc { min-width:190px; color:#e2e8f0; }
+  #tip { color:#64748b; }
+  .hidden { display:none !important; }
+
+  /* 提示条 */
+  #err { position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:#0b1020; color:#ffb648; font-size:26px; text-align:center; padding:60px; line-height:1.7; }
+</style>
+</head>
+<body>
+
+<div id="wrap"><div id="stage">
+  <div id="bgLayer"></div>
+  <svg id="ovLayer" viewBox="0 0 1920 1080" preserveAspectRatio="none"></svg>
+  <div id="fade"></div>
+  <div id="flash"></div>
+  <div id="subWrap"><div id="narrLine"></div><div id="subBox"><div id="subLine"></div></div></div>
+  <div id="watermark"></div>
+</div></div>
+
+<div id="hud">
+  <span id="tc">--</span>
+  <div id="bar"><div id="barIn"></div></div>
+  <span id="tip">空格 播放/暂停 · ←→ 切幕 · [ ] 隐藏UI · N 旁白 · F 全屏 · Home 归零</span>
+</div>
+
+<div id="err"></div>
+
+<script src="shots.js"></script>
+<script src="narration.js"></script>
+<script>
+(function(){
+  "use strict";
+  var SVGNS = "http://www.w3.org/2000/svg";
+  var W = 1920, H = 1080;
+  var COLOR = { amber:"#ffb648", red:"#ff4d4d", green:"#4ade80", cyan:"#38bdf8", white:"#e5e7eb" };
+
+  var DATA = window.SHOTS_DATA || null;
+  var NARR = window.NARRATION_DATA || [];
+  if (!DATA) {
+    // 尝试 fetch（file:// 下会被 CORS 拦，此时提示用 preview.bat）
+    var e = document.getElementById("err");
+    e.style.display = "flex";
+    e.innerHTML = "未加载到分镜数据。<br>请确认 shots.js 与本文件同目录；<br>" +
+                  "若通过 http 访问，请改用 preview.bat 或直接双击本文件。";
+    return;
+  }
+  var SHOTS = DATA.shots, TOTAL = DATA.meta.total;
+
+  // ---------- URL 参数 ----------
+  var qs = new URLSearchParams(location.search);
+  var START_T = parseFloat(qs.get("t") || "0") || 0;
+  var STILL = qs.get("still") === "1";
+  var SHOW_SUBS = qs.get("subs") !== "0";
+
+  // ---------- DOM ----------
+  var stage = document.getElementById("stage"), bgLayer = document.getElementById("bgLayer");
+  var ovLayer = document.getElementById("ovLayer"), fadeEl = document.getElementById("fade");
+  var flashEl = document.getElementById("flash"), subWrap = document.getElementById("subWrap");
+  var subLine = document.getElementById("subLine"), narrLine = document.getElementById("narrLine");
+  var wm = document.getElementById("watermark"), hud = document.getElementById("hud");
+  var barIn = document.getElementById("barIn"), tcEl = document.getElementById("tc");
+
+  function resize(){
+    var s = Math.min(window.innerWidth / W, window.innerHeight / (H + (STILL ? 0 : 46)));
+    stage.style.transform = "scale(" + s + ")";
+  }
+  window.addEventListener("resize", resize); resize();
+
+  if (STILL) { hud.classList.add("hidden"); wm.classList.add("hidden"); }
+  if (!SHOW_SUBS) subWrap.classList.add("hide");
+
+  // ---------- 预建底图 ----------
+  var imgs = SHOTS.map(function(sh){
+    var im = document.createElement("img");
+    im.src = sh.media && sh.media.src ? sh.media.src : "";
+    im.alt = sh.id;
+    bgLayer.appendChild(im);
+    return im;
+  });
+
+  // ---------- 运镜解析 ----------
+  function parseCam(cam){
+    cam = cam || "";
+    var m = /scale\s*([\d.]+)\s*[\u2192\->]+\s*([\d.]+)/.exec(cam);
+    var a = m ? parseFloat(m[1]) : 1.0, b = m ? parseFloat(m[2]) : 1.04;
+    var pan = /横移|pan|Pan/.test(cam);
+    return { a:a, b:b, pan:pan };
+  }
+  var CAMS = SHOTS.map(function(sh){ return parseCam(sh.camera); });
+
+  // ---------- overlay 构建 ----------
+  function el(tag, attrs){
+    var n = document.createElementNS(SVGNS, tag);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+  function highlightBox(ov, gid){
+    var c = COLOR[ov.style] || COLOR.cyan;
+    var g = el("g", {opacity:0});
+    var a = "anim-in";
+    g.appendChild(el("rect", {x:ov.x, y:ov.y, width:ov.w, height:ov.h, fill:"none",
+      stroke:c, "stroke-width":3, rx:2}));
+    // 四角括号
+    var L = 34, x = ov.x, y = ov.y, w = ov.w, h = ov.h;
+    [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]].forEach(function(p){
+      g.appendChild(el("path", {d:"M"+(p[0]+L*p[2])+","+p[1]+" L"+p[0]+","+p[1]+" L"+p[0]+","+(p[1]+L*p[3]),
+        fill:"none", stroke:c, "stroke-width":6, "stroke-linecap":"square"}));
+    });
+    if (ov.label){
+      var fs = 30, pad = 12, tw = ov.label.length * fs * 0.62 + pad * 2;
+      g.appendChild(el("rect", {x:x, y:y-fs-pad, width:tw, height:fs+pad, fill:"rgba(6,10,20,0.88)"}));
+      var t = el("text", {x:x+pad, y:y-pad-6, fill:c, "font-size":fs,
+        "font-family":"Microsoft YaHei, sans-serif", "font-weight":"bold"});
+      t.textContent = ov.label; g.appendChild(t);
+    }
+    g.setAttribute("data-delay", ov.delay || 0);
+    g.classList.add("ov-anim");
+    ovLayer.appendChild(g);
+  }
+  function arrow(ov){
+    var c = COLOR[ov.style] || COLOR.amber;
+    var x1 = ov.from[0], y1 = ov.from[1], x2 = ov.to[0], y2 = ov.to[1];
+    var mx = (x1+x2)/2, my = (y1+y2)/2;
+    var dx = x2-x1, dy = y2-y1, len = Math.sqrt(dx*dx+dy*dy) || 1;
+    var nx = -dy/len, ny = dx/len;
+    var cx = mx + nx*70, cy = my + ny*70;
+    var g = el("g", {opacity:0});
+    var path = el("path", {d:"M"+x1+","+y1+" Q"+cx+","+cy+" "+x2+","+y2, fill:"none",
+      stroke:c, "stroke-width":5, "stroke-linecap":"round"});
+    g.appendChild(path);
+    // 箭头（方向：控制点→终点）
+    var ax = x2-cx, ay = y2-cy, al = Math.sqrt(ax*ax+ay*ay) || 1;
+    ax/=al; ay/=al;
+    var px = -ay, py = ax, S = 18;
+    var p1 = [x2 - ax*S + px*S*0.6, y2 - ay*S + py*S*0.6];
+    var p2 = [x2 - ax*S - px*S*0.6, y2 - ay*S - py*S*0.6];
+    g.appendChild(el("path", {d:"M"+x2+","+y2+" L"+p1[0]+","+p1[1]+" L"+p2[0]+","+p2[1]+" Z", fill:c}));
+    if (ov.label){
+      var t = el("text", {x:mx+nx*95, y:my+ny*95, fill:c, "font-size":32,
+        "font-family":"Microsoft YaHei, sans-serif", "font-weight":"bold", "text-anchor":"middle"});
+      t.textContent = ov.label; g.appendChild(t);
+    }
+    g.setAttribute("data-delay", ov.delay || 0);
+    g.classList.add("ov-anim");
+    ovLayer.appendChild(g);
+  }
+  function label(ov){
+    var g = el("g", {opacity:0});
+    var fs = ov.style === "tag" ? 34 : 40;
+    if (ov.style === "tag"){
+      var tw = ov.text.length * fs * 0.62 + 30;
+      g.appendChild(el("rect", {x:ov.x-14, y:ov.y-fs-4, width:tw, height:fs+22, rx:6,
+        fill:"rgba(6,10,20,0.9)", stroke:COLOR.amber, "stroke-width":2}));
+    }
+    var t = el("text", {x:ov.x, y:ov.y, fill:(ov.style==="tag"?COLOR.amber:"#f8fafc"),
+      "font-size":fs, "font-family":"Microsoft YaHei, sans-serif", "font-weight":"bold",
+      paint_order:"stroke", stroke:"rgba(0,0,0,0.85)", "stroke-width":6});
+    if (ov.style === "typewriter"){
+      t.setAttribute("data-tw", ov.text);
+      t.textContent = "";
+      t.classList.add("tw");
+      t.setAttribute("data-delay", ov.delay || 0);
+    } else {
+      t.textContent = ov.text;
+      t.setAttribute("data-delay", ov.delay || 0);
+    }
+    g.appendChild(t);
+    g.classList.add("ov-anim");
+    g.setAttribute("data-delay", ov.delay || 0);
+    ovLayer.appendChild(g);
+  }
+  function pulse(ov){
+    var c = COLOR[ov.style] || COLOR.cyan;
+    var g = el("g", {opacity:0});
+    var ci = el("circle", {cx:ov.x, cy:ov.y, r:ov.r||80, fill:"none", stroke:c, "stroke-width":5});
+    ci.setAttribute("class", "pulse-c");
+    g.appendChild(ci);
+    g.classList.add("ov-anim");
+    g.setAttribute("data-delay", ov.delay || 0);
+    ovLayer.appendChild(g);
+  }
+  var STYLE_PULSE = document.createElement("style");
+  STYLE_PULSE.textContent =
+    "@keyframes ovIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}" +
+    "@keyframes pulseK{0%{transform:scale(.35);opacity:.95}100%{transform:scale(1.9);opacity:0}}" +
+    ".pulse-c{transform-box:fill-box;transform-origin:center;animation:pulseK 1.25s ease-out infinite}";
+  document.head.appendChild(STYLE_PULSE);
+
+  function buildOverlays(sh){
+    ovLayer.innerHTML = "";
+    (sh.overlays || []).forEach(function(ov){
+      if (ov.kind === "highlight") highlightBox(ov);
+      else if (ov.kind === "arrow") arrow(ov);
+      else if (ov.kind === "label") label(ov);
+      else if (ov.kind === "pulse") pulse(ov);
+    });
+  }
+  function applyOverlayDelays(local, g){
+    // local = 幕内已过秒数；delay 之前隐藏，之后 0.25s 淡入
+    var nodes = ovLayer.querySelectorAll("[data-delay]");
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i], d = parseFloat(n.getAttribute("data-delay")) || 0;
+      var k = Math.max(0, Math.min(1, (local - d) / 0.25));
+      if (k <= 0) { n.style.opacity = 0; n.style.animation = "none"; }
+      else {
+        n.style.opacity = 1;
+        if (STILL){
+          // 无头截图模式：不跑入场动画，直接落定，避免截图停在动画起始帧
+          n.style.animation = "none";
+          n.dataset.animDone = "1";
+        } else if (!n.dataset.animDone){
+          n.style.animation = "ovIn .28s ease-out both";
+          n.dataset.animDone = "1";
+        }
+      }
+    }
+  }
+
+  // ---------- 播放状态 ----------
+  var t = START_T, playing = false, curIdx = -1, showNarr = false, speed = 1;
+  var last = 0;
+
+  function goto(sec){
+    t = Math.max(0, Math.min(TOTAL, sec));
+    var idx = -1;
+    for (var i=0;i<SHOTS.length;i++){ if (t >= SHOTS[i].start && t < SHOTS[i].end){ idx = i; break; } }
+    if (idx < 0) idx = SHOTS.length - 1;
+    if (idx !== curIdx){
+      curIdx = idx;
+      for (var j=0;j<imgs.length;j++) imgs[j].classList.toggle("on", j === idx);
+      buildOverlays(SHOTS[idx]);
+      // 入转场
+      var tin = SHOTS[idx].transition_in;
+      if (tin === "fade") fadeEl.dataset.anim = "in";
+    }
+    render(true);
+  }
+
+  function render(force){
+    var sh = SHOTS[curIdx]; if (!sh) return;
+    var local = t - sh.start;
+
+    // 底图运镜
+    var cam = CAMS[curIdx];
+    var k = Math.max(0, Math.min(1, local / sh.dur));
+    var sc = cam.a + (cam.b - cam.a) * k;
+    var tx = cam.pan ? (-3 + 6 * k) : 0;
+    var im = imgs[curIdx];
+    if (im) im.style.transform = "scale(" + sc + ") translate(" + tx + "%,0)";
+
+    // overlays
+    applyOverlayDelays(local);
+
+    // 打字机 label
+    var tws = ovLayer.querySelectorAll(".tw");
+    for (var i=0;i<tws.length;i++){
+      var n = tws[i], d = parseFloat(n.getAttribute("data-delay")) || 0;
+      var txt = n.getAttribute("data-tw") || "";
+      var shown = Math.floor((local - d) / 0.06);
+      n.textContent = txt.slice(0, Math.max(0, shown));
+    }
+
+    // 字幕
+    if (!SHOW_SUBS){ subWrap.classList.add("hide"); }
+    else {
+      var sub = sh.subtitle || "";
+      if (sub){
+        subWrap.classList.remove("hide");
+        if (sh.sub_style === "typewriter"){
+          var n2 = Math.floor((local - 0.15) / 0.055);
+          subLine.textContent = sub.slice(0, Math.max(0, n2));
+        } else {
+          subLine.textContent = sub;
+        }
+        subWrap.style.opacity = local < 0.1 ? 0 : 1;
+      } else {
+        subWrap.style.opacity = 0;
+      }
+      // 旁白行
+      if (showNarr){
+        var nr = NARR[curIdx];
+        narrLine.style.display = "block";
+        narrLine.textContent = nr && nr.voice ? nr.voice : "";
+      } else {
+        narrLine.style.display = "none";
+      }
+    }
+
+    // 转场
+    var tout = sh.transition_out, left = sh.end - t;
+    if (tout === "fade" && left < 0.5) fadeEl.style.opacity = (0.5 - left) / 0.5;
+    else if (tout === "flash" && left < 0.09) flashEl.style.opacity = 0.85;
+    else { fadeEl.style.opacity = 0; flashEl.style.opacity = 0; }
+    if (sh.transition_in === "fade"){
+      var fi = Math.max(0, Math.min(1, local / 0.5));
+      if (local < 0.5) fadeEl.style.opacity = 1 - fi;
+    }
+
+    // HUD
+    if (!STILL){
+      barIn.style.width = (t / TOTAL * 100) + "%";
+      tcEl.textContent = sh.id + "  " + t.toFixed(1) + "s / " + TOTAL.toFixed(1) + "s";
+      wm.textContent = sh.id + " · " + TOTAL.toFixed(0) + "s";
+    }
+  }
+
+  function frame(now){
+    if (playing){
+      if (!last) last = now;
+      var dt = (now - last) / 1000;
+      last = now;
+      t += dt * speed;
+      if (t >= TOTAL){ t = TOTAL; playing = false; }   // 播完停住，不黑屏
+      var idx = -1;
+      for (var i=0;i<SHOTS.length;i++){ if (t >= SHOTS[i].start && t < SHOTS[i].end){ idx = i; break; } }
+      if (idx < 0) idx = SHOTS.length - 1;
+      if (idx !== curIdx){
+        curIdx = idx;
+        for (var j=0;j<imgs.length;j++) imgs[j].classList.toggle("on", j === idx);
+        buildOverlays(SHOTS[idx]);
+      }
+      render();
+    } else { last = 0; }
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- 控制 ----------
+  document.addEventListener("keydown", function(e){
+    if (e.code === "Space"){ e.preventDefault(); playing = !playing; last = 0; }
+    else if (e.key === "ArrowRight"){ playing = false; goto(SHOTS[Math.min(curIdx+1, SHOTS.length-1)].start + 0.01); }
+    else if (e.key === "ArrowLeft"){ playing = false; goto(SHOTS[Math.max(curIdx-1, 0)].start + 0.01); }
+    else if (e.key === "Home"){ goto(0); }
+    else if (e.key === "["){ hud.classList.remove("hidden"); wm.classList.remove("hidden"); }
+    else if (e.key === "]"){ hud.classList.add("hidden"); wm.classList.add("hidden"); }
+    else if (e.key === "n" || e.key === "N"){ showNarr = !showNarr; render(true); }
+    else if (e.key === "f" || e.key === "F"){
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+    }
+    else if (e.key === "1"){ speed = 0.5; }
+    else if (e.key === "2"){ speed = 1; }
+  });
+  hud.addEventListener("click", function(e){
+    var r = hud.getBoundingClientRect();
+    goto((e.clientX - r.left) / r.width * TOTAL);
+  });
+
+  // ---------- 启动 ----------
+  if (location.search.indexOf("t=") >= 0 || STILL){
+    goto(START_T);
+    if (qs.get("autoplay") === "1") playing = true;
+  } else {
+    goto(0);
+    playing = true;   // 默认自动播放，方便预览
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

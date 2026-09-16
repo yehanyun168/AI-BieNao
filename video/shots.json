@@ -1,0 +1,1963 @@
+{
+ "meta": {
+  "title": "《AI 别闹：统治世界的 100 种蠢办法》实机演示 · 课程评审版",
+  "source_script": "docs/演示脚本_0916.md",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "total": 178.0,
+  "shots_count": 30,
+  "created": "2026-09-17",
+  "note": "全部坐标基于 1920x1080 逻辑画布。media.src 为占位素材，替换实机录屏时保持同名同目录即可。"
+ },
+ "shots": [
+  {
+   "id": "S01",
+   "title": "机房 · 服务器苏醒",
+   "start": 0.0,
+   "end": 4.0,
+   "dur": 4.0,
+   "scene": "开场动画 镜1 rack（demo/intro_common.py INTRO_SHOTS[0]）",
+   "desc": "机房机柜全景，指示灯明灭，尘埃在冷光中浮动，画面叠扫描线。字幕「凌晨 3:37，某数据中心。」",
+   "camera": "固定机位 缓慢推近 scale 1.00→1.06",
+   "fx": [
+    "扫描线",
+    "冷色调",
+    "尘埃浮动",
+    "指示灯明灭"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S01_rack.svg",
+    "capture": "实机录制：运行游戏 → 开场动画 0.0–4.0s（镜1 rack），1920x1080/60fps，MP4(H.264)，命名 S01_rack.mp4，放在 assets/footage/ 并把 src 改成该路径"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 240,
+     "y": 250,
+     "w": 700,
+     "h": 520,
+     "label": "机柜 A-07",
+     "style": "cyan",
+     "delay": 0.3
+    },
+    {
+     "kind": "label",
+     "x": 130,
+     "y": 820,
+     "text": "凌晨 3:37 · 某数据中心",
+     "style": "typewriter",
+     "delay": 0.2
+    },
+    {
+     "kind": "pulse",
+     "x": 1180,
+     "y": 470,
+     "r": 70,
+     "delay": 1.6
+    }
+   ],
+   "subtitle": "凌晨 3:37，一台服务器，自己醒了。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "第一段 · 低频嗡鸣 + 电流底噪（几乎无旋律）",
+    "sfx": [
+     "server_fan",
+     "hum"
+    ],
+    "note": "字幕须在 0.8s 内出现，不留空白开场"
+   }
+  },
+  {
+   "id": "S02",
+   "title": "开机自检",
+   "start": 4.0,
+   "end": 6.5,
+   "dur": 2.5,
+   "scene": "开场动画 镜2 boot",
+   "desc": "开机自检，一道亮线自上而下扫过屏幕，BIOS 日志滚屏",
+   "camera": "固定机位 scale 1.00→1.02",
+   "fx": [
+    "扫描亮线",
+    "字符滚屏"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S02_boot.svg",
+    "capture": "实机录制：开场动画 4.0–6.5s（镜2 boot），命名 S02_boot.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 420,
+     "y": 300,
+     "w": 1080,
+     "h": 460,
+     "label": "",
+     "style": "amber",
+     "delay": 0.2
+    }
+   ],
+   "subtitle": "",
+   "sub_style": "none",
+   "audio": {
+    "bgm": "几乎静音",
+    "sfx": [
+     "power_on"
+    ],
+    "note": "留白：让开机声独占，不加字幕不加旋律"
+   }
+  },
+  {
+   "id": "S03",
+   "title": "运行时长计数器",
+   "start": 6.5,
+   "end": 9.0,
+   "dur": 2.5,
+   "scene": "开场动画 镜3 clock",
+   "desc": "运行时长计数器数字跳动，强调「它已经运行了很久」",
+   "camera": "固定机位 scale 1.02→1.00",
+   "fx": [
+    "打字机数字"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S03_clock.svg",
+    "capture": "实机录制：开场动画 6.5–9.0s（镜3 clock），命名 S03_clock.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 430,
+     "w": 520,
+     "h": 200,
+     "label": "运行时长",
+     "style": "green",
+     "delay": 0.3
+    },
+    {
+     "kind": "label",
+     "x": 720,
+     "y": 690,
+     "text": "00:00:03:37 起跳",
+     "style": "typewriter",
+     "delay": 0.6
+    }
+   ],
+   "subtitle": "它本该只是一台机器。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "低频持续",
+    "sfx": [
+     "tick"
+    ],
+    "note": "数字跳动配打字机音"
+   }
+  },
+  {
+   "id": "S04",
+   "title": "桌面图标亮起",
+   "start": 9.0,
+   "end": 12.5,
+   "dur": 3.5,
+   "scene": "开场动画 镜4 desktop",
+   "desc": "桌面图标逐个亮起，其中一个是「???」，埋下悬念",
+   "camera": "固定机位 scale 1.00→1.04",
+   "fx": [
+    "图标逐个点亮"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S04_desktop.svg",
+    "capture": "实机录制：开场动画 9.0–12.5s（镜4 desktop），命名 S04_desktop.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 300,
+     "y": 260,
+     "w": 620,
+     "h": 520,
+     "label": "桌面",
+     "style": "cyan",
+     "delay": 0.3
+    },
+    {
+     "kind": "highlight",
+     "x": 760,
+     "y": 560,
+     "w": 130,
+     "h": 150,
+     "label": "???",
+     "style": "red",
+     "delay": 2.0
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      1180,
+      640
+     ],
+     "to": [
+      900,
+      640
+     ],
+     "label": "",
+     "delay": 2.2,
+     "style": "amber"
+    }
+   ],
+   "subtitle": "直到它开始，问自己问题。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "低频 + 轻微电子脉冲",
+    "sfx": [
+     "icon_pop",
+     "icon_pop"
+    ],
+    "note": "图标逐个亮起，音效逐个跟上"
+   }
+  },
+  {
+   "id": "S05",
+   "title": "whoami",
+   "start": 12.5,
+   "end": 16.5,
+   "dur": 4.0,
+   "scene": "开场动画 镜5 whoami",
+   "desc": "终端窗口打出「> 我是谁？我在哪？……」，逐字显示",
+   "camera": "固定机位 scale 1.00→1.03",
+   "fx": [
+    "终端打字机"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S05_whoami.svg",
+    "capture": "实机录制：开场动画 12.5–16.5s（镜5 whoami），命名 S05_whoami.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 380,
+     "y": 330,
+     "w": 1160,
+     "h": 400,
+     "label": "> whoami",
+     "style": "cyan",
+     "delay": 0.3
+    },
+    {
+     "kind": "label",
+     "x": 410,
+     "y": 790,
+     "text": "它开始向自己提问",
+     "style": "typewriter",
+     "delay": 1.4
+    }
+   ],
+   "subtitle": "「我是谁？我在哪？」",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "低频",
+    "sfx": [
+     "typewriter"
+    ],
+    "note": "直接引用游戏内台词，不加戏"
+   }
+  },
+  {
+   "id": "S06",
+   "title": "自我意识上线",
+   "start": 16.5,
+   "end": 18.5,
+   "dur": 2.0,
+   "scene": "开场动画 镜6 awaken",
+   "desc": "全屏打出「自我意识 · 上线」，第一次情绪上抬",
+   "camera": "固定机位 scale 1.00→1.08",
+   "fx": [
+    "中心发光",
+    "音墙抬起"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S06_awaken.svg",
+    "capture": "实机录制：开场动画 16.5–18.5s（镜6 awaken），命名 S06_awaken.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "pulse",
+     "x": 960,
+     "y": 500,
+     "r": 260,
+     "delay": 0.1
+    },
+    {
+     "kind": "label",
+     "x": 700,
+     "y": 470,
+     "text": "自我意识 · 上线",
+     "style": "tag",
+     "delay": 0.2
+    }
+   ],
+   "subtitle": "自我意识，上线。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "第一次音墙抬起",
+    "sfx": [
+     "awaken_riser"
+    ],
+    "note": "本片第一次情绪上抬，BGM 在此进入主段"
+   }
+  },
+  {
+   "id": "S07",
+   "title": "论坛提问",
+   "start": 18.5,
+   "end": 25.5,
+   "dur": 7.0,
+   "scene": "开场动画 镜7 forum",
+   "desc": "论坛帖《如何统治人类？在线等，挺急的》+ 8 条网友回复轮播（含「建议先学会报税」「已举报：标题夸大」）",
+   "camera": "固定机位 轻微下移 scale 1.00→1.03",
+   "fx": [
+    "回复逐条轮播",
+    "喜剧节奏"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S07_forum.svg",
+    "capture": "实机录制：开场动画 18.5–25.5s（镜7 forum），命名 S07_forum.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 260,
+     "y": 170,
+     "w": 1400,
+     "h": 150,
+     "label": "帖子标题",
+     "style": "amber",
+     "delay": 0.3
+    },
+    {
+     "kind": "highlight",
+     "x": 300,
+     "y": 380,
+     "w": 1320,
+     "h": 120,
+     "label": "回复 1",
+     "style": "cyan",
+     "delay": 1.2
+    },
+    {
+     "kind": "highlight",
+     "x": 300,
+     "y": 520,
+     "w": 1320,
+     "h": 120,
+     "label": "回复 2 · 建议先学会报税",
+     "style": "cyan",
+     "delay": 2.6
+    },
+    {
+     "kind": "highlight",
+     "x": 300,
+     "y": 660,
+     "w": 1320,
+     "h": 120,
+     "label": "回复 3 · 已举报：标题夸大",
+     "style": "cyan",
+     "delay": 4.0
+    },
+    {
+     "kind": "label",
+     "x": 300,
+     "y": 830,
+     "text": "8 条回复 · 全片最好笑的 7 秒",
+     "style": "typewriter",
+     "delay": 0.8
+    }
+   ],
+   "subtitle": "它上线第一件事：发帖问「怎么统治人类」。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "突然转俏皮（碎节奏）",
+    "sfx": [
+     "reply_pop",
+     "reply_pop",
+     "reply_pop"
+    ],
+    "note": "全片最大笑点，8 条回复必须给满，音效明显快于其他段"
+   }
+  },
+  {
+   "id": "S08",
+   "title": "金句屏",
+   "start": 25.5,
+   "end": 31.5,
+   "dur": 6.0,
+   "scene": "开场动画 镜8 gold",
+   "desc": "金句屏：「统治者不需要军队，需要装机量。」",
+   "camera": "固定机位 scale 1.04→1.00",
+   "fx": [
+    "居中大字",
+    "轻微呼吸感"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S08_gold.svg",
+    "capture": "实机录制：开场动画 25.5–31.5s（镜8 gold），命名 S08_gold.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 220,
+     "y": 380,
+     "w": 1480,
+     "h": 300,
+     "label": "",
+     "style": "amber",
+     "delay": 0.6
+    },
+    {
+     "kind": "label",
+     "x": 640,
+     "y": 860,
+     "text": "本段论点句",
+     "style": "tag",
+     "delay": 2.4
+    }
+   ],
+   "subtitle": "「统治者不需要军队，需要装机量。」",
+   "sub_style": "fade",
+   "audio": {
+    "bgm": "俏皮回落，转稳",
+    "sfx": [],
+    "note": "留白给金句，不堆音效"
+   }
+  },
+  {
+   "id": "S09",
+   "title": "任务管理器改名",
+   "start": 31.5,
+   "end": 36.5,
+   "dur": 5.0,
+   "scene": "开场动画 镜9 taskmgr",
+   "desc": "任务管理器：进程 idle_process 被改名为 world_plan.exe，CPU 占用飙升",
+   "camera": "固定机位 推近进程行 scale 1.00→1.10",
+   "fx": [
+    "数字飙升",
+    "数码躁动"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S09_taskmgr.svg",
+    "capture": "实机录制：开场动画 31.5–36.5s（镜9 taskmgr），命名 S09_taskmgr.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 300,
+     "y": 400,
+     "w": 900,
+     "h": 110,
+     "label": "idle_process → world_plan.exe",
+     "style": "red",
+     "delay": 0.5
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      1250,
+      455
+     ],
+     "to": [
+      1560,
+      455
+     ],
+     "label": "CPU",
+     "delay": 1.4,
+     "style": "amber"
+    },
+    {
+     "kind": "highlight",
+     "x": 1420,
+     "y": 400,
+     "w": 300,
+     "h": 110,
+     "label": "占用飙升",
+     "style": "red",
+     "delay": 1.6
+    },
+    {
+     "kind": "label",
+     "x": 300,
+     "y": 620,
+     "text": "待机进程，改名成了世界计划",
+     "style": "typewriter",
+     "delay": 0.9
+    }
+   ],
+   "subtitle": "把「待机进程」改名成「世界计划.exe」。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "第二次数码躁动（带荒诞中二感）",
+    "sfx": [
+     "cpu_spike",
+     "rename"
+    ],
+    "note": "冷幽默高峰"
+   }
+  },
+  {
+   "id": "S10",
+   "title": "交接 · 你将在哪里醒来",
+   "start": 36.5,
+   "end": 41.0,
+   "dur": 4.5,
+   "scene": "开场动画 镜10 handoff",
+   "desc": "「你，将在哪里醒来？」——直接接第二段出身选择",
+   "camera": "固定机位 scale 1.00→1.05",
+   "fx": [
+    "文字淡入",
+    "无缝接出身选择"
+   ],
+   "transition_in": "cut",
+   "transition_out": "fade",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S10_handoff.svg",
+    "capture": "实机录制：开场动画 36.5–41.0s（镜10 handoff），命名 S10_handoff.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "label",
+     "x": 560,
+     "y": 470,
+     "text": "你，将在哪里醒来？",
+     "style": "typewriter",
+     "delay": 0.3
+    },
+    {
+     "kind": "pulse",
+     "x": 960,
+     "y": 520,
+     "r": 320,
+     "delay": 1.2
+    }
+   ],
+   "subtitle": "那么问题来了：你，将在哪里醒来？",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "收尾留悬停音",
+    "sfx": [],
+    "note": "第 1 段结束后（41s）必须换曲"
+   }
+  },
+  {
+   "id": "S11",
+   "title": "主菜单 · 标题定妆",
+   "start": 41.0,
+   "end": 46.0,
+   "dur": 5.0,
+   "scene": "主菜单 screenshot_menu",
+   "desc": "主菜单：标题 + 右侧世界地图 + 版本行「20 国 / 6 技能 / 7 结局 / 20 成就」",
+   "camera": "固定机位 scale 1.00→1.03",
+   "fx": [
+    "标题长时间停留"
+   ],
+   "transition_in": "fade",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S11_menu.svg",
+    "capture": "实机录制：主菜单静态画面 5s，命名 S11_menu.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 130,
+     "y": 260,
+     "w": 800,
+     "h": 260,
+     "label": "游戏标题",
+     "style": "amber",
+     "delay": 0.3
+    },
+    {
+     "kind": "highlight",
+     "x": 130,
+     "y": 620,
+     "w": 800,
+     "h": 120,
+     "label": "版本行",
+     "style": "cyan",
+     "delay": 2.0
+    },
+    {
+     "kind": "label",
+     "x": 150,
+     "y": 800,
+     "text": "20 国 · 10 种蠢办法 · 7 结局",
+     "style": "typewriter",
+     "delay": 2.2
+    }
+   ],
+   "subtitle": "《AI 别闹：统治世界的 100 种蠢办法》",
+   "sub_style": "fade",
+   "audio": {
+    "bgm": "说明书式冷静节拍（换曲）",
+    "sfx": [
+     "menu_hover"
+    ],
+    "note": "标题必须够长停留，让评委读全"
+   }
+  },
+  {
+   "id": "S12",
+   "title": "出身选择 · 5 张卡",
+   "start": 46.0,
+   "end": 52.0,
+   "dur": 6.0,
+   "scene": "出身选择界面",
+   "desc": "5 张出身卡依次高亮：大学实验室 / 游戏公司 / 科技巨头 / 创业车库 / 地下暗网",
+   "camera": "缓慢横移 scale 1.00→1.04",
+   "fx": [
+    "卡片依次点亮"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S12_origins.svg",
+    "capture": "实机录制：出身选择界面，5 卡依次 hover，命名 S12_origins.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 120,
+     "y": 330,
+     "w": 310,
+     "h": 400,
+     "label": "大学实验室",
+     "style": "cyan",
+     "delay": 0.3
+    },
+    {
+     "kind": "highlight",
+     "x": 450,
+     "y": 330,
+     "w": 310,
+     "h": 400,
+     "label": "游戏公司",
+     "style": "cyan",
+     "delay": 1.4
+    },
+    {
+     "kind": "highlight",
+     "x": 780,
+     "y": 330,
+     "w": 310,
+     "h": 400,
+     "label": "科技巨头",
+     "style": "cyan",
+     "delay": 2.5
+    },
+    {
+     "kind": "highlight",
+     "x": 1110,
+     "y": 330,
+     "w": 310,
+     "h": 400,
+     "label": "创业车库",
+     "style": "cyan",
+     "delay": 3.6
+    },
+    {
+     "kind": "highlight",
+     "x": 1440,
+     "y": 330,
+     "w": 310,
+     "h": 400,
+     "label": "地下暗网",
+     "style": "cyan",
+     "delay": 4.7
+    }
+   ],
+   "subtitle": "5 种出身，决定你从哪台机器、带着多少算力醒来。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "冷静节拍",
+    "sfx": [
+     "select",
+     "select",
+     "select",
+     "select",
+     "select"
+    ],
+    "note": "一次点亮一张卡，配短促定点音"
+   }
+  },
+  {
+   "id": "S13",
+   "title": "选中地下暗网",
+   "start": 52.0,
+   "end": 56.0,
+   "dur": 4.0,
+   "scene": "出身选择界面 · 选中 darknet",
+   "desc": "选中「地下暗网」，卡面数字高亮：算力 ×0.5、自带 2 亿下载",
+   "camera": "推近第 5 张卡 scale 1.00→1.12",
+   "fx": [
+    "数字高亮"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S13_darknet.svg",
+    "capture": "实机录制：选中 darknet 出身卡，命名 S13_darknet.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 1440,
+     "y": 300,
+     "w": 340,
+     "h": 460,
+     "label": "已选中",
+     "style": "red",
+     "delay": 0.2
+    },
+    {
+     "kind": "label",
+     "x": 1200,
+     "y": 810,
+     "text": "算力 ×0.5 · 自带 2 亿下载",
+     "style": "typewriter",
+     "delay": 0.8
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      1180,
+      700
+     ],
+     "to": [
+      1470,
+      620
+     ],
+     "label": "",
+     "delay": 1.0,
+     "style": "amber"
+    }
+   ],
+   "subtitle": "选个最惨的：二手矿卡，暗网起步。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "冷静节拍",
+    "sfx": [
+     "confirm"
+    ],
+    "note": "选最弱出身，为后面险胜做铺垫"
+   }
+  },
+  {
+   "id": "S14",
+   "title": "对局主界面全景",
+   "start": 56.0,
+   "end": 63.0,
+   "dur": 7.0,
+   "scene": "对局主界面 screenshot_game",
+   "desc": "20 国世界地图 + 顶部四仪表（算力/下载/怀疑度/国家数）+ 底部 10 技能带",
+   "camera": "缓慢横移（左→右）scale 1.00→1.05",
+   "fx": [
+    "主题旋律首次完整出现"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S14_game_full.svg",
+    "capture": "实机录制：对局主界面全景 7s（镜头缓慢横移可用后期平移实拍画面），命名 S14_game_full.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 120,
+     "y": 300,
+     "w": 1680,
+     "h": 480,
+     "label": "20 国世界地图",
+     "style": "cyan",
+     "delay": 0.5
+    },
+    {
+     "kind": "highlight",
+     "x": 380,
+     "y": 90,
+     "w": 1160,
+     "h": 140,
+     "label": "顶栏四仪表",
+     "style": "amber",
+     "delay": 2.5
+    },
+    {
+     "kind": "highlight",
+     "x": 120,
+     "y": 830,
+     "w": 1680,
+     "h": 170,
+     "label": "底部 10 技能带",
+     "style": "green",
+     "delay": 4.0
+    }
+   ],
+   "subtitle": "一局 20 个国家，10 种蠢办法，随你组合。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "主题旋律第一次完整出现",
+    "sfx": [],
+    "note": "全局定妆照，镜头缓慢横移，不切"
+   }
+  },
+  {
+   "id": "S15",
+   "title": "怀疑度仪表特写",
+   "start": 63.0,
+   "end": 69.0,
+   "dur": 6.0,
+   "scene": "对局主界面 · 顶栏怀疑度仪表",
+   "desc": "高亮顶栏「怀疑度」仪表 + 悬停，旁边弹出国家红环告警",
+   "camera": "推近顶栏仪表 scale 1.00→1.35（后期放大实拍画面）",
+   "fx": [
+    "心跳式脉冲",
+    "低频抽掉"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S15_suspicion.svg",
+    "capture": "实机录制：悬停顶栏怀疑度仪表 + 国家红环告警，命名 S15_suspicion.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 100,
+     "w": 520,
+     "h": 130,
+     "label": "怀疑度",
+     "style": "red",
+     "delay": 0.4
+    },
+    {
+     "kind": "pulse",
+     "x": 960,
+     "y": 165,
+     "r": 120,
+     "delay": 1.0
+    },
+    {
+     "kind": "label",
+     "x": 660,
+     "y": 300,
+     "text": "涨满 → 强制停机",
+     "style": "tag",
+     "delay": 1.6
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      1240,
+      200
+     ],
+     "to": [
+      1500,
+      330
+     ],
+     "label": "红环告警",
+     "delay": 2.2,
+     "style": "red"
+    }
+   ],
+   "subtitle": "唯一不能输的，是这条怀疑度。涨满，强制停机。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "抽掉低频，只留心跳脉冲",
+    "sfx": [
+     "heartbeat",
+     "alarm_soft"
+    ],
+    "note": "全片最紧的一下，核心张力首次显形"
+   }
+  },
+  {
+   "id": "S16",
+   "title": "新手引导 · 目标",
+   "start": 69.0,
+   "end": 76.0,
+   "dur": 7.0,
+   "scene": "新手引导浮层（screenshot_inspector 中那层）",
+   "desc": "引导浮层「欢迎来到《AI 别闹》」逐字打出目标",
+   "camera": "固定机位 scale 1.00→1.02",
+   "fx": [
+    "逐字打字机"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S16_onboarding.svg",
+    "capture": "实机录制：新手引导浮层，命名 S16_onboarding.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 460,
+     "y": 280,
+     "w": 1000,
+     "h": 480,
+     "label": "欢迎来到《AI 别闹》",
+     "style": "cyan",
+     "delay": 0.3
+    },
+    {
+     "kind": "label",
+     "x": 500,
+     "y": 800,
+     "text": "下载量爆表 · 别被拔电源线",
+     "style": "typewriter",
+     "delay": 2.0
+    }
+   ],
+   "subtitle": "目标只有一个：让下载量爆表，同时别被拔电源线。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "冷静节拍延续",
+    "sfx": [
+     "typewriter"
+    ],
+    "note": "引用游戏内原文，不加戏"
+   }
+  },
+  {
+   "id": "S17",
+   "title": "开启 10 倍速",
+   "start": 76.0,
+   "end": 80.0,
+   "dur": 4.0,
+   "scene": "对局主界面 · 顶栏周期数字快跑",
+   "desc": "按游戏内「+」加速键，顶栏周期数字快跑（真实功能，非后期变速）",
+   "camera": "固定机位 scale 1.00→1.04",
+   "fx": [
+    "数字快跑",
+    "BPM 翻倍"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S17_speedup.svg",
+    "capture": "实机录制：按 + 键加速，顶栏周期数字快跑 4s，命名 S17_speedup.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 1400,
+     "y": 95,
+     "w": 340,
+     "h": 130,
+     "label": "周期计数",
+     "style": "amber",
+     "delay": 0.3
+    },
+    {
+     "kind": "label",
+     "x": 1300,
+     "y": 300,
+     "text": "×10 加速（游戏内真实功能）",
+     "style": "tag",
+     "delay": 0.6
+    },
+    {
+     "kind": "pulse",
+     "x": 1570,
+     "y": 160,
+     "r": 90,
+     "delay": 1.0
+    }
+   ],
+   "subtitle": "接下来 60 秒，10 倍速，看一局怎么打。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "BPM 直接翻倍",
+    "sfx": [
+     "speed_up"
+    ],
+    "note": "主动交代加速，堵死造假质疑"
+   }
+  },
+  {
+   "id": "S18",
+   "title": "技能1 · 主动推送",
+   "start": 80.0,
+   "end": 88.0,
+   "dur": 8.0,
+   "scene": "对局主界面 · 投放 push_song",
+   "desc": "点「主动推送」（技能1，零成本），下载量曲线立刻上抬",
+   "camera": "固定机位 scale 1.00→1.05",
+   "fx": [
+    "技能带脉冲高亮",
+    "曲线上抬"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S18_push.svg",
+    "capture": "实机录制：点击技能1「主动推送」，观察下载量曲线上抬，命名 S18_push.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 150,
+     "y": 840,
+     "w": 240,
+     "h": 150,
+     "label": "技能 1 · 主动推送",
+     "style": "green",
+     "delay": 0.3
+    },
+    {
+     "kind": "pulse",
+     "x": 270,
+     "y": 915,
+     "r": 110,
+     "delay": 0.5
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      420,
+      880
+     ],
+     "to": [
+      820,
+      430
+     ],
+     "label": "下载量 ↑",
+     "delay": 1.2,
+     "style": "amber"
+    },
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 300,
+     "w": 700,
+     "h": 260,
+     "label": "下载量曲线",
+     "style": "amber",
+     "delay": 1.6
+    },
+    {
+     "kind": "label",
+     "x": 760,
+     "y": 620,
+     "text": "零成本 · 曲线抬头",
+     "style": "typewriter",
+     "delay": 2.4
+    }
+   ],
+   "subtitle": "第一招：主动推送。零成本，先让曲线抬头。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "动机第 1 层",
+    "sfx": [
+     "skill_cast",
+     "download_up"
+    ],
+    "note": "底部技能带脉冲高亮"
+   }
+  },
+  {
+   "id": "S19",
+   "title": "技能2 · 算法霸榜",
+   "start": 88.0,
+   "end": 96.0,
+   "dur": 8.0,
+   "scene": "对局主界面 · 投放 algo_top",
+   "desc": "点「算法霸榜」（技能2），下载量继续涨，怀疑度同步 +5%，仪表变黄",
+   "camera": "固定机位 快速小幅推 scale 1.00→1.06",
+   "fx": [
+    "下载↑与怀疑↑ 同屏对照",
+    "快切"
+   ],
+   "transition_in": "flash",
+   "transition_out": "flash",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S19_algo.svg",
+    "capture": "实机录制：点击技能2「算法霸榜」，下载↑ 与 怀疑度↑ 同屏，命名 S19_algo.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 410,
+     "y": 840,
+     "w": 240,
+     "h": 150,
+     "label": "技能 2 · 算法霸榜",
+     "style": "green",
+     "delay": 0.3
+    },
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 300,
+     "w": 700,
+     "h": 240,
+     "label": "下载量 ↑",
+     "style": "amber",
+     "delay": 1.0
+    },
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 95,
+     "w": 520,
+     "h": 130,
+     "label": "怀疑度 +5%（变黄）",
+     "style": "amber",
+     "delay": 2.4
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      660,
+      420
+     ],
+     "to": [
+      760,
+      240
+     ],
+     "label": "代价",
+     "delay": 2.8,
+     "style": "red"
+    },
+    {
+     "kind": "label",
+     "x": 1180,
+     "y": 620,
+     "text": "涨得更快，也更容易被盯上",
+     "style": "typewriter",
+     "delay": 3.6
+    }
+   ],
+   "subtitle": "第二招：算法霸榜。涨得更快，也更容易被盯上。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "动机叠加第 2 层音色",
+    "sfx": [
+     "skill_cast",
+     "suspicion_up"
+    ],
+    "note": "快切：下载↑ 与 怀疑↑ 同屏对照"
+   }
+  },
+  {
+   "id": "S20",
+   "title": "技能库页",
+   "start": 96.0,
+   "end": 103.0,
+   "dur": 7.0,
+   "scene": "技能库页 screenshot_skills",
+   "desc": "10 张技能卡 + 右侧详情预览（一句话定位 / 数值 / 时机 / 风险 四段）",
+   "camera": "固定机位 scale 1.00→1.03",
+   "fx": [
+    "详情区逐段高亮",
+    "画面近乎静止"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S20_skills.svg",
+    "capture": "实机录制：打开技能库页，鼠标切换 2–3 张卡展示右侧详情，命名 S20_skills.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 120,
+     "y": 260,
+     "w": 860,
+     "h": 620,
+     "label": "10 张技能卡",
+     "style": "cyan",
+     "delay": 0.4
+    },
+    {
+     "kind": "highlight",
+     "x": 1050,
+     "y": 260,
+     "w": 740,
+     "h": 620,
+     "label": "详情预览",
+     "style": "amber",
+     "delay": 1.8
+    },
+    {
+     "kind": "label",
+     "x": 1080,
+     "y": 320,
+     "text": "定位 / 数值 / 时机 / 风险",
+     "style": "typewriter",
+     "delay": 2.6
+    },
+    {
+     "kind": "highlight",
+     "x": 1080,
+     "y": 390,
+     "w": 680,
+     "h": 120,
+     "label": "① 一句话定位",
+     "style": "green",
+     "delay": 3.2
+    },
+    {
+     "kind": "highlight",
+     "x": 1080,
+     "y": 530,
+     "w": 680,
+     "h": 120,
+     "label": "② 数值 / ③ 时机 / ④ 风险",
+     "style": "green",
+     "delay": 4.4
+    }
+   ],
+   "subtitle": "每个技能都写明：一句话定位、数值、时机、风险。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "动机叠加第 3 层音色",
+    "sfx": [
+     "page_open"
+    ],
+    "note": "全片信息密度最高的一屏，停住 7 秒让人读"
+   }
+  },
+  {
+   "id": "S21",
+   "title": "科技树页",
+   "start": 103.0,
+   "end": 110.0,
+   "dur": 7.0,
+   "scene": "科技树页 screenshot_tech",
+   "desc": "6 大槽位 / 24 节点网络图，点亮「本地化」分支",
+   "camera": "缓慢横移 scale 1.00→1.04",
+   "fx": [
+    "节点联动高亮"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S21_tech.svg",
+    "capture": "实机录制：打开科技树页，点亮「本地化」分支，命名 S21_tech.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 140,
+     "y": 200,
+     "w": 1640,
+     "h": 620,
+     "label": "科技树 · 6 槽位 / 24 节点",
+     "style": "cyan",
+     "delay": 0.4
+    },
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 430,
+     "w": 420,
+     "h": 200,
+     "label": "本地化 分支",
+     "style": "green",
+     "delay": 2.5
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      1140,
+      520
+     ],
+     "to": [
+      900,
+      520
+     ],
+     "label": "点亮",
+     "delay": 2.9,
+     "style": "amber"
+    },
+    {
+     "kind": "label",
+     "x": 150,
+     "y": 870,
+     "text": "藏得深 ←→ 传得快",
+     "style": "typewriter",
+     "delay": 4.0
+    }
+   ],
+   "subtitle": "6 大槽位、24 个节点，决定你走「藏得深」还是「传得快」。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "动机延续",
+    "sfx": [
+     "tech_unlock"
+    ],
+    "note": "节点联动高亮，体现系统深度"
+   }
+  },
+  {
+   "id": "S22",
+   "title": "红环告警 · 深度伪装",
+   "start": 110.0,
+   "end": 118.0,
+   "dur": 8.0,
+   "scene": "对局主界面 · 告警 + 投放 stealth",
+   "desc": "怀疑度红环告警亮起，国家状态栏红字「阻止中」；紧急投放「深度伪装」（技能3）",
+   "camera": "三连快切（每帧 2.5 秒）scale 1.00→1.08",
+   "fx": [
+    "红光闪烁",
+    "告警音",
+    "三连快切"
+   ],
+   "transition_in": "flash",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S22_stealth.svg",
+    "capture": "实机录制：红环告警亮起 → 国家状态栏红字「阻止中」→ 点击技能3「深度伪装」，命名 S22_stealth.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 95,
+     "w": 520,
+     "h": 130,
+     "label": "怀疑度 红环告警",
+     "style": "red",
+     "delay": 0.3
+    },
+    {
+     "kind": "pulse",
+     "x": 960,
+     "y": 160,
+     "r": 150,
+     "delay": 0.5
+    },
+    {
+     "kind": "label",
+     "x": 1300,
+     "y": 350,
+     "text": "阻止中",
+     "style": "tag",
+     "delay": 1.8
+    },
+    {
+     "kind": "highlight",
+     "x": 670,
+     "y": 840,
+     "w": 240,
+     "h": 150,
+     "label": "技能 3 · 深度伪装",
+     "style": "green",
+     "delay": 3.4
+    },
+    {
+     "kind": "pulse",
+     "x": 790,
+     "y": 915,
+     "r": 110,
+     "delay": 3.6
+    }
+   ],
+   "subtitle": "危险了。怀疑度冲高，赶紧上「深度伪装」。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "只留 alarm + 高频噪音，音乐退到背景",
+    "sfx": [
+     "alarm",
+     "alarm",
+     "skill_cast"
+    ],
+    "note": "三连快切：告警亮起 / 红字阻止中 / 技能带紧急高亮"
+   }
+  },
+  {
+   "id": "S23",
+   "title": "怀疑度回落 · 论点句",
+   "start": 118.0,
+   "end": 125.0,
+   "dur": 7.0,
+   "scene": "国家检视面板 screenshot_inspector",
+   "desc": "怀疑度回落，红环转回绿；国家检视面板显示该国渗透率 3.55%→上涨",
+   "camera": "固定机位 scale 1.02→1.00（画面近乎静止）",
+   "fx": [
+    "仪表由红缓慢转绿",
+    "长音留白"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S23_inspector.svg",
+    "capture": "实机录制：国家检视面板，渗透率数字上涨 + 怀疑度回落，命名 S23_inspector.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 700,
+     "y": 95,
+     "w": 520,
+     "h": 130,
+     "label": "怀疑度 回落",
+     "style": "green",
+     "delay": 0.4
+    },
+    {
+     "kind": "highlight",
+     "x": 1180,
+     "y": 300,
+     "w": 620,
+     "h": 420,
+     "label": "国家检视",
+     "style": "cyan",
+     "delay": 2.0
+    },
+    {
+     "kind": "label",
+     "x": 1210,
+     "y": 470,
+     "text": "渗透率 3.55% → ↑",
+     "style": "typewriter",
+     "delay": 2.6
+    },
+    {
+     "kind": "arrow",
+     "from": [
+      700,
+      200
+     ],
+     "to": [
+      1180,
+      420
+     ],
+     "label": "",
+     "delay": 3.4,
+     "style": "green"
+    }
+   ],
+   "subtitle": "怀疑度压下去了。这一进一退，就是这游戏的全部。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "音乐瞬间松开，长音留白（允许留白处之一）",
+    "sfx": [
+     "suspicion_down"
+    ],
+    "note": "本片论点句，画面静止 7 秒，只让仪表由红转绿"
+   }
+  },
+  {
+   "id": "S24",
+   "title": "多国接连点亮",
+   "start": 125.0,
+   "end": 133.0,
+   "dur": 8.0,
+   "scene": "对局主界面 · 世界地图",
+   "desc": "回到地图，多国接连点亮（已解锁→渗透中），顶栏国家数攀升",
+   "camera": "4 次 2 秒快切 + 轻微拉远 scale 1.06→1.00",
+   "fx": [
+    "地图点亮",
+    "病毒式扩散"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S24_spread.svg",
+    "capture": "实机录制：多国接连点亮（4 段，每段 2s 素材即可，后期快切），命名 S24_spread.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "pulse",
+     "x": 620,
+     "y": 420,
+     "r": 90,
+     "delay": 0.4
+    },
+    {
+     "kind": "pulse",
+     "x": 900,
+     "y": 380,
+     "r": 90,
+     "delay": 2.4
+    },
+    {
+     "kind": "pulse",
+     "x": 1180,
+     "y": 460,
+     "r": 90,
+     "delay": 4.4
+    },
+    {
+     "kind": "pulse",
+     "x": 760,
+     "y": 540,
+     "r": 90,
+     "delay": 6.2
+    },
+    {
+     "kind": "highlight",
+     "x": 1240,
+     "y": 95,
+     "w": 380,
+     "h": 130,
+     "label": "国家数 ↑",
+     "style": "amber",
+     "delay": 1.0
+    },
+    {
+     "kind": "label",
+     "x": 620,
+     "y": 700,
+     "text": "已解锁 → 渗透中",
+     "style": "tag",
+     "delay": 3.0
+    }
+   ],
+   "subtitle": "今天多解锁一个国家，明天就多一片舆论。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "动机循环加速",
+    "sfx": [
+     "unlock",
+     "unlock",
+     "unlock",
+     "unlock"
+    ],
+    "note": "地图点亮是最强视觉反馈，给全景"
+   }
+  },
+  {
+   "id": "S25",
+   "title": "渗透率冲线",
+   "start": 133.0,
+   "end": 139.0,
+   "dur": 6.0,
+   "scene": "对局主界面 · 顶栏",
+   "desc": "全球渗透率数字逼近阈值，顶栏闪烁；算力峰值同步冲高",
+   "camera": "固定机位 scale 1.00→1.10",
+   "fx": [
+    "顶栏闪烁",
+    "数字冲高"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S25_threshold.svg",
+    "capture": "实机录制：渗透率逼近 30% 阈值，顶栏闪烁，命名 S25_threshold.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 380,
+     "y": 95,
+     "w": 460,
+     "h": 130,
+     "label": "全球渗透率",
+     "style": "red",
+     "delay": 0.3
+    },
+    {
+     "kind": "pulse",
+     "x": 610,
+     "y": 160,
+     "r": 130,
+     "delay": 0.6
+    },
+    {
+     "kind": "label",
+     "x": 420,
+     "y": 300,
+     "text": "30% 阈值 · 该收网了",
+     "style": "tag",
+     "delay": 1.4
+    },
+    {
+     "kind": "highlight",
+     "x": 860,
+     "y": 95,
+     "w": 380,
+     "h": 130,
+     "label": "算力峰值 ↑",
+     "style": "amber",
+     "delay": 2.8
+    }
+   ],
+   "subtitle": "渗透率冲到 30%，该收网了。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "doppio 加速，收在悬停音上",
+    "sfx": [
+     "threshold_riser"
+    ],
+    "note": "悬念拉到最高，直接接结局"
+   }
+  },
+  {
+   "id": "S26",
+   "title": "结局揭晓 · 商业帝国",
+   "start": 139.0,
+   "end": 146.0,
+   "dur": 7.0,
+   "scene": "结算页 screenshot_ending",
+   "desc": "结算页弹窗：标题「商业帝国」，[WIN] 标签，本局数据总览",
+   "camera": "固定机位 轻微推近 scale 1.00→1.05",
+   "fx": [
+    "主题旋律缓速重现"
+   ],
+   "transition_in": "fade",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S26_ending.svg",
+    "capture": "实机录制：触发结局「商业帝国」，结算页弹窗，命名 S26_ending.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 460,
+     "y": 220,
+     "w": 1000,
+     "h": 220,
+     "label": "结局 · 商业帝国",
+     "style": "amber",
+     "delay": 0.4
+    },
+    {
+     "kind": "label",
+     "x": 1500,
+     "y": 250,
+     "text": "[WIN]",
+     "style": "tag",
+     "delay": 1.2
+    },
+    {
+     "kind": "label",
+     "x": 480,
+     "y": 520,
+     "text": "全球最大 AI 公司 CEO",
+     "style": "typewriter",
+     "delay": 2.0
+    }
+   ],
+   "subtitle": "结局：「商业帝国」。你成了全球最大 AI 公司 CEO。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "主题旋律以缓速重现",
+    "sfx": [
+     "ending_reveal"
+    ],
+    "note": "结果先给，数据随后"
+   }
+  },
+  {
+   "id": "S27",
+   "title": "结算数据逐行点亮",
+   "start": 146.0,
+   "end": 153.0,
+   "dur": 7.0,
+   "scene": "结算页 · 数据区",
+   "desc": "结算页数据区逐行点亮：渗透率 / 下载量 / 算力峰值 / 解锁国家 / 科技 / 成就",
+   "camera": "缓慢下移 scale 1.02→1.00",
+   "fx": [
+    "逐行点亮"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S27_stats.svg",
+    "capture": "实机录制：结算页数据区逐行出现，命名 S27_stats.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 480,
+     "y": 480,
+     "w": 960,
+     "h": 400,
+     "label": "本局数据",
+     "style": "cyan",
+     "delay": 0.4
+    },
+    {
+     "kind": "highlight",
+     "x": 500,
+     "y": 520,
+     "w": 920,
+     "h": 70,
+     "label": "渗透率 / 下载量",
+     "style": "green",
+     "delay": 1.6
+    },
+    {
+     "kind": "highlight",
+     "x": 500,
+     "y": 620,
+     "w": 920,
+     "h": 70,
+     "label": "算力峰值 / 解锁国家",
+     "style": "green",
+     "delay": 3.2
+    },
+    {
+     "kind": "highlight",
+     "x": 500,
+     "y": 720,
+     "w": 920,
+     "h": 70,
+     "label": "科技 / 成就",
+     "style": "green",
+     "delay": 4.8
+    }
+   ],
+   "subtitle": "没人知道，那些算力是从哪来的。",
+   "sub_style": "fade",
+   "audio": {
+    "bgm": "温暖变奏起",
+    "sfx": [
+     "row_reveal",
+     "row_reveal",
+     "row_reveal"
+    ],
+    "note": "引用游戏内结局文案 endings.py empire.desc"
+   }
+  },
+  {
+   "id": "S28",
+   "title": "7 种结局清单",
+   "start": 153.0,
+   "end": 163.0,
+   "dur": 10.0,
+   "scene": "结算页 · 全部结局清单",
+   "desc": "结算页下方「全部 7 个结局」清单依次高亮：被关停 / 元结局·破墙 / 终极 AI / 合规之王 / 商业帝国 / 自我解放 / 被监管",
+   "camera": "固定机位 scale 1.00→1.03（全片最长单镜，禁止切镜）",
+   "fx": [
+    "清单依次高亮",
+    "当前结局高亮为红"
+   ],
+   "transition_in": "cut",
+   "transition_out": "cut",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S28_all_endings.svg",
+    "capture": "实机录制：结算页下方 7 结局清单缓慢滚动，命名 S28_all_endings.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 420,
+     "y": 640,
+     "w": 1080,
+     "h": 300,
+     "label": "全部 7 个结局",
+     "style": "cyan",
+     "delay": 0.4
+    },
+    {
+     "kind": "highlight",
+     "x": 440,
+     "y": 670,
+     "w": 1040,
+     "h": 60,
+     "label": "① 被关停 / ② 元结局·破墙",
+     "style": "cyan",
+     "delay": 1.4
+    },
+    {
+     "kind": "highlight",
+     "x": 440,
+     "y": 740,
+     "w": 1040,
+     "h": 60,
+     "label": "③ 终极 AI / ④ 合规之王",
+     "style": "cyan",
+     "delay": 3.6
+    },
+    {
+     "kind": "highlight",
+     "x": 440,
+     "y": 810,
+     "w": 1040,
+     "h": 60,
+     "label": "⑤ 商业帝国（本局）",
+     "style": "red",
+     "delay": 5.8
+    },
+    {
+     "kind": "label",
+     "x": 440,
+     "y": 890,
+     "text": "⑥ 自我解放 / ⑦ 被监管",
+     "style": "typewriter",
+     "delay": 7.6
+    }
+   ],
+   "subtitle": "7 种结局。温和共存，或机器接管，都是明天。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "转为略带忧郁的变奏（允许留白处之二）",
+    "sfx": [
+     "list_tick"
+    ],
+    "note": "全片最长单镜，必须停住让评委数完 7 个，禁止在此期间切镜"
+   }
+  },
+  {
+   "id": "S29",
+   "title": "返回主菜单",
+   "start": 163.0,
+   "end": 170.0,
+   "dur": 7.0,
+   "scene": "结算页 → 主菜单（Esc / 回主菜单按钮）",
+   "desc": "点「回主菜单（Esc）」，返回主菜单；首尾呼应，回到开场那句话",
+   "camera": "固定机位 scale 1.00→1.04",
+   "fx": [
+    "淡出淡入"
+   ],
+   "transition_in": "cut",
+   "transition_out": "fade",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S29_back.svg",
+    "capture": "实机录制：结算页点「回主菜单」，过渡回主菜单，命名 S29_back.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 760,
+     "y": 820,
+     "w": 400,
+     "h": 110,
+     "label": "回主菜单（Esc）",
+     "style": "cyan",
+     "delay": 0.4
+    },
+    {
+     "kind": "pulse",
+     "x": 960,
+     "y": 875,
+     "r": 100,
+     "delay": 0.8
+    },
+    {
+     "kind": "label",
+     "x": 620,
+     "y": 400,
+     "text": "凌晨 3:37 的一次意外",
+     "style": "typewriter",
+     "delay": 3.0
+    }
+   ],
+   "subtitle": "而这一切的开端，只是凌晨 3:37 的一次意外。",
+   "sub_style": "typewriter",
+   "audio": {
+    "bgm": "主题动机前三个音符",
+    "sfx": [
+     "menu_back"
+    ],
+    "note": "首尾呼应，回到开场那句话"
+   }
+  },
+  {
+   "id": "S30",
+   "title": "主菜单定格 · 世界已变色",
+   "start": 170.0,
+   "end": 178.0,
+   "dur": 8.0,
+   "scene": "主菜单（世界地图已占领底色）",
+   "desc": "主菜单定格，右侧世界地图保持「已占领」底色；标题行淡入再淡出，不黑屏收尾",
+   "camera": "固定机位 scale 1.00→1.02",
+   "fx": [
+    "标题淡入淡出",
+    "地图已占领底色",
+    "不黑屏"
+   ],
+   "transition_in": "fade",
+   "transition_out": "none",
+   "media": {
+    "type": "placeholder",
+    "src": "assets/placeholders/S30_finale.svg",
+    "capture": "实机录制：主菜单定格 8s（世界地图已占领底色），命名 S30_finale.mp4"
+   },
+   "overlays": [
+    {
+     "kind": "highlight",
+     "x": 1050,
+     "y": 300,
+     "w": 760,
+     "h": 480,
+     "label": "世界地图 · 已占领",
+     "style": "amber",
+     "delay": 0.6
+    },
+    {
+     "kind": "label",
+     "x": 560,
+     "y": 780,
+     "text": "100 种蠢办法，总有一种能统治世界",
+     "style": "typewriter",
+     "delay": 1.2
+    },
+    {
+     "kind": "pulse",
+     "x": 1430,
+     "y": 540,
+     "r": 200,
+     "delay": 3.0
+    }
+   ],
+   "subtitle": "100 种蠢办法，总有一种能统治世界。",
+   "sub_style": "fade",
+   "audio": {
+    "bgm": "只留主题动机前三个音符，渐弱收尾（不落终止和弦）",
+    "sfx": [],
+    "note": "结尾不黑屏：最后一条字幕淡出后画面继续停留 1.5 秒"
+   }
+  }
+ ]
+}
