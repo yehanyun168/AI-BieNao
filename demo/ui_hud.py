@@ -350,13 +350,13 @@ class LegendBar(HudBox):
 
 
 class LayerHud(HudBox):
-    """右上角图层切换 + 缩放（设计稿 .hud.tr）"""
+    """右上角图层切换（设计稿 .hud.tr）。"""
 
     # 顶部额外下沉：右上 HUD 与顶栏「周期/暂停/帮助」chips 仅隔 6px，
     # HiDPI 下视觉上会贴在一起（用户反馈"按钮相互遮挡"）。整体下移让二者分离。
     TOP_GAP = 14
 
-    def __init__(self, on_layer=None, on_zoom=None, **kwargs):
+    def __init__(self, on_layer=None, **kwargs):
         super().__init__(anchor='tr', **kwargs)
         col = BoxLayout(orientation='vertical', spacing=12,
                         size_hint=(None, None), padding=0)
@@ -365,13 +365,6 @@ class LayerHud(HudBox):
         self.seg.size_hint = (None, None)
         col.add_widget(self.seg)
 
-        row = BoxLayout(orientation='horizontal', spacing=8,
-                        size_hint=(None, None), height=26)
-        self.btn_minus = PxChip(U.SYM['minus'], tone='plain', on_press=lambda *_: on_zoom and on_zoom(-0.10))
-        self.btn_plus = PxChip(U.SYM['plus'], tone='plain', on_press=lambda *_: on_zoom and on_zoom(+0.10))
-        for b in (self.btn_minus, self.btn_plus):
-            row.add_widget(b)
-        col.add_widget(row)
         self.add_widget(col)
         self.col = col
         self.bind(pos=self._sync, size=self._sync)
@@ -379,23 +372,17 @@ class LayerHud(HudBox):
 
     def _sync(self, *_args) -> None:
         self.col.pos = (self.x + self.PAD, self.y + self.PAD)
-        # 外层面板宽度取图层切换与缩放行的较大值，避免控件溢出。
-        row = self.col.children[0] if self.col.children else None
-        row_w = 0
-        if row is not None:
-            row_w = sum(c.width for c in row.children) + row.spacing * max(len(row.children) - 1, 0)
         seg_w = self.seg.width or 0
-        w = max(row_w, seg_w, 312)
-        self.seg.width = w          # 图层切换与缩放行等宽（避免挤成一小块）
-        row.height = 26
-        self.col.size = (w, 22 + 12 + 26)
+        w = max(seg_w, 312)
+        self.seg.width = w
+        self.col.size = (w, 22)
         # 内容高 + 上下 PAD；额外下沉 TOP_GAP 避免与顶栏 chips 贴住。
         # ⚠️ _sync 会被反复调用（pos/size 变化），必须「赋值」而非「累加」，
         # 否则 inset 会一次次叠加把 HUD 推到画面中部。
         base_inset = getattr(self, '_base_top_inset', 0)
         self._base_top_inset = base_inset       # 投放模式的额外 inset 由外部改写
         self._top_inset = base_inset + self.TOP_GAP
-        self.content_size(w, 60)
+        self.content_size(w, 34)
         self._redraw()
 
     def set_layer(self, idx: int) -> None:
@@ -465,9 +452,7 @@ class HudMixin:
                                   on_press=lambda *_: self.toggle_lang())
         self.pause_chip = PxChip(t('state_running'), tone='up',
                                  on_press=lambda *_: self.toggle_pause())
-        self.help_chip = PxChip('? ' + t('rail_help'), tone='plain',
-                                on_press=lambda *_: self.open_page('help'))
-        for c in (self.lang_switch, self.pause_chip, self.help_chip):
+        for c in (self.lang_switch, self.pause_chip):
             bar.add_widget(c)
         return holder
 
@@ -667,7 +652,7 @@ class HudMixin:
         stage.add_widget(self.region_hud)
 
         # HUD：图层（右上）
-        self.layer_hud = LayerHud(on_layer=self.set_layer, on_zoom=self._zoom_btn)
+        self.layer_hud = LayerHud(on_layer=self.set_layer)
         stage.add_widget(self.layer_hud)
 
         # HUD：图例（左下）

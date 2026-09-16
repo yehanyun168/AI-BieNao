@@ -105,8 +105,6 @@ def main() -> int:
     print("\n[8] 区域 / 缩放 / 网格")
     for key in ('asia', 'europe', 'americas', 'africa', 'oceania'):
         check(f'区域 {key}', lambda k=key: g.select_region(k))
-    check('缩放 +', lambda: g.adjust_scale(+0.10))
-    check('缩放 -', lambda: g.adjust_scale(-0.10))
     check('网格 off', lambda: g.map_widget.set_grid_mode(0))
     check('网格 on', lambda: g.map_widget.set_grid_mode(1))
 

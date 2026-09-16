@@ -66,9 +66,7 @@ class HelpPage(U.PageScreen):
         groups = [
             ('help_g_time', [('Space', 'k_pause'), ('↑', 'k_speed_up'),
                              ('↓', 'k_speed_down')]),
-            ('help_g_view', [('Tab', 'k_region'), ('+ / =', 'k_zoom_in'),
-                             ('- / _', 'k_zoom_out'), ('F11', 'k_fullscreen'),
-                             ('F12', 'k_fit')]),
+            ('help_g_view', [('Tab', 'k_region'), ('F11', 'k_fullscreen')]),
             ('help_g_panel', [('1 – 6', 'k_skill'), ('F', 'k_drop'), ('K', 'k_tech'),
                               ('A', 'k_ach'), ('S / R', 'k_save'), ('L', 'k_lang'),
                               ('Esc', 'k_esc')]),
@@ -187,7 +185,7 @@ class HelpPage(U.PageScreen):
 class SettingsPage(U.PageScreen):
     """全屏设置页（设计稿 S12）：左显示与操作 / 右存档槽位。"""
 
-    def __init__(self, on_lang: Callable = None, on_scale: Callable = None,
+    def __init__(self, on_lang: Callable = None,
                  on_speed: Callable = None, on_grid: Callable = None,
                  on_a11y: Callable = None, on_motion: Callable = None,
                  on_sound: Callable = None,
@@ -242,25 +240,6 @@ class SettingsPage(U.PageScreen):
         self.sw_music = _seg('set_music', _tf,
                              int(values.get('music_on', True)), on_music)
 
-        # UI 缩放行
-        zoom = BoxLayout(orientation='horizontal', spacing=8,
-                         size_hint_y=None, height=44)
-        zoom.add_widget(mk_label(i18n.t('set_zoom'), font_size=FS_SM,
-                                 color=COLORS['text_dim'], size_hint_x=None,
-                                 width=200))
-        self.lbl_zoom = mk_label('×1.00', font_size=FS_SM,
-                                 halign='center', size_hint_x=None, width=72)
-        zoom.add_widget(small_btn('－', 'plain',
-                                  lambda: on_scale and on_scale(-0.10),
-                                  width=44, height=40, font_size=FS_SM))
-        zoom.add_widget(self.lbl_zoom)
-        zoom.add_widget(small_btn('＋', 'plain',
-                                  lambda: on_scale and on_scale(+0.10),
-                                  width=44, height=40, font_size=FS_SM))
-        zoom.add_widget(Widget())
-        zoom.add_widget(mk_label(i18n.t('set_zoom_hint'), font_size=FS_CAP,
-                                 color=COLORS['text_mute']))
-        left.add_widget(zoom)
         # 重看教程（P0-1）：随时重新走一遍新手引导
         left.add_widget(small_btn('重看教程', 'on',
                                   lambda: on_tutorial and on_tutorial(),
@@ -369,9 +348,6 @@ class SettingsPage(U.PageScreen):
         r.bind(pos=_draw_sep, size=_draw_sep)
         _draw_sep()
         return r
-
-    def set_zoom_text(self, text: str) -> None:
-        self.lbl_zoom.text = text
 
     def rebuild_slots(self, rows: Sequence[Tuple[str, str, bool]]) -> None:
         """重建 3 个存档槽位行。

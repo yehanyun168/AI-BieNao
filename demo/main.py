@@ -23,7 +23,7 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
 
 快捷键（F11 —— 计划书 8.3 节，v0.4 帮助页同源）：
   Space 暂停 · 1–6 选技能（进投放模式）· F 投放 · K 科技树 · A 成就
-  Tab 切区域 · +/- 缩放 · F11 全屏 · F12 适配 · F1 帮助
+  Tab 切区域 · F11 全屏 · 窗口变化自动适配 · F1 帮助
   S/R 存/读档 · L 中英切换 · Esc 返回上一层 · Enter 确认投放
 
 性能探针（P1-3，**默认关闭**，零开销）：
@@ -484,7 +484,6 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self.speed_mult: float = ST.SPEED_STEPS[self.speed_idx]
         self._tick_deadline: float = Clock.get_time() + ST.BASE_TICK_SECONDS
         self._cd_clock = None
-        self.user_scale = preferences.get('ui_scale')
         self._scalables = []
         self.scale = self._compute_scale()
         self.active_region = None
@@ -720,7 +719,6 @@ class MainMenu(FloatLayout):
         self.on_continue = on_continue
         self.on_exit = on_exit
         self.on_start_new_slot = on_start_new_slot
-        self.user_scale = preferences.get('ui_scale')
         self._scalables = []
         self._overlay = None
         self._ng_modal = None            # P2-3 新档弹窗（打开时接管按键）
@@ -752,7 +750,7 @@ class MainMenu(FloatLayout):
         # 下限 0.62 是按「1680 逻辑宽 + 键盘到底 + 缩放 1.0」实测标定的：
         # 再小左面板右缘就会压到世界地图。窗口被钳到更窄的机器上，
         # 下限兜住，宁可略挤也不溢出。
-        return min(max(base, 0.62), 1.85) * self.user_scale
+        return min(max(base, 0.62), 1.85)
 
     def _reg(self, widget, font=None, height=None):
         if font is not None:
@@ -788,8 +786,6 @@ class MainMenu(FloatLayout):
                     fn(self.scale)
                 except Exception:
                     pass  # 同上：单个控件的 refresh_scale 失败不拖垮整体缩放
-        if isinstance(self._overlay, S.SettingsPage):
-            self._overlay.set_zoom_text(f"×{self.user_scale:.2f}")
 
     def rebuild(self) -> None:
         """语言切换后整页重建（文案全在控件上）。"""
@@ -1177,14 +1173,6 @@ class MainMenu(FloatLayout):
         if callable(self.on_exit):
             self.on_exit()
 
-    def _scale_delta(self, d: float) -> None:
-        if d == 0.0:
-            self.user_scale = 1.0
-        else:
-            self.user_scale = min(max(self.user_scale + d, 0.70), 1.60)
-        self._apply_scale()
-        preferences.update(ui_scale=self.user_scale)
-
     # 主菜单设置浮层回调：音效/音乐/动效/色盲/速度（进游戏时 GameUI 读取）
     def _set_sound_idx(self, i: int) -> None:
         set_sound(i)
@@ -1222,7 +1210,6 @@ class MainMenu(FloatLayout):
     def _open_settings(self) -> None:
         page = S.SettingsPage(
             on_lang=self._set_lang_idx,
-            on_scale=self._scale_delta,
             on_speed=self._set_speed_idx,
             on_grid=lambda i: ui_preferences.set_grid(i, self.sil_map),
             on_a11y=self._set_a11y_idx,
@@ -1233,7 +1220,6 @@ class MainMenu(FloatLayout):
             slot_actions=self._slot_actions,
             on_reset=self._reset_settings)
         page.rebuild_slots(read_slot_rows(self._sel_slot))
-        page.set_zoom_text(f"×{self.user_scale:.2f}")
         page.set_back_button(t('k_esc'), self._close_overlay)
         self._open_overlay(page)
 
@@ -1302,8 +1288,6 @@ class MainMenu(FloatLayout):
             self._start_new_on_slot(path)
 
     def _reset_settings(self) -> None:
-        self.user_scale = 1.0
-        preferences.update(ui_scale=1.0)          # 重置后必须落盘，否则重启仍读旧值
         set_grid(1, self.sil_map)                 # 内部已 preferences.update(grid_mode=1)
         self._apply_scale()
     def _set_lang_idx(self, idx: int) -> None:

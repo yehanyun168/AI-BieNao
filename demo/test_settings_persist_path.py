@@ -81,7 +81,7 @@ class FrozenPersistPathTests(unittest.TestCase):
                 preferences.save({'language': 'en', 'ui_scale': 1.4})
                 loaded = preferences.load()
                 self.assertEqual(loaded['language'], 'en')
-                self.assertEqual(loaded['ui_scale'], 1.4)
+                self.assertNotIn('ui_scale', loaded)
                 self.assertTrue(
                     os.path.exists(os.path.join(appd, 'AI-BieNao', 'settings.json')))
             finally:

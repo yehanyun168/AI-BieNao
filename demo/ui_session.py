@@ -29,7 +29,7 @@ class SessionMixin:
     def _compute_scale(self) -> float:
         h = Window.height or self.DESIGN_HEIGHT
         base = min(max(h / self.DESIGN_HEIGHT, 0.68), 1.45)
-        return base * getattr(self, 'user_scale', 1.0)
+        return base
 
     def _register(self, widget, font=None, height=None):
         if font is not None:
@@ -73,18 +73,6 @@ class SessionMixin:
     def _fit_after_resize(self, _dt) -> None:
         self._resize_fit_event = None
         self._apply_scale()
-
-    def _zoom_btn(self, delta: float) -> None:
-        if delta == 0.0:
-            self.user_scale = 1.0
-        else:
-            self.user_scale = min(max(self.user_scale + delta, 0.70), 1.60)
-        self._apply_scale()
-        preferences.update(ui_scale=self.user_scale)
-        self._notify(f"{t('scale_label')} ×{self.user_scale:.2f}")
-
-    def adjust_scale(self, delta: float) -> None:
-        self._zoom_btn(delta)
 
     # ========================================================
     # 区域高亮（设计稿 S02 左上 HUD）
@@ -162,7 +150,6 @@ class SessionMixin:
         page_sel = getattr(self._page, 'selected_key', None)
         _update_window_title()
         self.lang_switch.set_tone('plain', LANG_CHIP_TAG[get_lang()])
-        self.help_chip.set_tone('plain', '? ' + t('rail_help'))
         for sid, card in self.skill_cards.items():
             card.set_texts(self._skill_name(sid), self._skill_desc(sid))
         for sid, btn in self.rail.buttons.items():

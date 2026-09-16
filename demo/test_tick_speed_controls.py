@@ -26,12 +26,11 @@ class TickSpeedControlsTests(unittest.TestCase):
         self.assertEqual(view.set_speed_idx.call_args_list,
                          [unittest.mock.call(0), unittest.mock.call(2)])
 
-    def test_topbar_has_help_button_and_speed_buttons_are_centered(self):
+    def test_topbar_has_no_help_button_and_speed_buttons_are_centered(self):
         engine.init_game()
         view = main.GameUI()
 
-        # 我们保留了顶栏帮助按钮（缩放功能同批验收，不可因合并丢失）。
-        self.assertTrue(hasattr(view, 'help_chip'))
+        self.assertFalse(hasattr(view, 'help_chip'))
         for widget in (view.btn_speed_down, view.lbl_game_date,
                        view.lbl_tick_cap, view.lbl_tick_val,
                        view.btn_speed_up):

@@ -144,8 +144,8 @@ def main():
         [('1', 'n', 'd', True, False)] * 20, 7, 20, 5, 13, 2, 7, 3,
         [('全球通吃', '12/20')]))(S.AchPage()))
     check('HelpPage', lambda: S.HelpPage())
-    check('SettingsPage', lambda: (lambda p: (p.set_zoom_text('×1.00'),
-                                              p.rebuild_slots([('槽位 01', 'x', True)])))(S.SettingsPage()))
+    check('SettingsPage', lambda: (lambda p: p.rebuild_slots(
+        [('槽位 01', 'x', True)]))(S.SettingsPage()))
     check('LogDrawer', lambda: (lambda d: (d.rebuild([{'tick': 24, 'text': 'hi', 'tone': 'w'}], 2)))(S.LogDrawer()))
 
     print("\n=== 语言切换回归（所有组件在 EN 下重建一遍）===")

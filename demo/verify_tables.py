@@ -359,10 +359,6 @@ LAYERS = {
                                #       刻意不 import save_manager —— 账本目录由调用方
                                #       传入，保持 L0 零项目依赖，也不与 L4 成环
     'preferences.py':     0,   # 跨对局设置：settings.json 持久化（仅标准库），零项目依赖
-    'paths.py':           0,   # 2026-09-15 登记（补齐既有的「未纳管」告警）：运行时数据
-                               #       路径统一（源码运行 = demo/；PyInstaller 冻结态 =
-                               #       %APPDATA%/AI-BieNao）+ 旧档迁移。仅 import
-                               #       os/shutil/sys，零项目依赖 → L0。
     'origins.py':         0,   # T16：觉醒出身声明式表（只依赖 typing）。
                                #       难度 id 用字符串字面量不 import balance，
                                #       避免 L0 内部循环；balance.apply_origin 反向引用它属
@@ -614,17 +610,10 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     941 条 CRITICAL」降回 0 条）
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
-    'main.py':           1615,    # 2026-09-15 六度登记：合入协作者张博文分支后仍为 1615
-                                  #    行（未新增行）—— 本次合并按「以我们版本为基底」
-                                  #    处理，仅并入 help 文案基线，行数不变；1615 行来自
-                                  #    此前本地缩放基础设施（user_scale/_scale_delta/
-                                  #    set_zoom_text 落盘）未及时再登记，此处补齐留痕。
-                                  #    冻结值 = 实测 1615（后续不得增长，涨则须再登记 +
-                                  #    说明；纯减行不受限）。
-                                  #    （1543 = 2026-09-14 五度登记：开场动画收尾停
-                                  #     BGM 后，取消出身页回菜单要接回菜单曲池 ——
-                                  #     新增 _close_origin_flow_to_menu（+10 行）；
-                                  #     原 1533 = 合并协作者分支：设置浮层回调 +
+    'main.py':           1543,    # 2026-09-14 五度登记（原 1533）：开场动画收尾停
+                                  #    BGM 后，取消出身页回菜单要接回菜单曲池 ——
+                                  #    新增 _close_origin_flow_to_menu（+10 行）
+                                  #    （原 1533 = 合并协作者分支：设置浮层回调 +
                                   #     设置页 values 传参；1523 = 音频启动加载前移）
     'ui_input.py':        801,    # 2026-09-14 登记（原走 800 默认上限）：
                                   #    合并协作者分支（事件暂停 +1 行）
@@ -636,15 +625,12 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     sk_preview_empty / sk_preview_missing ×2 语）
                                   #    （原 1381：技能完整介绍 sk_full_* + sk_detail_*
                                   #     精简为单行）
-    'ui_hud.py':          960,    # 2026-09-15 四度登记（原 922）：合入协作者张博文
-                                  #    分支的「顶栏四档调速」—— _make_tick_box 新增
-                                  #    btn_speed_up/btn_speed_down 两个 PxChip +
-                                  #    _refresh_speed_indicator（四块档位指示条，绑
-                                  #    pos/size 重绘）；本文件同时保留本地缩放行的
-                                  #    宽高自适应（_sync 取图层行/缩放行较大宽度）。
-                                  #    （原 922 = 2026-09-14 三度登记：右侧指令栏
-                                  #     RailBar 6 枚菜单按钮点击音效接线；916 =
-                                  #     顶栏火花线按指标语义着色）
+    'ui_hud.py':          922,    # 2026-09-14 三度登记（原 916）：右侧指令栏 RailBar
+                                  #    6 枚菜单按钮点击音效接线（原为零接线静默，
+                                  #    玩家点技能/科技/成就/帮助/设置/日志全无声）
+                                  #    （原 916 = 顶栏火花线按指标语义着色）
+                                  #    （_SPARK_HEX 字典 + _stat 传 fill_hex，算力=黄/下载=粉/
+                                  #     怀疑度=红/解锁国=青，修复「四根全青无法区分涨落」）
 }
 
 line_violations = []

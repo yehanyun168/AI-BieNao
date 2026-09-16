@@ -442,7 +442,7 @@ class PopupsMixin:
             self.remove_widget(old)
         chip = self._build_top_toast(text, tone, detail)
         self._cap_toast_width(chip)
-        # P1-11 避让顶栏：inset = 顶栏真实下缘（随 F12 缩放自动正确）。
+        # P1-11 避让顶栏：inset = 顶栏真实下缘（随窗口缩放自动正确）。
         inset = self._topbar_inset(self)
         chip.pos_hint = {'center_x': 0.5,
                          'top': 1.0 - inset / max(float(self.height), 1.0)}

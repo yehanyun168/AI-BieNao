@@ -160,7 +160,6 @@ TRANSLATIONS = {
                      '  [color=4ec9b0]Space[/color]   暂停 / 继续\n'
                      '  [color=4ec9b0]1 - 6[/color]   释放对应技能\n'
                      '  [color=4ec9b0]Tab[/color]     切换大洲高亮\n'
-                     '  [color=4ec9b0]+ / -[/color]   放大 / 缩小 UI 字号\n'
                      '  [color=4ec9b0]S[/color]       手动存档\n'
                      '  [color=4ec9b0]R[/color]       读取存档\n'
                      '  [color=4ec9b0]A[/color]       成就列表\n'
@@ -328,7 +327,6 @@ TRANSLATIONS = {
                      '  [color=4ec9b0]Space[/color]   Pause / resume\n'
                      '  [color=4ec9b0]1 - 6[/color]   Use skill\n'
                      '  [color=4ec9b0]Tab[/color]     Cycle continent highlight\n'
-                     '  [color=4ec9b0]+ / -[/color]   Scale UI font\n'
                      '  [color=4ec9b0]S[/color]       Save\n'
                      '  [color=4ec9b0]R[/color]       Load\n'
                      '  [color=4ec9b0]A[/color]       Achievements\n'
@@ -670,7 +668,6 @@ TRANSLATIONS[LANG_ZH].update({
     'set_sound': '音效', 'set_sound_hint': 'UI 操作 / 事件反馈音（合成 CC0）',
     'set_music': '背景音乐', 'set_music_hint': '怀疑度驱动两态氛围曲，紧张时变调',
     'set_off': '关', 'set_on': '开',
-    'set_zoom': 'UI 缩放', 'set_zoom_hint': '范围 0.70 – 1.60，等效 +/- 键',
     'set_slots': '存档槽位', 'set_slots_hint': 'S 存档 / R 读档',
     'set_slot_note': '存档为 JSON 明文，存放在 demo/saves/；删除操作需二次确认。',
     'set_about': '关于游戏',
@@ -1009,7 +1006,6 @@ TRANSLATIONS[LANG_EN].update({
     'set_sound': 'Sound', 'set_sound_hint': 'UI / event feedback SFX (synth CC0)',
     'set_music': 'Music', 'set_music_hint': 'Two-state ambient track driven by suspicion',
     'set_off': 'Off', 'set_on': 'On',
-    'set_zoom': 'UI zoom', 'set_zoom_hint': 'Range 0.70 – 1.60, same as +/-',
     'set_slots': 'Save slots', 'set_slots_hint': 'S save / R load',
     'set_slot_note': 'Saves are plain JSON under demo/saves/; deletion asks for confirmation.',
     'set_about': 'About',
