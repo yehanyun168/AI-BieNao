@@ -192,6 +192,7 @@ class SettingsPage(U.PageScreen):
                  on_music: Callable = None,
                  on_tutorial: Callable = None,
                  slot_actions: Callable = None, on_reset: Callable = None,
+                 on_back_to_menu: Callable = None,
                  values: dict = None,
                  **kwargs):
         super().__init__(title=i18n.t('set_page_title'), **kwargs)
@@ -244,6 +245,12 @@ class SettingsPage(U.PageScreen):
         left.add_widget(small_btn('重看教程', 'on',
                                   lambda: on_tutorial and on_tutorial(),
                                   width=200, height=44, font_size=FS_BODY))
+        # 返回主菜单（仅对局内提供 on_back_to_menu 时渲染）：点按弹确认框，
+        # 确认后自动存档并退回主菜单。按钮与「重看教程」同款 small_btn，保持视觉一致。
+        if on_back_to_menu:
+            left.add_widget(small_btn(i18n.t('back_to_menu'), 'on',
+                                      lambda: on_back_to_menu(),
+                                      width=200, height=44, font_size=FS_BODY))
         # 快捷键速查（Bug5：填充留白）
         keys = KeyBox(i18n.t('set_keys'), [('Space', 'k_pause'), ('1 – 6', 'k_skill'),
                                            ('F1', 'k_help'), ('Esc', 'k_esc'),

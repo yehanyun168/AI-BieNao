@@ -121,7 +121,8 @@ class PagesMixin:
                 values=preferences.get(),
                 on_tutorial=self.tutorial.replay,
                 slot_actions=self._slot_actions,
-                on_reset=lambda: self._notify(t('set_restore')))
+                on_reset=lambda: self._notify(t('set_restore')),
+                on_back_to_menu=self._confirm_back_to_menu)
             p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         return None

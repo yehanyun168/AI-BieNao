@@ -525,6 +525,35 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self.tutorial = TutorialController(self)   # P0-1 新手引导
 
+    def _confirm_back_to_menu(self) -> None:
+        """对局内「返回主菜单」确认框：确认后自动存档并退回主菜单。
+
+        仅由对局内设置页的「返回主菜单」按钮触发（主菜单设置页不传该回调）。
+        OK → 关闭弹窗 → do_save() 写默认槽（下次可继续）→ exit_to_menu() 退回主菜单。
+        弹窗皮肤（modal_header + hline + auto_h_label + make_button）与覆盖确认框一致。
+        """
+        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
+        body.add_widget(modal_header('!', t('back_to_menu_confirm_title')))
+        body.add_widget(hline())
+        body.add_widget(auto_h_label(t('back_to_menu_confirm_body'), U.FS_BODY,
+                                     color=COLORS['text']))
+        row = BoxLayout(orientation='horizontal', spacing=12,
+                        size_hint_y=None, height=50)
+        cancel = make_button(t('save_overwrite_cancel'), font_size=U.FS_BODY,
+                             height=50, bg=COLORS['panel_light'],
+                             on_release=lambda *_: pop.dismiss())
+        ok = make_button(t('back_to_menu_ok'), font_size=U.FS_BODY,
+                         height=50, bg=COLORS['panel'],
+                         on_release=lambda *_: (pop.dismiss(),
+                                                self.do_save(),
+                                                self.exit_to_menu()))
+        row.add_widget(cancel)
+        row.add_widget(ok)
+        body.add_widget(row)
+        pop = make_modal(body, size_hint=(0.5, 0.62), skin='lose',
+                         close_on_outside=True)
+        pop.open()
+
 
 # ============================================================
 # 成就取数（MainMenu / GameUI 共用口径）
