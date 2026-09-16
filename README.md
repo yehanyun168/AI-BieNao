@@ -45,9 +45,10 @@
 **无需安装 Python，无需任何依赖 —— 下载一个 exe，双击即玩：**
 
 1. 前往 [**Releases 页面（点此直达最新版）**](https://github.com/yehanyun168/AI-BieNao/releases/latest)
-2. 下载资产里的 **`AI-BieNao-v0.4.0.exe`**（约 39 MB）
+2. 下载资产里的 **`AI-BieNao-v0.4.2.exe`**（约 40 MB）
 3. 双击运行（首次启动需解压，黑屏 5–10 秒属正常）
-4. 存档、设置、崩溃日志都写在 exe 同目录，删掉即重置
+4. 存档 / 设置 / 崩溃日志统一写在 **`%APPDATA%\AI-BieNao`**
+   （v0.4.1+ 起不再写入 exe 同目录），删掉该目录即恢复出厂设置
 
 > Windows SmartScreen 首次运行可能提示「未知发布者」—— 点「更多信息 → 仍要运行」。
 > 本游戏未做代码签名（开源项目，欢迎自己从源码构建）。
@@ -60,18 +61,37 @@
 | Python | 3.12 |
 | Kivy | 2.3.1（`pip install kivy`） |
 
+**最省事方式**：Windows 下直接双击仓库根目录的 **`run_demo.bat`**
+（等价于 `启动游戏_源码最新版.bat`，自动用 Python 3.12 跑 `demo/main.py`，
+不打包也能试玩含最新改动的版本）。
+
+命令行方式：
+
 ```bash
 git clone https://github.com/yehanyun168/AI-BieNao.git
 cd AI-BieNao/demo
 python main.py          # 界面语言默认简体中文，L 键随时切换中/英
 ```
 
-打包单文件 exe（产物 `dist/AI别闹.exe`，图标自动嵌入）：
+### 打包单文件 exe
 
 ```bash
 pip install pyinstaller
 pyinstaller AI别闹.spec --noconfirm --clean
 ```
+
+- 产物：`dist/AI别闹.exe`（单文件 onefile，图标已嵌入，音频/封面随包）
+- 也可用 `build_exe.bat` 向导选择单文件 / 单目录模式
+
+发布到 GitHub Releases 时先**重命名为 ASCII 文件名**再上传
+（GitHub 会清洗中文资产名，导致下载名乱码）：
+
+```bash
+mv dist/AI别闹.exe dist/AI-BieNao-v0.4.2.exe
+```
+
+> ⚠️ 打包前建议清空 `demo/saves/` 与 `demo/settings.json`，
+> 避免把开发期的测试存档与设置带进发行包。
 
 ## 🧪 质量基线（每个版本提交前全绿）
 
@@ -91,6 +111,9 @@ AI-BieNao/
 ├── design/          设计资产（封面 AI 原稿 cover_src/）
 ├── AI别闹.spec      PyInstaller 单文件打包配置
 ├── AI别闹.ico       exe 图标（16–256 多尺寸）
+├── run_demo.bat     一键从源码启动（等价 启动游戏_源码最新版.bat）
+├── build_exe.bat    打包向导（调用 tools/build_exe.py，可选单文件/单目录）
+├── .gitignore       排除构建产物 / 依赖 / 运行时数据与存档
 └── dist/            打包产物（不入库，见 Releases 下载）
 ```
 
