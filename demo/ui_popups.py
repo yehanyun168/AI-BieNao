@@ -396,6 +396,13 @@ class PopupsMixin:
         content.add_widget(ft)
         popup = make_modal(content, size_hint=(0.62, 0.82), auto_dismiss=False,
                            skin=skin)
+        self._ending_popup = popup
+
+        def _clear_ending_popup(_popup) -> None:
+            if self._ending_popup is _popup:
+                self._ending_popup = None
+
+        popup.bind(on_dismiss=_clear_ending_popup)
         popup.open()
 
     def show_achievements(self) -> None:

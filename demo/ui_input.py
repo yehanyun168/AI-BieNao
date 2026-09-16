@@ -72,13 +72,15 @@ class InputMixin:
             slot = SLOT_MAP.get(req['slot'])
             if slot is None:
                 return t('sk_state_lock')
-            name = slot.name
+            lang = get_lang()
+            name = slot.name_for(lang)
             prereq = getattr(slot, 'prereq_slot', None)
             if prereq:
                 pslot = SLOT_MAP.get(prereq)
                 if pslot is not None and not engine.player.tech.t0_unlocked.get(
                         prereq, False):
-                    name = f"{name}（需先点亮{pslot.name}）"
+                    name = (f"{name} ({t('need_prereq')}: "
+                            f"{pslot.name_for(lang)})")
             return t('sk_unlock_hint').format(tech=name)
         except Exception:
             return t('sk_state_lock')
@@ -327,7 +329,7 @@ class InputMixin:
         避免与滚动动效互相覆盖（两边写同一个 Label 会闪）。
 
         玩家反馈 #7（确认怀疑度增长时机 + 下周期预测）：在趋势箭头之后，
-        再追加一个「下个周期预测变化量」段（青色 ``下+Δ``）。预测由
+        再追加一个「下个周期预测变化量」段（青色 ``+Δ``）。预测由
         ``engine.preview_next_cycle`` 给出（与 tick 阶段 1/2/5/5.1 同源、
         确定性部分；随机事件按设计不计入）。单位与 refresh_all 显示同构：
         算力=原始算力、下载=亿/B（/1000）、怀疑度=百分点。对局已结束则
@@ -370,7 +372,7 @@ class InputMixin:
                     pdtxt = f"{pv['downloads_delta'] / 1000.0:.2f}{t('unit_b')}"
                 else:  # suspicion：增量很小，保留 1 位小数才看得出增长
                     pdtxt = f"{pv['suspicion_delta']:.1f}%"
-                suffix += f"  [color={U.MK['cyan']}]下+{pdtxt}[/color]"
+                suffix += f"  [color={U.MK['cyan']}]+{pdtxt}[/color]"
             # 只写缓存：真正的 label.text 由紧随其后的 _animate_stat 写入
             # （它会带上这个后缀）。这样两边永不互相覆盖，滚动动效也不会
             # 把箭头抹掉。
@@ -703,6 +705,12 @@ class InputMixin:
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers) -> bool:
         """F11 快捷键表（与设计稿 S11 帮助页同源）"""
         key = keycode[1]
+
+        # 结局弹窗位于所有游戏页面之上；Esc 必须先关闭它并吞掉本次按键，
+        # 否则会穿透到后方页面，造成“后面的界面退出、弹窗仍在”的错觉。
+        if key == 'escape' and self._ending_popup is not None:
+            self._ending_popup.dismiss()
+            return True
 
         # ── 科技树全屏页打开时，方向键/回车改作节点导航（优先于全局速度档）──
         if isinstance(self._page, S.TechPage):

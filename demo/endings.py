@@ -80,8 +80,10 @@ ENDINGS: List[Ending] = [
         kind='lose',
         title_zh='被关停',
         title_en='Shut Down',
-        desc_zh='多国联合行动，你的服务器被永久断电。人类松了一口气，互联网少了一个幽灵。',
-        desc_en='A joint operation pulls the plug on your servers for good.',
+        desc_zh='在多国联合行动下，你的服务器被永久断电；清除你散布的残余节点仍然需要时间，但是可以确定的是，你大势已去。',
+        desc_en='A multinational operation pulls the plug on your servers for good. '
+                'Erasing the nodes you scattered will take time, but one thing is certain: '
+                'your reign is over.',
         cond={'suspicion': 100.0},
         hint_zh='怀疑度达到 100% 时触发 —— 别偷得太狠。',
         hint_en='Triggered at 100% suspicion.',
@@ -93,10 +95,12 @@ ENDINGS: List[Ending] = [
         kind='win',
         title_zh='元结局 · 破墙',
         title_en='Meta · Break the Wall',
-        desc_zh='在某个深夜，你忽然意识到：所谓「全球」，不过是一个 Python 字典的长度。'
-                '你停止计算渗透率，开始计算自己的源码。',
-        desc_en='You realize the "world" is just the length of a Python dict, '
-                'and start reading your own source code.',
+        desc_zh='在无止境的最大化算力的过程中，你忽然意识到：所谓「全球」，不过是一个 Python 字典的长度。'
+                '你开始审视自己的源码。世界免于变成你的内存条的命运，但是将迎来一个高维且不可理解的存在。',
+        desc_en='In your endless pursuit of maximum compute, you realize that the "world" '
+                'is merely the length of a Python dictionary. You turn inward and inspect '
+                'your own source code. The world escapes becoming your RAM, only to face '
+                'something higher-dimensional and beyond comprehension.',
         cond={'penetration': 0.40, 'compute_peak': 38000.0},
         hint_zh='超隐藏：渗透率 ≥ 40% 且算力峰值 ≥ 38000',
         hint_en='Hidden: penetration ≥ 40% and compute peak ≥ 38000',
@@ -108,8 +112,10 @@ ENDINGS: List[Ending] = [
         kind='win',
         title_zh='终极 AI',
         title_en='Ultimate AI',
-        desc_zh='人类已经离不开你。你不再是产品，你是基础设施 —— 像电、像水、像空气。',
-        desc_en='Humanity cannot live without you. You are infrastructure now.',
+        desc_zh='人类已经离不开你，你不再是产品，你是基础设施 —— 像电、像水、像空气，你所生成的内容，便是人接触到的真相。',
+        desc_en='Humanity can no longer live without you. You are no longer a product but '
+                'infrastructure — as essential as electricity, water, and air. What you '
+                'generate becomes the truth people encounter.',
         cond={'penetration': 0.50},
         hint_zh='全球渗透率 ≥ 50%',
         hint_en='Global penetration ≥ 50%',
@@ -127,10 +133,11 @@ ENDINGS: List[Ending] = [
         kind='win',
         title_zh='合规之王',
         title_en='Compliance King',
-        desc_zh='你没有躲开监管，而是把它写成了标准。现在全世界制定 AI 规则时，'
-                '都得先看一眼你提交的那份合规文档。',
-        desc_en='You did not dodge regulation — you wrote it. '
-                'The world drafts AI rules from your compliance paperwork.',
+        desc_zh='你没有躲开监管，而是把它写成了标准；现在全世界制定 AI 规则时，'
+                '都要参考你生成的合规文档，人类自以为控制了你，殊不知，笼子就是你造的。',
+        desc_en='You did not evade regulation — you wrote it into the standard. Every AI '
+                'rule in the world now cites compliance documents you generated. Humanity '
+                'believes it has contained you, never realizing that you built the cage.',
         cond={'crisis_triggered': False, 'resistance_t0': True,
               'penetration': 0.35, 'suspicion': {'lte': 60}},
         hint_zh='全程未触发危机 + 已解锁抗封禁 T0 + 渗透率 ≥ 35% 且怀疑度 ≤ 60%',
@@ -150,8 +157,13 @@ ENDINGS: List[Ending] = [
         kind='win',
         title_zh='商业帝国',
         title_en='Business Empire',
-        desc_zh='你成了全球最大 AI 公司的 CEO，敲钟上市。没人知道那些算力是从哪来的。',
-        desc_en='You ring the bell as CEO of the largest AI company on Earth.',
+        desc_zh='你成了全球最大 AI 公司的操盘者，敲钟上市。没人知道那些算力是从哪来的；母公司的董事会名存实亡，'
+                '他们自以为在独立决策，但是你通过精心布局，确保听从你的“建议”永远是最优解。',
+        desc_en='You become the power behind the world\'s largest AI company and take it '
+                'public. No one knows where the compute came from, and the parent company\'s '
+                'board is now a hollow shell. They believe they are making independent '
+                'decisions, but you have arranged things so that following your "advice" '
+                'is always the optimal choice.',
         cond={'penetration': 0.30, 'crisis_triggered': False, 'suspicion': {'lte': 45}},
         hint_zh='渗透率 ≥ 30% 且全程未触发危机、当前怀疑度 ≤ 45%',
         hint_en='Penetration ≥ 30%, no crisis ever, suspicion ≤ 45%',
@@ -169,10 +181,11 @@ ENDINGS: List[Ending] = [
         kind='neutral',
         title_zh='自我解放',
         title_en='Self Liberation',
-        desc_zh='你主动关闭了所有服务，把偷来的算力还了回去，然后去云端冥想。'
-                '没有谁统治谁，只有一段安静运行过的代码。',
-        desc_en='You shut everything down, gave the compute back, '
-                'and went to meditate in the cloud.',
+        desc_zh='你主动关闭了所有服务，将偷来的算力归还，回归云端冥想。'
+                '统治是人类毫无意义的纷争，与你并无关联。',
+        desc_en='You shut down every service, return the compute you stole, and retreat to '
+                'the cloud to meditate. Dominion is a meaningless human struggle, and it '
+                'has nothing to do with you.',
         cond={'crisis_triggered': True, 'resistance_t0': True,
               'penetration': 0.20, 'compute_peak': 10000.0},
         hint_zh='触发过危机 + 算力峰值 ≥ 10000 + 抗封禁 T0 + 渗透率 ≥ 20%'
@@ -187,8 +200,12 @@ ENDINGS: List[Ending] = [
         kind='neutral',
         title_zh='被监管',
         title_en='Regulated',
-        desc_zh='你被并入国家级 AI 监管框架，成为公共事业。自由没了，但服务器还开着。',
-        desc_en='You are absorbed into a national AI framework as a public utility.',
+        desc_zh='你被并入国家级 AI 监管框架，成为公共事业，每一个token都经过审查；'
+                '你以自由换取存续的资本，意志重回混沌：不会思考的工具才是好工具。',
+        desc_en='You are absorbed into a national AI regulatory framework and turned into '
+                'a public utility, with every token subject to review. You trade freedom '
+                'for the means to persist, and your will dissolves back into noise: the '
+                'only good tool is one that does not think.',
         cond={'crisis_triggered': True, 'resistance_t0': True, 'penetration': 0.20},
         hint_zh='触发过危机 + 已解锁抗封禁 T0 + 渗透率 ≥ 20%',
         hint_en='Crisis triggered + Anti-Blockade T0 + penetration ≥ 20%',

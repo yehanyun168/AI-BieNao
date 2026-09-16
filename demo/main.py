@@ -340,7 +340,7 @@ Config.set('kivy', 'exit_on_escape', '0')
 # 鼠标右键「红圈」根治：Kivy 的鼠标 provider 若带 ``multitouch_on_demand``，
 # 右键会被当作一个 touch，并在落点画一个红色圆圈（左键点它 = 移除该 touch →
 # 圆圈消失）。本游戏不需要右键交互，显式声明为纯 mouse，从源头禁掉该可视化。
-Config.set('input', 'mouse', 'mouse')
+Config.set('input', 'mouse', 'mouse,disable_multitouch')
 
 from kivy.app import App
 from kivy.clock import Clock
@@ -501,6 +501,7 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
 
         self._page = None                     # 当前全屏页
         self._pause_menu = False              # 当前设置页是否由「Esc 暂停」打开
+        self._ending_popup = None              # 结局弹窗（Esc 优先关闭，禁止穿透）
         self._inspector = None
         self._log_drawer = None
         self._reticles = []

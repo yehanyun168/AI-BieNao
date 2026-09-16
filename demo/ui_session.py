@@ -153,7 +153,7 @@ class SessionMixin:
         for sid, card in self.skill_cards.items():
             card.set_texts(self._skill_name(sid), self._skill_desc(sid))
         for sid, btn in self.rail.buttons.items():
-            btn._caption = '' if sid == 'help' else t(f'rail_{sid}')
+            btn._caption = t(f'rail_{sid}')
             btn._sync_text()
         self.lbl_tick_cap.text = t('stats_tick')
         U.fit_width(self.lbl_tick_cap, pad=6)
@@ -379,19 +379,17 @@ class SessionMixin:
     #                       ② game_over 状态下按 Esc（不再暂停，直接 exit）。
     # ========================================================
     def pause_menu(self) -> None:
-        """暂停（未暂停时）+ 打开设置页。pause 音由 toggle_pause 自带。"""
-        if not self.paused:
-            self.toggle_pause()          # 冻结剩余秒数 + 停 tick + 播音效
+        """按 Esc 打开设置页，并复用事件弹窗的暂停所有权规则。"""
+        self._pause_for_event()           # 冻结倒计时；保留玩家原有暂停状态
         self._pause_menu = True
         self.open_page('settings')
 
     def _leave_pause_menu(self) -> None:
-        """离开「暂停态设置页」→ 恢复对局（仅当仍处于 paused，避免二次恢复）。"""
+        """离开 Esc 设置页；只恢复由该页面造成的暂停。"""
         if not getattr(self, '_pause_menu', False):
             return
         self._pause_menu = False
-        if self.paused:
-            self.toggle_pause()          # 从冻结处续走 + 播音效
+        self._resume_after_event()        # 玩家原本手动暂停时不会误恢复
 
     def _esc_fallback(self) -> None:
         """Esc 最外层兜底：对局进行中 → 暂停 + 设置页；已结束 → 回主菜单。"""

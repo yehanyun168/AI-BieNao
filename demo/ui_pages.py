@@ -25,6 +25,10 @@ from ui_modal import (make_button, make_modal, modal_header, auto_h_label)
 from ui_v4 import hline
 
 
+# 阅读这些全屏信息页时冻结回合；关闭后只恢复由页面造成的暂停。
+AUTO_PAUSE_PAGES = frozenset(('skills', 'tech', 'ach', 'help'))
+
+
 # ============================================================
 # PagesMixin —— GameUI 的全屏页 / 检视卡 / 日志抽屉
 # ============================================================
@@ -53,6 +57,8 @@ class PagesMixin:
         page.pos_hint = {'x': 0, 'y': 0}
         self.add_widget(page)
         self.rail.set_active(name)
+        if name in AUTO_PAUSE_PAGES:
+            self._pause_for_event()
         self._refresh_page(name, page)
 
     def close_page(self) -> None:
@@ -61,12 +67,16 @@ class PagesMixin:
         # Esc 关页 / open_page 切页；其它页与普通设置页不受影响。
         was_pause_menu = (isinstance(self._page, S.SettingsPage)
                           and getattr(self, '_pause_menu', False))
+        was_auto_pause_page = (
+            getattr(self._page, 'page_name', '') in AUTO_PAUSE_PAGES)
         if self._page is not None:
             self.remove_widget(self._page)
             self._page = None
         self.rail.set_active('none')
         if was_pause_menu:
             self._leave_pause_menu()
+        if was_auto_pause_page:
+            self._resume_after_event()
 
     def _close_page_user(self) -> None:
         """用户主动退出页面（点返回 / Esc）—— 补一个返回音。
@@ -197,8 +207,8 @@ class PagesMixin:
 
         if locked:
             req = SKILL_UNLOCK.get(sid)
-            unlock_hint = (t('sk_unlock_hint').format(
-                tech=SLOT_MAP[req['slot']].name) if req else t('sk_starter_hint'))
+            unlock_hint = (self._skill_unlock_text(sid)
+                           if req else t('sk_starter_hint'))
             card.update(skill, self.SKILL_ICON[sid], self._skill_name(sid),
                         self._key_hint(sid), [],
                         rich_desc, 0, "0.0M", "0.00M",
@@ -567,6 +577,9 @@ class PagesMixin:
                 on_focus=self._on_inspector_focus)
             self._inspector.pos_hint = {'x': 0, 'y': 0}
             self.map_stage.add_widget(self._inspector)
+        self.rail.opacity = 0
+        for button in self.rail.buttons.values():
+            button.disabled = True
         self._inspector.update(
             self._country_state(code), self.stats,
             engine.player.total_downloads_m, engine.player.suspicion,
@@ -576,6 +589,9 @@ class PagesMixin:
         if self._inspector is not None:
             self.map_stage.remove_widget(self._inspector)
             self._inspector = None
+        self.rail.opacity = 1
+        for button in self.rail.buttons.values():
+            button.disabled = False
 
     def _refresh_lang_panels(self) -> None:
         """语言切换后刷新**缓存在 map_stage 上的浮层**文案。
@@ -616,17 +632,21 @@ class PagesMixin:
             on_export=self._export_log)
         self._log_drawer.pos_hint = {'right': 1, 'y': 0}
         self.map_stage.add_widget(self._log_drawer)
-        self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
+        self.stats.begin_reading_logs()
+        self.rail.buttons['log'].set_badge(0)
+        self._log_drawer.rebuild(self.stats.logs, 0)
         self.rail.set_active('log')
 
     def _close_log(self) -> None:
         if self._log_drawer is not None:
             self.map_stage.remove_widget(self._log_drawer)
             self._log_drawer = None
+            self.stats.end_reading_logs()
         self.rail.set_active('none')
 
     def _mark_logs_read(self) -> None:
         self.stats.clear_unread()
+        self.rail.buttons['log'].set_badge(0)
         if self._log_drawer is not None:
             self._log_drawer.rebuild(self.stats.logs, 0)
 

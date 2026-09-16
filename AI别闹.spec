@@ -54,6 +54,10 @@ _BGM_DST = 'assets/bgm'
 _COVER_SRC = 'demo/assets/cover'
 _COVER_DST = 'assets/cover'
 
+# 对局页面背景（科技树等）
+_BACKGROUNDS_SRC = 'demo/assets/backgrounds'
+_BACKGROUNDS_DST = 'assets/backgrounds'
+
 # 构建期自检：缺 wav 直接中止打包，而不是静默产出一个「哑掉」的 exe
 _SFX_FILES = sorted(glob.glob(_SFX_SRC + '/*.wav'))
 if not _SFX_FILES:
@@ -88,13 +92,14 @@ datas = (
     + [(_SFX_SRC, _SFX_DST)]    # 音效：整目录携带，全部 wav/ogg 自动跟随
     + [(_BGM_SRC, _BGM_DST)]    # BGM：整目录携带（calm/tense/menu + CREDITS）
     + [(_COVER_SRC, _COVER_DST)]  # 封面资产：主视觉 + 图标 PNG
+    + [(_BACKGROUNDS_SRC, _BACKGROUNDS_DST)]  # 对局页面背景
 )
 
 print('[spec] 随包音效：%d 个 wav -> %s（%s）'
       % (len(_SFX_FILES), _SFX_DST, ', '.join(os.path.basename(f) for f in _SFX_FILES)))
 print('[spec] 随包 BGM：%d 个 ogg -> %s' % (len(_BGM_FILES), _BGM_DST))
-print('[spec] datas 条目合计：%d（显式 %d + 自动 %d + 目录 3）'
-      % (len(datas), len(_EXPLICIT_DATAS), len(datas) - len(_EXPLICIT_DATAS) - 3))
+print('[spec] datas 条目合计：%d（显式 %d + 自动 %d + 目录 4）'
+      % (len(datas), len(_EXPLICIT_DATAS), len(datas) - len(_EXPLICIT_DATAS) - 4))
 
 # ---------------------------------------------------------------------------
 # Windows 应用清单：声明 DPI 感知为 per-monitor（PMv2）

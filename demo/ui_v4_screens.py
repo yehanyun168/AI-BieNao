@@ -22,6 +22,8 @@ ui_v4_screens.py - AI 别闹 v0.4 对局内全屏页 + 家族统一入口
     - 颜色/尺寸全部来自 ui_v4 的令牌，不在此硬编码新色值。
 """
 from collections import deque
+import os
+import sys
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from kivy.graphics import Color, Line, Rectangle
@@ -30,6 +32,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
+from kivy.uix.image import Image
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
@@ -43,6 +46,15 @@ import i18n
 import origins
 import sfx
 import ui_v4 as U
+
+
+def _asset_file(*parts: str) -> str:
+    """返回开发态或 PyInstaller 打包态中的资源绝对路径。"""
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        root = sys._MEIPASS
+    else:
+        root = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(root, 'assets', *parts)
 from ui_v4 import (
     AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
     KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
@@ -365,9 +377,31 @@ class TechPage(U.PageScreen):
         self.legend.add_widget(self.lbl_hint)
         self.body.add_widget(self.legend)
 
-        # ---- 网络图画布 ----
+        # ---- 网络图画布：机房背景 + 深色遮罩 + 可交互节点层 ----
+        self.graph_stage = FloatLayout()
+        self.tech_bg = Image(
+            source=_asset_file('backgrounds', 'tech_server_room.jpg'),
+            fit_mode='cover',
+            size_hint=(1, 1),
+            pos_hint={'x': 0, 'y': 0})
+        self.graph_stage.add_widget(self.tech_bg)
+
+        self.tech_bg_overlay = Widget(
+            size_hint=(1, 1),
+            pos_hint={'x': 0, 'y': 0})
+        with self.tech_bg_overlay.canvas:
+            self._tech_bg_tint = Color(0.020, 0.031, 0.047, 0.72)
+            self._tech_bg_rect = Rectangle(
+                pos=self.tech_bg_overlay.pos,
+                size=self.tech_bg_overlay.size)
+        self.tech_bg_overlay.bind(
+            pos=lambda inst, value: setattr(self._tech_bg_rect, 'pos', value),
+            size=lambda inst, value: setattr(self._tech_bg_rect, 'size', value))
+        self.graph_stage.add_widget(self.tech_bg_overlay)
+
         self.canvas_view = TechCanvas(on_pick=self._on_node_pick)
-        self.body.add_widget(self.canvas_view)
+        self.graph_stage.add_widget(self.canvas_view)
+        self.body.add_widget(self.graph_stage)
 
         # ---- 底部详情面板 ----
         self.detail = StrokePanel(bg=COLORS['panel'], border=COLORS['border_2'],
@@ -397,6 +431,9 @@ class TechPage(U.PageScreen):
                                     height=44, font_size=FS_BODY)
         self.btn_action.size_hint_y = None
         self.btn_action.height = 44
+        self.btn_action.halign = 'center'
+        self.btn_action.valign = 'middle'
+        self.btn_action.bind(text=self._fit_action_button)
         dright.add_widget(self.lbl_d_cost)
         dright.add_widget(self.btn_action)
         dright.add_widget(Widget())                  # 底弹簧
@@ -407,6 +444,13 @@ class TechPage(U.PageScreen):
 
         self._action_cb: Callable = None
         self._show_detail(None)
+
+    def _fit_action_button(self, *_args) -> None:
+        """按当前文案的真实纹理宽度调整操作按钮。"""
+        self.btn_action.text_size = (None, None)
+        self.btn_action.texture_update()
+        self.btn_action.width = max(
+            120, float(self.btn_action.texture_size[0]) + 28)
 
     # ---------------- 建图（一次） ----------------
     def ensure_slots(self, tech_tree: Sequence, on_slot_click: Callable = None) -> None:

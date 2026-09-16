@@ -206,15 +206,17 @@ class HudBox(FloatLayout):
 
 
 class RailBar(HudBox):
-    """右侧指令栏（设计稿 .rail）：6 个 44×44 按钮，垂直居中"""
+    """左侧指令栏：6 个横向按钮，垂直居中。"""
+
+    GAP = 6
 
     def __init__(self, items, **kwargs):
-        super().__init__(anchor='cr', **kwargs)
+        super().__init__(anchor='cl', **kwargs)
         self.size_hint = (None, None)
         # ⚠️ 不要设 self.opacity = 0：Kivy 的 opacity 会连子按钮一起乘成透明，
         # 导致整条 rail 永久不可见（曾因此"看不到科技树"）。rail 按设计稿 .hud
         # 显示半透明底板 + 边框，按钮标签由 RailButton 自绘。
-        self.box = BoxLayout(orientation='vertical', spacing=4,
+        self.box = BoxLayout(orientation='vertical', spacing=self.GAP,
                              size_hint=(None, None), padding=0)
         self.buttons = {}
         for key, icon, label in items:
@@ -223,7 +225,9 @@ class RailBar(HudBox):
             self.box.add_widget(b)
         self.add_widget(self.box)
         self._layout_hud()
-        self.content_size(44, 44 * len(items) + 4 * (len(items) - 1))
+        self.content_size(RailButton.BASE_W,
+                          RailButton.BASE_H * len(items)
+                          + self.GAP * (len(items) - 1))
 
     _on_pick = None
 
@@ -246,23 +250,25 @@ class RailBar(HudBox):
     def refresh_scale(self, scale: float) -> None:
         for b in self.buttons.values():
             b.refresh_scale(scale)
-        self.content_size(44 * scale,
-                          44 * scale * len(self.buttons)
-                          + 4 * (len(self.buttons) - 1))
+        gap = self.GAP * scale
+        self.box.spacing = gap
+        self.content_size(RailButton.BASE_W * scale,
+                          RailButton.BASE_H * scale * len(self.buttons)
+                          + gap * (len(self.buttons) - 1))
 
     def _layout_hud(self, *_args) -> None:
-        """Rail 特殊定位：右侧居中（不是四角）"""
+        """Rail 特殊定位：左侧居中，并为底板保留统一内边距。"""
         par = self.parent
         if par is None:
             return
         w = self._content_w or self.width
         h = self._content_h or self.height
         self.size = (w, h)
-        self.box.size = (w, h)
-        self.box.pos = self.pos
-        self.pos = (par.x + par.width - w - 6,
+        self.pos = (par.x + 6,
                     par.y + (par.height - h) / 2.0)
-        self.box.pos = self.pos
+        self.box.size = (max(0, w - self.PAD * 2),
+                         max(0, h - self.PAD * 2))
+        self.box.pos = (self.x + self.PAD, self.y + self.PAD)
 
 
 class LegendBar(HudBox):
@@ -282,9 +288,18 @@ class LegendBar(HudBox):
             self._base[key] = ''
             self.box.add_widget(chip)
         self.add_widget(self.box)
-        self.content_size(430, 16)
+        self._fit_content()
         self.bind(pos=self._sync_box, size=self._sync_box)
         Clock.schedule_once(self._sync_box, 0)
+
+    def _fit_content(self) -> None:
+        """按各项单行文本宽度调整图例栏总宽度。"""
+        for chip in self.items.values():
+            chip.fit_width()
+        visible = [chip for chip in self.items.values() if chip.opacity > 0]
+        width = sum(chip.width for chip in visible)
+        width += self.box.spacing * max(len(visible) - 1, 0)
+        self.content_size(width, 16)
 
     def _sync_box(self, *_args) -> None:
         self.box.pos = (self.x + self.PAD, self.y + self.PAD)
@@ -299,6 +314,7 @@ class LegendBar(HudBox):
             if key in texts:
                 self._base[key] = texts[key]
                 self._apply_chip(key)
+        self._fit_content()
 
     def apply_a11y(self) -> None:
         """色盲辅助开关变化：重画形状符号 + 文字前缀。
@@ -309,6 +325,7 @@ class LegendBar(HudBox):
         if self._mode == 'states':
             for key in self.items:
                 self._apply_chip(key)
+            self._fit_content()
         else:
             self._apply_scale_chips()
 
@@ -334,6 +351,7 @@ class LegendBar(HudBox):
                      if (ST.A11Y_SHAPES and i < len(SCALE_SHAPE)) else '')
             chip.set_shape(glyph)
             chip.set_text(((glyph + ' ') if glyph else '') + text)
+        self._fit_content()
 
     def set_scale(self, scale_items) -> None:
         """图层模式下换成自定义色阶图例。scale_items: ``[(fill, edge, text), …]``"""
@@ -635,6 +653,7 @@ class HudMixin:
 
         # HUD：区域页签（左上）
         self.region_hud = HudBox(anchor='tl')
+        self.region_hud._top_inset = 8
         self.region_row = BoxLayout(orientation='horizontal', spacing=4,
                                     size_hint=(None, None), height=20)
         self.region_tabs = {}
@@ -659,14 +678,14 @@ class HudMixin:
         self.legend_hud = LegendBar()
         stage.add_widget(self.legend_hud)
 
-        # 指令栏（右侧居中）—— 图标统一走 U.SYM（避开字体缺失的豆腐块字符）
+        # 指令栏（左侧居中）—— 图标统一走 U.SYM（避开字体缺失的豆腐块字符）
         self.rail = RailBar([
             ('drop',  U.SYM['drop'], t('rail_drop')),
             ('tech',  U.SYM['tech'], t('rail_tech')),
             ('skills', U.SYM['skills'], t('rail_skills')),
             ('log',   U.SYM['log'], t('rail_log')),
             ('ach',   U.SYM['ach'], t('rail_ach')),
-            ('help',  U.SYM['help'], ''),
+            ('help',  U.SYM['help'], t('rail_help')),
         ])
         self.rail.set_handler(self._on_rail)
         stage.add_widget(self.rail)

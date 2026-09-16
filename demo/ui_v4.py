@@ -855,10 +855,10 @@ class TgtLabel(PixelLabel):
 
 
 # ============================================================
-# RailButton —— 右侧指令栏按钮（设计稿 .rail button，44×44）
+# RailButton —— 左侧指令栏按钮（128×56）
 # ============================================================
 class RailButton(Button):
-    """指令栏按钮：图标 + 小字，触控尺寸 44px 达标。
+    """指令栏按钮：图标在左、文字在右，触控尺寸 128×56px。
 
     Args:
         icon: 图标字符。
@@ -866,17 +866,29 @@ class RailButton(Button):
         badge: 右上角未读角标数字（0 = 不显示）。
     """
 
-    BASE = 44
+    BASE_W = 128
+    BASE_H = 56
+    ICON_FS = 26
+    CAPTION_FS = 18
+    SOLO_ICON_FS = 26
+    PAD_X = 12
 
     def __init__(self, icon: str = '', label: str = '', badge: int = 0,
                  on_click: Callable = None, **kwargs):
         kwargs.setdefault('size_hint', (None, None))
-        kwargs.setdefault('size', (self.BASE, self.BASE))
+        kwargs.setdefault('size', (self.BASE_W, self.BASE_H))
         super().__init__(**kwargs)
         self.background_normal = ''
         self.background_color = (0.051, 0.067, 0.090, 0.9)
         self.color = COLORS['text_dim']
         self.markup = True
+        # 统一基础字号和文本边界，确保横排内容在缩放后仍保持垂直居中。
+        self.font_size = self.CAPTION_FS
+        self.halign = 'left'
+        self.valign = 'middle'
+        self.padding = (self.PAD_X, 0)
+        self.text_size = self.size
+        self.bind(size=self._sync_text_bounds)
         self._icon = icon
         # ⚠️ 绝不能叫 self._label —— Kivy 的 Button 继承自 Label，
         #    _label 是它内部持有的 CoreLabel 实例，覆盖成字符串会让
@@ -892,16 +904,20 @@ class RailButton(Button):
         if on_click:
             self.bind(on_release=lambda *_: on_click(self))
 
+    def _sync_text_bounds(self, *_args) -> None:
+        """让单行图标和文字在按钮内水平、垂直居中。"""
+        self.text_size = self.size
+
     def _sync_text(self) -> None:
         s = self._scale
         if self._caption:
-            self.text = (f"[size={int(FS_H3 * s)}]{self._icon}[/size]\n"
-                         f"[size={int(FS_TINY * s)}]{self._caption}[/size]")
+            self.text = (f"[size={int(self.ICON_FS * s)}]{self._icon}[/size]   "
+                         f"[size={int(self.CAPTION_FS * s)}]{self._caption}[/size]")
         else:
-            self.text = f"[size={int(FS_H2 * s)}]{self._icon}[/size]"
+            self.text = f"[size={int(self.SOLO_ICON_FS * s)}]{self._icon}[/size]"
         if self._badge > 0:
             self.text += (f" [color={MK['red']}]"
-                          f"[size={int(FS_TINY * s)}]"
+                          f"[size={int(self.CAPTION_FS * s)}]"
                           f"{self._badge}[/size][/color]")
 
     def _redraw_frame(self, *_args) -> None:
@@ -940,7 +956,9 @@ class RailButton(Button):
 
     def refresh_scale(self, scale: float) -> None:
         self._scale = scale
-        self.size = (self.BASE * scale, self.BASE * scale)
+        self.size = (self.BASE_W * scale, self.BASE_H * scale)
+        self.padding = (self.PAD_X * scale, 0)
+        self.font_size = self.CAPTION_FS * scale
         self._sync_text()
 
 
@@ -1128,6 +1146,15 @@ class LegendChip(FloatLayout):
 
     def set_text(self, text: str) -> None:
         self.label.text = text
+        self.fit_width()
+
+    def fit_width(self) -> None:
+        """按单行文本的真实宽度扩展图例项，避免文字换行或截断。"""
+        self.label.text_size = (None, None)
+        self.label.texture_update()
+        text_w = float(self.label.texture_size[0])
+        self.width = self._swatch + 5 + text_w + 2
+        self._layout()
 
     def set_colors(self, fill_hex: str, edge_hex: str) -> None:
         self._fill, self._edge = fill_hex, edge_hex
@@ -1845,15 +1872,15 @@ class KeyBox(StrokePanel):
         super().__init__(bg=COLORS['panel_2'], border=COLORS['border'],
                          spacing=3, padding=(8, 6), **kwargs)
         h = mk_label(title, font_size=FS_CAP, color=COLORS['purple'],
-                     size_hint_y=None, height=18)
+                     size_hint_y=None, height=24)
         self.add_widget(h)
         for key, desc in rows:
             self.add_widget(self._make_row(key, desc))
 
     @staticmethod
     def _make_row(key: str, desc: str) -> FloatLayout:
-        row = FloatLayout(size_hint_y=None, height=18)
-        kbd = PxChip(key, tone='plain', height=17)
+        row = FloatLayout(size_hint_y=None, height=26)
+        kbd = PxChip(key, tone='plain', height=26)
         kbd.color = COLORS['yellow']
         kbd._edge = list(COLORS['border_2'])
         kbd._bg = list(COLORS['panel'])
@@ -1902,6 +1929,8 @@ class SaveSlotRow(Widget):
         for text, tone, cb in actions:
             b = Button(text=text, font_size=FS_SM, size_hint=(None, None),
                        size=(78, 34), background_normal='', markup=True)
+            b.texture_update()
+            b.width = max(78, float(b.texture_size[0]) + 20)
             b.background_color = list(COLORS['panel_2'])
             b.color = COLORS[{'primary': 'cyan', 'danger': 'red'}.get(tone, 'text')]
             if tone == 'primary':
@@ -1925,14 +1954,16 @@ class SaveSlotRow(Widget):
         w, h = self.size
         if w < 8 or h < 8:
             return
-        bw, bh, gap = 78, 34, 8
-        total = len(self._btns) * bw + max(len(self._btns) - 1, 0) * gap
+        bh, gap = 34, 8
+        total = (sum(b.width for b in self._btns)
+                 + max(len(self._btns) - 1, 0) * gap)
         bx = x + w - 10 - total
+        buttons_left = bx
         for b in self._btns:
             b.pos = (bx, y + (h - bh) / 2)
-            bx += bw + gap
+            bx += b.width + gap
         self.lbl.pos = (x + 10, y)
-        self.lbl.size = (max(bx - x - 10 - gap - 10, 1), h)
+        self.lbl.size = (max(buttons_left - gap - (x + 10), 1), h)
         self.lbl.text_size = self.lbl.size
         self._redraw()
 
@@ -1997,9 +2028,15 @@ class PageScreen(StrokePanel):
     def set_back_button(self, text: str, callback: Callable) -> None:
         self.btn_back.text = text
         self.btn_back.opacity = 1
-        self.btn_back.size = (max(len(text) * FS_BODY * 0.72 + 20, 100),
-                              MIN_TOUCH)
+        self._fit_back_button()
         self.btn_back.bind(on_release=lambda *_: callback())
+
+    def _fit_back_button(self) -> None:
+        """按实际渲染宽度扩展返回按钮，兼容中英文与窗口缩放。"""
+        self.btn_back.text_size = (None, None)
+        self.btn_back.texture_update()
+        self.btn_back.size = (max(float(self.btn_back.texture_size[0]) + 28, 120),
+                              self.btn_back.height or MIN_TOUCH)
 
     def add_head_widget(self, w: Widget) -> None:
         """往头部右侧加入控件。
@@ -2024,6 +2061,8 @@ class PageScreen(StrokePanel):
         self.lbl_title.font_size = FS_H3 * scale
         self.btn_back.font_size = FS_BODY * scale
         self.btn_back.height = MIN_TOUCH * scale
+        if self.btn_back.opacity:
+            self._fit_back_button()
         # 标题字号变了必须重测宽度，否则会裁字
         measure = getattr(self.lbl_title, '_fit_width_measure', None)
         if callable(measure):

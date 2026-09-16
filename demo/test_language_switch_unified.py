@@ -62,7 +62,7 @@ class UnifiedLanguageSwitchTests(unittest.TestCase):
 
         game.toggle_lang()
 
-        for key in ('drop', 'tech', 'skills', 'log', 'ach'):
+        for key in ('drop', 'tech', 'skills', 'log', 'ach', 'help'):
             self.assertEqual(game.rail.buttons[key]._caption, i18n.t(f'rail_{key}'))
 
     def test_menu_settings_switch_keeps_translated_settings_open(self):

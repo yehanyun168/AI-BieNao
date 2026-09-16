@@ -248,7 +248,7 @@ class SettingsPage(U.PageScreen):
         keys = KeyBox(i18n.t('set_keys'), [('Space', 'k_pause'), ('1 – 6', 'k_skill'),
                                            ('F1', 'k_help'), ('Esc', 'k_esc'),
                                            ('L', 'k_lang'), ('S / R', 'k_save')])
-        keys.size_hint_y, keys.height = None, 190
+        keys.size_hint_y, keys.height = None, 216
         left.add_widget(keys)
         # 关于游戏（Bug5：弹性卡片，吃掉面板剩余空间；奖杯像素画压阵）
         about = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],

@@ -70,6 +70,7 @@ class UiStats:
         self.global_unlocked: deque = deque(maxlen=window)    # 已解锁国家数
         self.logs: List[dict] = []                 # {tick, tone, text}
         self.unread: int = 0
+        self._count_unread: bool = True
 
     # ---- 采样 ----
     def sample(self, countries, player, last_growth: float = 0.0) -> None:
@@ -110,10 +111,20 @@ class UiStats:
         """写一条日志（tone: i 信息 / w 警告 / e 阻止 / g 成就）。"""
         self.logs.insert(0, {'tick': tick, 'text': text, 'tone': tone})
         self.logs = self.logs[:200]            # 设计稿：只保留最近 200 条
-        self.unread += 1
+        if self._count_unread:
+            self.unread += 1
 
     def clear_unread(self) -> None:
         self.unread = 0
+
+    def begin_reading_logs(self) -> None:
+        """日志抽屉打开期间，新日志直接视为已读。"""
+        self.unread = 0
+        self._count_unread = False
+
+    def end_reading_logs(self) -> None:
+        """日志抽屉关闭后，恢复未读累加。"""
+        self._count_unread = True
 
     # ---- 读取 ----
     def spark_values(self, code: str) -> List[float]:
