@@ -46,7 +46,7 @@ import i18n
 import ui_v4 as U
 import ui_v4_panels as P
 
-# UI 缩放档位（F12 缩放：面板宽与字号同倍缩，比值应保持）
+# 自动 UI 缩放档位：面板宽与字号同倍缩，比值应保持
 SCALES = (0.8, 1.0, 1.3)
 
 FAILED = []

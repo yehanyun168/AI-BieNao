@@ -45,7 +45,7 @@ for _fp in (r"C:\Windows\Fonts\msyh.ttc", r"C:\Windows\Fonts\simhei.ttf"):
 import i18n
 import ui_v4_panels as P
 
-# _compute_scale 的钳位区间是 0.68~1.45（再乘用户 F12 缩放），两端都要过
+# _compute_scale 的自动钳位区间是 0.68~1.45，两端都要过
 SCALES = (0.68, 0.8, 1.0, 1.3, 1.45)
 FAILED = []
 

@@ -445,6 +445,7 @@ class HudMixin:
 
         # ---- 右组：周期数（醒目，用户要求「右上角显示周期数」）----
         self.tick_box = self._make_tick_box()
+        self._refresh_speed_indicator()
         bar.add_widget(self.tick_box)
         bar.add_widget(self._sep())
 
@@ -471,43 +472,89 @@ class HudMixin:
         return holder
 
     def _make_tick_box(self) -> Widget:
-        """顶栏游戏年月、周期标签和周期数。"""
+        """顶栏调速减键、游戏年月、周期数和调速加键。"""
         box = StrokePanel(bg=tuple(COLORS['panel_2']),
                           border=tuple(COLORS['cyan']),
                           spacing=0, padding=(10, 2),
                           orientation='horizontal',
                           size_hint=(None, None), height=MIN_TOUCH)
+        self._speed_bar_states = [False] * len(ST.SPEED_STEPS)
+        self._speed_bar_colors = []
+        self._speed_bar_rects = []
+        with box.canvas.after:
+            for _ in ST.SPEED_STEPS:
+                self._speed_bar_colors.append(Color(*COLORS['border_2']))
+                self._speed_bar_rects.append(Rectangle(pos=(0, 0), size=(1, 1)))
+        self.btn_speed_down = PxChip(
+            U.SYM['minus'], tone='plain',
+            on_press=lambda *_: self.set_speed_idx(self.speed_idx - 1),
+            pos_hint={'center_y': 0.5})
+        box.add_widget(self.btn_speed_down)
         self.lbl_game_date = mk_label('0000-00', font_size=U.FS_SM,
-                                      color=COLORS['cyan'], size_hint_x=None)
+                                      color=COLORS['cyan'], size_hint_x=None,
+                                      pos_hint={'center_y': 0.5})
         fit_width(self.lbl_game_date, pad=8)
         self._register(self.lbl_game_date, font=U.FS_SM)
         box.add_widget(self.lbl_game_date)
         self.lbl_tick_cap = mk_label(t('stats_tick'), font_size=U.FS_CAP,
                                      color=COLORS['text_dim'],
-                                     size_hint_x=None)
+                                     size_hint_x=None,
+                                     pos_hint={'center_y': 0.5})
         fit_width(self.lbl_tick_cap, pad=6)
         self._register(self.lbl_tick_cap, font=U.FS_CAP)
         box.add_widget(self.lbl_tick_cap)
 
         self.lbl_tick_val = mk_label('0', font_size=U.FS_H2,
                                      color=COLORS['cyan'], halign='right',
-                                     size_hint_x=None)
+                                     size_hint_x=None,
+                                     pos_hint={'center_y': 0.5})
         fit_width(self.lbl_tick_val, pad=4, min_w=44)
         self._register(self.lbl_tick_val, font=U.FS_H2)
         box.add_widget(self.lbl_tick_val)
+        self.btn_speed_up = PxChip(
+            U.SYM['plus'], tone='plain',
+            on_press=lambda *_: self.set_speed_idx(self.speed_idx + 1),
+            pos_hint={'center_y': 0.5})
+        box.add_widget(self.btn_speed_up)
 
         # 宽度随内容自适应（数字变多位数时自动变宽）
         def _sync(*_a) -> None:
-            gap = 6
-            w = (self.lbl_game_date.width + self.lbl_tick_cap.width
-                 + self.lbl_tick_val.width + gap * 2 + 20)
+            gap = 5
+            w = (self.btn_speed_down.width + self.lbl_game_date.width
+                 + self.lbl_tick_cap.width + self.lbl_tick_val.width
+                 + self.btn_speed_up.width + gap * 4 + 20)
             box.width = w
+        self.btn_speed_down.bind(width=lambda *_: _sync())
         self.lbl_game_date.bind(width=lambda *_: _sync())
         self.lbl_tick_cap.bind(width=lambda *_: _sync())
         self.lbl_tick_val.bind(width=lambda *_: _sync())
+        self.btn_speed_up.bind(width=lambda *_: _sync())
         self._register(box, height=MIN_TOUCH)
+        box.bind(pos=self._refresh_speed_indicator,
+                 size=self._refresh_speed_indicator)
         _sync()
+        self._refresh_speed_indicator()
         return box
+
+    def _refresh_speed_indicator(self, *_args) -> None:
+        """在时间框正上方绘制四块固定宽度的速度档位指示条。"""
+        box = getattr(self, 'tick_box', None)
+        if box is None:
+            return
+        count = len(ST.SPEED_STEPS)
+        active = max(0, min(int(self.speed_idx) + 1, count))
+        self._speed_bar_states = [i < active for i in range(count)]
+        scale = max(float(getattr(self, 'scale', 1.0)), 0.1)
+        block_h, gap = 4 * scale, 3 * scale
+        block_w = max((box.width - gap * (count - 1)) / count, 1)
+        start_x = box.x
+        y = box.top + 3 * scale
+        for i, (color, rect) in enumerate(zip(
+                self._speed_bar_colors, self._speed_bar_rects)):
+            color.rgba = (COLORS['cyan'] if self._speed_bar_states[i]
+                          else COLORS['border_2'])
+            rect.pos = (start_x + i * (block_w + gap), y)
+            rect.size = (block_w, block_h)
 
     @staticmethod
     def _sep() -> Widget:

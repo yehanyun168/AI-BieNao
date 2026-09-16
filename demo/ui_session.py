@@ -222,6 +222,7 @@ class SessionMixin:
         sfx.play('pause')                 # 点击暂停/继续的个性化音效
         if self.paused:
             self.paused = False
+            self._event_pause_owned = False
             self._resume_from_pause()
             bgm.resume()                 # 随游戏一同恢复 BGM
         else:
@@ -236,6 +237,14 @@ class SessionMixin:
     def _pause_for_event(self) -> None:
         """事件弹窗复用手动暂停流程；已暂停时保持原状态。"""
         if not self.paused:
+            self.toggle_pause()
+            self._event_pause_owned = True
+
+    def _resume_after_event(self) -> None:
+        """只恢复由事件造成的暂停；玩家原本手动暂停则保持不变。"""
+        owned = bool(getattr(self, '_event_pause_owned', False))
+        self._event_pause_owned = False
+        if owned and self.paused and not engine.player.game_over:
             self.toggle_pause()
 
     def _resume_from_pause(self) -> None:
@@ -301,6 +310,7 @@ class SessionMixin:
         ST.CURRENT_SPEED_IDX = self.speed_idx
         preferences.update(speed_idx=self.speed_idx)
         self._reschedule_tick()
+        self._refresh_speed_indicator()
         self.refresh_all()
 
     def _set_motion_idx(self, i: int) -> None:

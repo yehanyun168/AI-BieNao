@@ -437,9 +437,9 @@ for _cur, _sus, _want in ((None, 0.0, 'calm'), (None, 34.9, 'calm'),
         f"怀疑度 {_sus}(当前 {_cur}) 应映射到 {_want}"
 _bgm._current = None
 # 节奏守卫：base_tick_seconds 是真实 tick 间隔唯一来源（main.py 直接消费），
-# 被误改会静默破坏 30s/周期 设计节奏。协作者 PR 曾两次改成 4.0（提交说明均未提及）。
-assert abs(_bal.TUNE['base_tick_seconds'] - 30.0) < 1e-9, \
-    f"base_tick_seconds 应为 30.0，实际 {_bal.TUNE['base_tick_seconds']}"
+# 被误改会静默破坏 16s/周期 设计节奏（四档 → 32/16/8/4 秒）。
+assert abs(_bal.TUNE['base_tick_seconds'] - 16.0) < 1e-9, \
+    f"base_tick_seconds 应为 16.0，实际 {_bal.TUNE['base_tick_seconds']}"
 assert _bal.SPEED_STEPS == (0.5, 1.0, 2.0, 4.0), "速度档定义被改动，需同步复核"
 # 主菜单覆盖接线：show_menu 切 menu 池、_enter_game 切回对局池、
 # exit_to_menu 不得 stop()（否则菜单曲起播前有一拍静音断点）

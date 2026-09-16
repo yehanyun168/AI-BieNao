@@ -136,7 +136,7 @@ class SkillPageCard(StrokePanel):
         self.add_widget(ft)
 
     def refresh_scale(self, scale: float) -> None:
-        """F12/窗口缩放：卡片「分段高度 + 字号」按同一系数整体同步缩放。
+        """窗口缩放：卡片「分段高度 + 字号」按同一系数整体同步缩放。
 
         ⚠️ 必须整体同步：只缩 self.height 会让内部固定高控件溢出、只缩字号
         会裁字 —— 两者一起走才等价于整卡等比。技能页把卡片放进 ScrollView
