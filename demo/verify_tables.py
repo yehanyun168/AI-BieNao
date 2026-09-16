@@ -620,11 +620,9 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     941 条 CRITICAL」降回 0 条）
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
-    'main.py':           1600,    # 2026-09-16 七度登记（原 1599）：对齐协作者张博文
-                                  #    最新交付版 —— Config 禁鼠标多点触控
-                                  #    （input.mouse = 'mouse,disable_multitouch'）＋
-                                  #    GameUI._ending_popup 结局弹窗句柄（Esc 优先关闭
-                                  #    结局弹窗、禁止穿透到设置页）（+1 行）
+    'main.py':           1650,    # 2026-09-16 八度登记（原 1600）：新增 GameUI._confirm_back_to_menu
+                                  #    对局内「返回主菜单」确认弹窗（+29 行：modal_header + hline +
+                                  #    auto_h_label + 取消/确认 make_button，OK 回调 do_save→exit_to_menu）
                                   #    （原 1599 = 2026-09-16 六度登记：对齐协作者张博文
                                   #    交付版（zip）后的实测值；本地缩放接线已按其版本
                                   #    移除，当前行数为交付版自身总量（+56 行）
@@ -635,7 +633,7 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     设置页 values 传参；1523 = 音频启动加载前移）
     'ui_input.py':        801,    # 2026-09-14 登记（原走 800 默认上限）：
                                   #    合并协作者分支（事件暂停 +1 行）
-    'i18n.py':           1414,    # 2026-09-14 三度登记（原 1387）：科技树分支效果中文化
+    'i18n.py':           1416,    # 2026-09-17 九度登记（原 1414）：新增返回主菜单确认框 ZH 三词条
                                   #    —— tt_fx_* 家族 11 键 ×2 语（9 种 effect.type 的
                                   #    中文名 + 未知兜底 + scope 括号格式；中文界面里
                                   #    分支描述曾出现 type；value ×1.10 这类英文代码串）
