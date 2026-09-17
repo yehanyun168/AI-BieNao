@@ -34,6 +34,53 @@ import engine                                       # noqa: E402
 import intro                                        # noqa: E402
 import ui_v4_screens as S                           # noqa: E402  (S.OriginPage)
 import ui_shared as ST                              # noqa: E402  (ST.SPEED_STEPS)
+import ui_popups                                    # noqa: E402  (PopupsMixin)
+
+
+def _silence_crisis(self):
+    """演示专用：危险度越线触发危机时静默压回阈值以下——不弹窗、不暂停。
+
+    原因：故事板里没有「危机弹窗」这一镜，而驱动脚本故意把怀疑度推到 80+ 来展示
+    红环告警；实时 tick 会反复弹「多国联合调查已启动」遮挡后续镜头。这里把它按住。
+    """
+    try:
+        engine.player.suspicion = min(float(engine.player.suspicion), 78.0)
+        engine.player.crisis_triggered = False
+    except Exception:
+        pass
+    try:
+        self.refresh_all()
+    except Exception:
+        pass
+
+
+def _silence_choice(self, evt):
+    """演示专用：事件选择弹窗静默按默认项结算——不弹窗、不暂停。
+
+    实时跑故事板时 tick 会随机触发「来源国/事件」选择弹窗，8 秒停留期间它们会
+    一直盖住画面。这里直接按 0 号选项结算，保留引擎状态推进但不渲染弹窗。
+    """
+    try:
+        logs = engine.resolve_choice(evt, 0)
+        for line in (logs or []):
+            try:
+                self.stats.push_log(engine.player.tick_count, str(line), 'i')
+            except Exception:
+                pass
+    except Exception:
+        pass
+    try:
+        if engine.player.game_over:
+            self.stop_ticking()
+            self.show_ending_popup(engine.player.ending)
+        else:
+            self.refresh_all()
+    except Exception:
+        pass
+
+
+ui_popups.PopupsMixin.show_crisis_popup = _silence_crisis
+ui_popups.PopupsMixin.show_choice_popup = _silence_choice
 
 OUT = os.path.normpath(os.path.join(HERE, '..', 'video', 'assets', 'footage'))
 os.makedirs(OUT, exist_ok=True)

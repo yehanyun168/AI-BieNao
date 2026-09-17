@@ -37,15 +37,11 @@ def _overlay_box(path, box, border=4, corner_radius=0):
 
 
 def main():
-    # S13：暗网卡是高亮框。从 S12_origins.png 目测，5 张出身卡竖排，
-    # 最下方「地下暗网」卡约占 y=615~755（PIL 顶向下），左右贴边留 12px 边距。
+    # S13：暗网卡高亮框。Kivy Window.screenshot 不强制重绘，canvas.after 红框落不到帧缓冲，
+    # 所以 S13 与 S12 逐字节相同；这里在已保存的 PNG 上直接画框。
+    # 坐标目测自 S12_origins.png：5 张出身卡竖排，最下方「地下暗网」卡约 y=615~755。
     s13 = os.path.join(FOOTAGE, 'S13_darknet.png')
     _overlay_box(s13, (12, 615, 1428, 755), border=5, corner_radius=6)
-
-    # S25：危机弹窗底部进度条/倒计时区域，强调「阈值」概念。
-    # 弹窗居中，底部进度条约在 x=320~1060, y=520~555（PIL 顶向下）。
-    s25 = os.path.join(FOOTAGE, 'S25_threshold.png')
-    _overlay_box(s25, (320, 522, 1060, 553), border=4, corner_radius=0)
 
     print('[post] done')
 
