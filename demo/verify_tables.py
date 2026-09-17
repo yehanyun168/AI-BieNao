@@ -437,6 +437,8 @@ EXEMPT_MODULES = {
     'balance_sim.py':  '平衡模拟 CLI 工具（argparse 驱动），非运行时模块',
     'thresholds.py':   '自动试玩阈值表（balance_sim 工具配套，非运行时模块）',
     'perf_stress.py':  '压测工具脚本，非运行时模块',
+    'capture_demo.py': '演示视频截图驱动（开发期工具，非运行时模块）；只被 record_demo 复用动作方法，游戏本体不 import 它',
+    'record_demo.py':  '演示视频实时录屏驱动（开发期工具，非运行时模块）；入口脚本，无人 import',
 }
 # 前缀豁免：测试脚本 / 校验脚本 / 截图工具 / 下划线开头的临时探针（如 _probe_clock.py）
 # —— 测试与工具类文件本就不该进 LAYERS，它们属于开发期基础设施。

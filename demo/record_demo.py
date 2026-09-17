@@ -127,6 +127,7 @@ class RecordApp(CD.ShotApp):
 
     def build(self):
         engine.init_game()
+        CD.mute_game_bgm()              # 录制期只留音效，BGM 由后期统一配
         if '--probe' in sys.argv:
             # 只探测窗口矩形：开窗后取一次矩形即退出，用于裁剪已有录像
             Clock.schedule_once(lambda *_: self._probe_rect(0), 2.0)

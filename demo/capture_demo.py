@@ -82,6 +82,30 @@ def _silence_choice(self, evt):
 ui_popups.PopupsMixin.show_crisis_popup = _silence_crisis
 ui_popups.PopupsMixin.show_choice_popup = _silence_choice
 
+
+def mute_game_bgm():
+    """演示专用：录制/截图期间**强制静音游戏 BGM，保留音效**。
+
+    原因：成片的 BGM 由后期统一铺一条连续的音乐床
+    （见 video/build_video_ffmpeg.py 的 build_bgm_bed），录制期再响游戏自己的
+    BGM 只会和后期配乐打架（两套不同曲目/不同时间线叠在一起 = 听起来「混乱」）。
+    游戏音效不受影响，仍照常发声，后期按时间轴重新叠。
+
+    ⚠️ 必须用「补丁 + 强制关」而非只调一次 set_enabled(False)：
+    设置页的「音乐」开关（ui_session / ui_preferences）会再次调
+    set_enabled(True) 把 BGM 拉回来，只在启动时关一次并不保险。
+    """
+    import bgm
+    orig = bgm.set_enabled
+
+    def _force_off(_on=True):
+        orig(False)                     # 无论传什么都保持关闭
+
+    bgm.set_enabled = _force_off
+    orig(False)                         # 立即停掉已在播的 BGM
+    return orig
+
+
 OUT = os.path.normpath(os.path.join(HERE, '..', 'video', 'assets', 'footage'))
 os.makedirs(OUT, exist_ok=True)
 
@@ -115,6 +139,7 @@ class NonSkippingIntroPlayer(intro.IntroPlayer):
 class ShotApp(App):
     def build(self):
         engine.init_game()
+        mute_game_bgm()                 # 录制期只留音效，BGM 由后期统一配
         self.rv = M.RootView()          # 启动时在菜单
         self.plan = []
         self.i = 0

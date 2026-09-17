@@ -3,8 +3,13 @@
 
 产出 out/AI-BieNao_Demo_RealCapture_1080p.mp4（真·动态实机录屏）。
 
+音轨与静帧版共用同一套两层管线（见 build_video_ffmpeg.build_audio）：
+BGM 床按幕连续铺（幕内不重启）、音效按全局时间轴叠；两条轨也各自导出到 out/audio/。
+
 用法（在 video/ 目录下）：
     python build_real_capture.py
+    python build_real_capture.py --no-bgm       # 只留音效（等同「录制期关 BGM」）
+    python build_real_capture.py --no-sfx       # 只留 BGM 床
 """
 import json
 import os
@@ -22,6 +27,11 @@ SUB_STYLE = "FontName=Microsoft YaHei,FontSize=30,Outline=2,Shadow=1,Bold=1"
 
 
 def main():
+    ap = __import__("argparse").ArgumentParser()
+    ap.add_argument("--no-bgm", action="store_true", help="不铺 BGM 床，只留音效")
+    ap.add_argument("--no-sfx", action="store_true", help="不叠音效，只留 BGM 床")
+    args = ap.parse_args()
+
     if not os.path.exists(RAW):
         print("[ERROR] 没找到原始录像：%s" % RAW)
         return 1
@@ -33,8 +43,10 @@ def main():
     seg_dir = os.path.join(BASE, "_segtmp")
     os.makedirs(seg_dir, exist_ok=True)
 
-    # 音轨：复用逐镜 BGM+音效（与故事板时长严格对齐）
-    soundtrack = B.build_audio(seg_dir, shots)
+    # 音轨：BGM 床（按幕连续）+ 音效轨（全局时间轴），再终混
+    soundtrack = B.build_audio(seg_dir, shots,
+                               want_bgm=not args.no_bgm,
+                               want_sfx=not args.no_sfx)
 
     rect = None
     if os.path.exists(RECT):
