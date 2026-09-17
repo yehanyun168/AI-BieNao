@@ -55,3 +55,4 @@ assets_library/
 # 视频工程产物（帧序列与成片体积大，不入库）
 video/frames/
 video/out/
+video/_segtmp/

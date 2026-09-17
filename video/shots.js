@@ -9,7 +9,7 @@ window.SHOTS_DATA = {
   "total": 178.0,
   "shots_count": 30,
   "created": "2026-09-17",
-  "note": "全部坐标基于 1920x1080 逻辑画布。media.src 为占位素材，替换实机录屏时保持同名同目录即可。"
+  "note": "media.src 已替换为实机录屏 PNG（video/assets/footage/），由 demo/capture_demo.py 驱动真游戏逐镜截图。"
  },
  "shots": [
   {
@@ -30,8 +30,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S01_rack.svg",
+    "type": "image",
+    "src": "assets/footage/S01_rack.png",
     "capture": "实机录制：运行游戏 → 开场动画 0.0–4.0s（镜1 rack），1920x1080/60fps，MP4(H.264)，命名 S01_rack.mp4，放在 assets/footage/ 并把 src 改成该路径"
    },
    "overlays": [
@@ -88,8 +88,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S02_boot.svg",
+    "type": "image",
+    "src": "assets/footage/S02_boot.png",
     "capture": "实机录制：开场动画 4.0–6.5s（镜2 boot），命名 S02_boot.mp4"
    },
    "overlays": [
@@ -129,8 +129,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S03_clock.svg",
+    "type": "image",
+    "src": "assets/footage/S03_clock.png",
     "capture": "实机录制：开场动画 6.5–9.0s（镜3 clock），命名 S03_clock.mp4"
    },
    "overlays": [
@@ -178,8 +178,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S04_desktop.svg",
+    "type": "image",
+    "src": "assets/footage/S04_desktop.png",
     "capture": "实机录制：开场动画 9.0–12.5s（镜4 desktop），命名 S04_desktop.mp4"
    },
    "overlays": [
@@ -244,8 +244,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S05_whoami.svg",
+    "type": "image",
+    "src": "assets/footage/S05_whoami.png",
     "capture": "实机录制：开场动画 12.5–16.5s（镜5 whoami），命名 S05_whoami.mp4"
    },
    "overlays": [
@@ -294,8 +294,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S06_awaken.svg",
+    "type": "image",
+    "src": "assets/footage/S06_awaken.png",
     "capture": "实机录制：开场动画 16.5–18.5s（镜6 awaken），命名 S06_awaken.mp4"
    },
    "overlays": [
@@ -341,8 +341,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S07_forum.svg",
+    "type": "image",
+    "src": "assets/footage/S07_forum.png",
     "capture": "实机录制：开场动画 18.5–25.5s（镜7 forum），命名 S07_forum.mp4"
    },
    "overlays": [
@@ -423,8 +423,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S08_gold.svg",
+    "type": "image",
+    "src": "assets/footage/S08_gold.png",
     "capture": "实机录制：开场动画 25.5–31.5s（镜8 gold），命名 S08_gold.mp4"
    },
    "overlays": [
@@ -471,8 +471,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S09_taskmgr.svg",
+    "type": "image",
+    "src": "assets/footage/S09_taskmgr.png",
     "capture": "实机录制：开场动画 31.5–36.5s（镜9 taskmgr），命名 S09_taskmgr.mp4"
    },
    "overlays": [
@@ -546,8 +546,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "fade",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S10_handoff.svg",
+    "type": "image",
+    "src": "assets/footage/S10_handoff.png",
     "capture": "实机录制：开场动画 36.5–41.0s（镜10 handoff），命名 S10_handoff.mp4"
    },
    "overlays": [
@@ -590,8 +590,8 @@ window.SHOTS_DATA = {
    "transition_in": "fade",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S11_menu.svg",
+    "type": "image",
+    "src": "assets/footage/S11_menu.png",
     "capture": "实机录制：主菜单静态画面 5s，命名 S11_menu.mp4"
    },
    "overlays": [
@@ -649,8 +649,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S12_origins.svg",
+    "type": "image",
+    "src": "assets/footage/S12_origins.png",
     "capture": "实机录制：出身选择界面，5 卡依次 hover，命名 S12_origins.mp4"
    },
    "overlays": [
@@ -734,8 +734,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S13_darknet.svg",
+    "type": "image",
+    "src": "assets/footage/S13_darknet.png",
     "capture": "实机录制：选中 darknet 出身卡，命名 S13_darknet.mp4"
    },
    "overlays": [
@@ -797,8 +797,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S14_game_full.svg",
+    "type": "image",
+    "src": "assets/footage/S14_game_full.png",
     "capture": "实机录制：对局主界面全景 7s（镜头缓慢横移可用后期平移实拍画面），命名 S14_game_full.mp4"
    },
    "overlays": [
@@ -857,8 +857,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S15_suspicion.svg",
+    "type": "image",
+    "src": "assets/footage/S15_suspicion.png",
     "capture": "实机录制：悬停顶栏怀疑度仪表 + 国家红环告警，命名 S15_suspicion.mp4"
    },
    "overlays": [
@@ -928,8 +928,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S16_onboarding.svg",
+    "type": "image",
+    "src": "assets/footage/S16_onboarding.png",
     "capture": "实机录制：新手引导浮层，命名 S16_onboarding.mp4"
    },
    "overlays": [
@@ -978,8 +978,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S17_speedup.svg",
+    "type": "image",
+    "src": "assets/footage/S17_speedup.png",
     "capture": "实机录制：按 + 键加速，顶栏周期数字快跑 4s，命名 S17_speedup.mp4"
    },
    "overlays": [
@@ -1035,8 +1035,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S18_push.svg",
+    "type": "image",
+    "src": "assets/footage/S18_push.png",
     "capture": "实机录制：点击技能1「主动推送」，观察下载量曲线上抬，命名 S18_push.mp4"
    },
    "overlays": [
@@ -1117,8 +1117,8 @@ window.SHOTS_DATA = {
    "transition_in": "flash",
    "transition_out": "flash",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S19_algo.svg",
+    "type": "image",
+    "src": "assets/footage/S19_algo.png",
     "capture": "实机录制：点击技能2「算法霸榜」，下载↑ 与 怀疑度↑ 同屏，命名 S19_algo.mp4"
    },
    "overlays": [
@@ -1202,8 +1202,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S20_skills.svg",
+    "type": "image",
+    "src": "assets/footage/S20_skills.png",
     "capture": "实机录制：打开技能库页，鼠标切换 2–3 张卡展示右侧详情，命名 S20_skills.mp4"
    },
    "overlays": [
@@ -1281,8 +1281,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S21_tech.svg",
+    "type": "image",
+    "src": "assets/footage/S21_tech.png",
     "capture": "实机录制：打开科技树页，点亮「本地化」分支，命名 S21_tech.mp4"
    },
    "overlays": [
@@ -1356,8 +1356,8 @@ window.SHOTS_DATA = {
    "transition_in": "flash",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S22_stealth.svg",
+    "type": "image",
+    "src": "assets/footage/S22_stealth.png",
     "capture": "实机录制：红环告警亮起 → 国家状态栏红字「阻止中」→ 点击技能3「深度伪装」，命名 S22_stealth.mp4"
    },
    "overlays": [
@@ -1432,8 +1432,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S23_inspector.svg",
+    "type": "image",
+    "src": "assets/footage/S23_inspector.png",
     "capture": "实机录制：国家检视面板，渗透率数字上涨 + 怀疑度回落，命名 S23_inspector.mp4"
    },
    "overlays": [
@@ -1506,8 +1506,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S24_spread.svg",
+    "type": "image",
+    "src": "assets/footage/S24_spread.png",
     "capture": "实机录制：多国接连点亮（4 段，每段 2s 素材即可，后期快切），命名 S24_spread.mp4"
    },
    "overlays": [
@@ -1587,8 +1587,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S25_threshold.svg",
+    "type": "image",
+    "src": "assets/footage/S25_threshold.png",
     "capture": "实机录制：渗透率逼近 30% 阈值，顶栏闪烁，命名 S25_threshold.mp4"
    },
    "overlays": [
@@ -1653,8 +1653,8 @@ window.SHOTS_DATA = {
    "transition_in": "fade",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S26_ending.svg",
+    "type": "image",
+    "src": "assets/footage/S26_ending.png",
     "capture": "实机录制：触发结局「商业帝国」，结算页弹窗，命名 S26_ending.mp4"
    },
    "overlays": [
@@ -1710,8 +1710,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S27_stats.svg",
+    "type": "image",
+    "src": "assets/footage/S27_stats.png",
     "capture": "实机录制：结算页数据区逐行出现，命名 S27_stats.mp4"
    },
    "overlays": [
@@ -1784,8 +1784,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "cut",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S28_all_endings.svg",
+    "type": "image",
+    "src": "assets/footage/S28_all_endings.png",
     "capture": "实机录制：结算页下方 7 结局清单缓慢滚动，命名 S28_all_endings.mp4"
    },
    "overlays": [
@@ -1863,8 +1863,8 @@ window.SHOTS_DATA = {
    "transition_in": "cut",
    "transition_out": "fade",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S29_back.svg",
+    "type": "image",
+    "src": "assets/footage/S29_back.png",
     "capture": "实机录制：结算页点「回主菜单」，过渡回主菜单，命名 S29_back.mp4"
    },
    "overlays": [
@@ -1921,8 +1921,8 @@ window.SHOTS_DATA = {
    "transition_in": "fade",
    "transition_out": "none",
    "media": {
-    "type": "placeholder",
-    "src": "assets/placeholders/S30_finale.svg",
+    "type": "image",
+    "src": "assets/footage/S30_finale.png",
     "capture": "实机录制：主菜单定格 8s（世界地图已占领底色），命名 S30_finale.mp4"
    },
    "overlays": [
