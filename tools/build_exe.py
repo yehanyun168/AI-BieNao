@@ -9,6 +9,12 @@ build_exe.py - PyInstaller 打包脚本
 可选参数：
   --onedir    单文件夹（启动更快，杀软友好，推荐）
   --onefile   单 exe（分发更便利，启动慢 5-10 秒）
+
+⚠️ 发行正典是根目录手写的 `AI别闹.spec`（带 DPI 清单 + 全套资源自检），
+   发版请用：KIVY_NO_FILELOG=1 python -m PyInstaller AI别闹.spec --noconfirm --clean
+   本脚本是等价的命令行版（给 build_exe.bat 双击用）。**两边都改了资源清单时，
+   必须同步** —— 历史上这里漏了 assets/cover 和 --icon，导致 exe 图标退回
+   Kivy 默认 logo 且多一个控制台窗口（2026-09-17 修复）。
 """
 import os
 import sys
@@ -49,6 +55,16 @@ def build(mode='onedir'):
     """打包"""
     print(f"🚀 开始打包（模式: {mode}）...")
 
+    # 构建期自检：窗口/任务栏图标依赖这两个文件，缺了不报错、只是静默变回
+    # Kivy 默认 logo（与 spec 里对 wav/ogg 的自检同一思路：宁可中止）。
+    _icon_ico = ROOT_DIR / 'AI别闹.ico'
+    _icon_png = DEMO_DIR / 'assets' / 'cover' / 'icon_256.png'
+    for _p in (_icon_ico, _icon_png):
+        if not _p.exists():
+            print(f"❌ 打包中止：缺图标资产 {_p}")
+            print("   请先跑：python tools/make_cover_assets.py")
+            return False
+
     # PyInstaller 命令
     cmd = [
         sys.executable, '-m', 'PyInstaller',
@@ -74,13 +90,19 @@ def build(mode='onedir'):
         '--add-data', f'{DEMO_DIR}/assets/bgm;assets/bgm',
         # 对局页面背景（科技树等）
         '--add-data', f'{DEMO_DIR}/assets/backgrounds;assets/backgrounds',
+        # ⚠️ 封面资产：整目录随包。目标路径 assets/cover 必须对齐
+        #    demo/paths.py::assets_dir() 的 os.path.join(sys._MEIPASS, 'assets', 'cover')。
+        #    少了这一行，exe 形态找不到 icon_256.png → 窗口图标静默退回 Kivy 默认
+        #    logo（不报错、只是变丑），任务栏也一起不对。
+        '--add-data', f'{DEMO_DIR}/assets/cover;assets/cover',
         # 注意：不要用 --collect-all kivy —— 它会让 collect_submodules 扫描
         # kivy.garden 这个命名空间包并抛 ValueError。PyInstaller 自带 hook-kivy.py
         # 已会委托 Kivy 官方钩子收集资源/依赖，无需手动 collect。
-        # 图标（如果有）
-        # '--icon=ai_bienao.ico',
-        # 隐藏控制台（发布版用）
-        # '--noconsole',
+        # 图标：exe 内嵌图标 == 打包态的任务栏图标来源（任务栏取进程 exe 图标，
+        # 不看窗口图标）。必须给绝对路径 —— 构建时 cwd 是 demo/，相对路径会找错。
+        f'--icon={ROOT_DIR}/AI别闹.ico',
+        # 隐藏控制台（发布版用；否则双击先弹一个黑框，且任务栏会多一个控制台按钮）
+        '--noconsole',
         # 模式
         f'--{mode}',
         # 产物路径：显式指定，避免落到 cwd(demo/) 下；

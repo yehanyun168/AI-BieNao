@@ -28,6 +28,35 @@ def _app_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
+def assets_dir():
+    """随包静态资源根目录（sfx / bgm / cover / backgrounds 的父目录）。
+
+    - 源码运行：``demo/assets/``
+    - PyInstaller 单文件：``_MEIPASS/assets/``（对齐 AI别闹.spec 里
+      ``_SFX_DST`` / ``_BGM_DST`` / ``_COVER_DST`` 等目标路径，
+      也与 bgm.py / sfx.py 的 ``_base_dir()`` 同源）
+    """
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, 'assets')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'assets')
+
+
+def cover_icon_path():
+    """方形游戏图标 PNG 的路径（窗口标题栏 / 任务栏用）。
+
+    优先 ``icon_256.png``（小尺寸下比 512 更锐利），退回 ``icon_512.png``；
+    两者都不存在时返回 ``None`` —— 调用方必须容错（没图标只是回退到 Kivy
+    默认 logo，不该影响启动）。资产由 ``tools/make_cover_assets.py`` 产出，
+    打包时经 spec 的 ``demo/assets/cover`` 整目录携带。
+    """
+    cover = os.path.join(assets_dir(), 'cover')
+    for name in ('icon_256.png', 'icon_512.png'):
+        p = os.path.join(cover, name)
+        if os.path.exists(p):
+            return p
+    return None
+
+
 def migrate_legacy_data():
     """把 v0.4.0 及更早的 exe 同级数据迁移到 APPDATA。
 

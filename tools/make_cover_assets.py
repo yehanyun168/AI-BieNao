@@ -46,10 +46,13 @@ def make_cover():
 
 def make_icon():
     img = Image.open(ICON_RAW).convert('RGBA')
-    # 方形图标 PNG 512
-    p512 = os.path.join(COVER_DIR, 'icon_512.png')
-    img.resize((512, 512), Image.LANCZOS).save(p512, optimize=True)
-    print('[icon ] %s' % p512)
+    # 方形图标 PNG：512 留档，256 给窗口标题栏/任务栏用
+    # （Kivy 的 window_icon 只吃单张图，Windows 再自行缩到 16/32；
+    #   从 256 缩比从 512 缩更锐利，故运行期优先用 256。见 demo/paths.py）
+    for size in (512, 256):
+        p = os.path.join(COVER_DIR, 'icon_%d.png' % size)
+        img.resize((size, size), Image.LANCZOS).save(p, optimize=True)
+        print('[icon ] %s' % p)
     # Windows 多尺寸 ico
     ico_path = os.path.join(ROOT, 'AI别闹.ico')
     img.resize((256, 256), Image.LANCZOS).save(

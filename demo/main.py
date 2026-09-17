@@ -342,6 +342,23 @@ Config.set('kivy', 'exit_on_escape', '0')
 # 圆圈消失）。本游戏不需要右键交互，显式声明为纯 mouse，从源头禁掉该可视化。
 Config.set('input', 'mouse', 'mouse,disable_multitouch')
 
+# 窗口图标（标题栏左上角 + 任务栏）：必须是**封面派生的方形图标**，
+# 而不是 Kivy 默认 logo。
+# 为什么写在这里、而不是 App 里调用 Window.set_icon()：
+#   Kivy 的 SDL 窗口是**延迟创建**的 —— `App.build()` 跑完之后，
+#   `runTouchApp()` 里的 `EventLoop.ensure_window()` 才真正建窗；
+#   建窗时读的是 `Window.icon or Config['kivy']['window_icon']`，
+#   两者都空就回退成 kivy/data/logo/kivy-icon-64.png（= 玩家看到的默认图标）。
+#   故必须在首次 `import kivy.core.window`（建窗前）就写入该配置项。
+# on_start() 里还会再 `Window.set_icon()` 兜一次（见 AIBienaoApp.on_start）。
+try:
+    import paths as _paths
+    _WINDOW_ICON = _paths.cover_icon_path()
+except Exception:
+    _WINDOW_ICON = None
+if _WINDOW_ICON:
+    Config.set('kivy', 'window_icon', _WINDOW_ICON)
+
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.text import LabelBase
@@ -1588,6 +1605,20 @@ class AIBienaoApp(App):
         并在落点画红色圆圈（左键点它 = 移除该 touch → 圆圈消失）。本游戏
         无右键交互需求，直接在窗口层把右键 touch 吞掉，从源头杜绝红圈。
         """
+        # 窗口图标兜底：`Config['kivy']['window_icon']`（见文件上方）已在建窗时
+        # 生效；这里再显式推一次，覆盖少数后端在窗口创建后把图标重置掉的情况。
+        # 失败安全：没图标最多回退到 Kivy 默认 logo，不该影响启动。
+        #
+        # ⚠️ 任务栏图标不由此处决定：任务栏按**进程 exe / AppUserModelID** 取图标，
+        #    不看窗口图标（2026-09-17 实测：窗口 ICON_BIG 已是本图标，任务栏仍显示
+        #    宿主 python.exe 的图标）。所以：
+        #      * 打包 exe：任务栏 = exe 内嵌图标（spec 的 icon='AI别闹.ico'）= 封面图标 ✓
+        #      * 源码运行：任务栏 = python.exe 的图标（Windows 行为，非本项目可改）
+        if _WINDOW_ICON:
+            try:
+                Window.set_icon(_WINDOW_ICON)
+            except Exception:
+                pass
         try:
             Window.bind(on_touch_down=self._swallow_right_click)
         except Exception:

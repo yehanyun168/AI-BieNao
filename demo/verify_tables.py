@@ -622,7 +622,12 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     941 条 CRITICAL」降回 0 条）
     'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
                                   #    PlayerState.intro_seen 字段（+2 行）
-    'main.py':           1650,    # 2026-09-16 八度登记（原 1600）：新增 GameUI._confirm_back_to_menu
+    'main.py':           1675,    # 2026-09-17 九度登记（原 1650）：窗口图标改封面图标
+                                  #    (+31 行：建窗前 Config['kivy']['window_icon'] 指向
+                                  #     paths.cover_icon_path() + on_start() 里 Window.set_icon
+                                  #     兜底；实测任务栏取进程 exe 图标而非窗口图标，
+                                  #     故 exe 侧靠 spec 的 icon='AI别闹.ico'，见提交说明)
+                                  #    （原 1650 = 2026-09-16 八度登记：新增 GameUI._confirm_back_to_menu
                                   #    对局内「返回主菜单」确认弹窗（+29 行：modal_header + hline +
                                   #    auto_h_label + 取消/确认 make_button，OK 回调 do_save→exit_to_menu）
                                   #    （原 1599 = 2026-09-16 六度登记：对齐协作者张博文
