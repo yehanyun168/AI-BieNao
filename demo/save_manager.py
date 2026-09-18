@@ -25,6 +25,7 @@ P1-9 写入 / 版本迁移约定：
     SAVE_VERSION += 1，按 _MIGRATIONS 补一级纯函数迁移即可，老档不会全废。
 """
 import json
+import math
 import os
 import random
 import sys
@@ -468,7 +469,7 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
             return False, LOAD_BAD_VERSION
         try:
             data = _migrate(data, v)
-        except (TypeError, KeyError) as e:
+        except (TypeError, KeyError, OverflowError) as e:
             _log_load_fail(LOAD_BAD_SCHEMA, path, e)
             return False, LOAD_BAD_SCHEMA
         except (NotImplementedError, ValueError) as e:
@@ -479,13 +480,24 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
     # 4) 字段搬运：原生 v5 脏值只在内存中修复并记诊断，不改原文件。
     try:
         dirty_codes = []
-        if v == SAVE_VERSION:
-            for cs in data['countries']:
-                if not cs['unlocked'] and cs['downloads_m'] != 0.0:
-                    dirty_codes.append(cs['code'])
-                    cs['downloads_m'] = 0.0
+        valid_codes = {c.code for c in engine.COUNTRIES}
+        for cs in data['countries']:
+            amount = cs['downloads_m']
+            if cs['unlocked']:
+                if (isinstance(amount, bool)
+                        or not isinstance(amount, (int, float))
+                        or not math.isfinite(amount)):
+                    raise TypeError('invalid unlocked downloads_m')
+            elif v == SAVE_VERSION and (not isinstance(amount, (int, float))
+                                        or isinstance(amount, bool)
+                                        or amount != 0.0):
+                code = cs['code']
+                if not isinstance(code, str) or code not in valid_codes:
+                    raise TypeError('invalid locked country code')
+                dirty_codes.append(code)
+                cs['downloads_m'] = 0.0
         _apply_save(data)
-    except (KeyError, TypeError, ValueError, AttributeError) as e:
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError) as e:
         # _apply_save 里已经 init_game() 过，可能留下半写状态 → 回滚成干净新档
         try:
             engine.init_game()

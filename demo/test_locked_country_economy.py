@@ -187,5 +187,48 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
         with open(path, 'rb') as f:
             self.assertEqual(f.read(), original_bytes)
 
+    def test_native_v5_rejects_non_numeric_unlocked_downloads(self):
+        path, saved = self._saved_data()
+        for value in ('not-a-number', True, float('nan'), float('inf')):
+            with self.subTest(value=value):
+                corrupted = copy.deepcopy(saved)
+                unlocked = next(cs for cs in corrupted['countries']
+                                if cs['unlocked'])
+                unlocked['downloads_m'] = value
+                with open(path, 'w', encoding='utf-8') as f:
+                    json.dump(corrupted, f, ensure_ascii=False)
+                with open(path, 'rb') as f:
+                    original_bytes = f.read()
+                engine.player.tick_count = 7
+
+                self.assertEqual(save_manager.load_ex(path),
+                                 (False, save_manager.LOAD_BAD_SCHEMA))
+                self.assertEqual(engine.player.tick_count, 0)
+                self.assertTrue(all(c.downloads_m == 0.0
+                                    for c in engine.player_countries
+                                    if not c.unlocked))
+                with open(path, 'rb') as f:
+                    self.assertEqual(f.read(), original_bytes)
+
+    def test_native_v5_rejects_non_string_dirty_country_code(self):
+        path, saved = self._saved_data()
+        locked = next(cs for cs in saved['countries'] if not cs['unlocked'])
+        locked['code'] = 123
+        locked['downloads_m'] = 99.0
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(saved, f, ensure_ascii=False)
+        with open(path, 'rb') as f:
+            original_bytes = f.read()
+        engine.player.tick_count = 7
+
+        self.assertEqual(save_manager.load_ex(path),
+                         (False, save_manager.LOAD_BAD_SCHEMA))
+        self.assertEqual(engine.player.tick_count, 0)
+        if os.path.exists(save_manager.CRASH_LOG):
+            with open(save_manager.CRASH_LOG, encoding='utf-8') as f:
+                self.assertNotIn('LOAD_REPAIR', f.read())
+        with open(path, 'rb') as f:
+            self.assertEqual(f.read(), original_bytes)
+
 if __name__ == '__main__':
     unittest.main()
