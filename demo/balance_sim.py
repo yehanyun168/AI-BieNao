@@ -553,7 +553,9 @@ def _run_matrix_inner(args) -> None:
     """矩阵跑批主体（T03 开关已由 run_matrix 关闭）。"""
     stamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     here = os.path.dirname(os.path.abspath(__file__))
-    data_dir = os.path.normpath(os.path.join(here, '..', 'tools', 'data'))
+    data_dir = (os.path.abspath(args.matrix_output_dir)
+                if getattr(args, 'matrix_output_dir', None)
+                else os.path.normpath(os.path.join(here, '..', 'tools', 'data')))
     reports_dir = os.path.join(data_dir, 'playtest_reports')
     os.makedirs(reports_dir, exist_ok=True)
 
@@ -700,6 +702,8 @@ def main():
                     help='M0 自动试玩基线：策略×难度全矩阵跑批'
                          '（--seeds 为每组合局数，--strategy/--difficulty 忽略），'
                          '写 tools/data/playtest_baseline.json + md 报告')
+    ap.add_argument('--matrix-output-dir', default=None,
+                    help='矩阵 JSON 和报告输出目录；不传沿用 tools/data')
     ap.add_argument('--tutorial', action='store_true',
                     help='T03 首局压力验收：跑新档早期节奏（首危机 / 解锁门控 /'
                          '引导期静默），输出对照验收线的 PASS/FAIL')

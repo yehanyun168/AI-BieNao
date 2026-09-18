@@ -620,8 +620,10 @@ LINE_LIMIT_WHITELIST = {          # 文件: 冻结行数（登记日 2025-09-11 
                                   #     正反馈链改 Clock.create_trigger debounce，每帧
                                   #     最多合并一次 _resize；进局后主循环从「每帧
                                   #     941 条 CRITICAL」降回 0 条）
-    'engine.py':         1741,    # 2026-09-14 再登记（原 1739）：开场动画 v2 持久化
-                                  #    PlayerState.intro_seen 字段（+2 行）
+    'engine.py':         1748,    # 2026-09-18 再登记（原 1741）：锁国结算与预览
+                                  #    口径对齐，实测净增 7 行
+                                  #    （原 1741 = 2026-09-14 开场动画 v2 持久化，
+                                  #     PlayerState.intro_seen 字段 +2 行）
     'main.py':           1675,    # 2026-09-17 九度登记（原 1650）：窗口图标改封面图标
                                   #    (+31 行：建窗前 Config['kivy']['window_icon'] 指向
                                   #     paths.cover_icon_path() + on_start() 里 Window.set_icon

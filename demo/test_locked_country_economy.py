@@ -1,9 +1,11 @@
 """未解锁国家经济口径的无头回归。"""
+import argparse
 import copy
 import json
 import os
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 os.environ.setdefault('KIVY_NO_ARGS', '1')
 os.environ.setdefault('KIVY_NO_FILELOG', '1')
@@ -12,6 +14,35 @@ import data
 import engine
 import commissions
 import save_manager
+import balance_sim
+
+
+class MatrixOutputTests(unittest.TestCase):
+    def test_matrix_writes_to_requested_directory(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = Path(root)
+            fake_module = root / 'demo' / 'balance_sim.py'
+            fake_module.parent.mkdir()
+            requested = root / 'requested'
+            args = argparse.Namespace(seeds=1, ticks=2,
+                                      matrix_output_dir=str(requested))
+            sample = dict.fromkeys(balance_sim.REGRESSION_FIELDS, 0) | {
+                'ending_name': 'test', 'ticks': 2, 'penetration': 0.0,
+                'suspicion': 0.0, 'unlocked': 2,
+                'anomalies': {'bug_count': 0, 'review_count': 0,
+                              'by_type': {}},
+                'delta_hist': {}, 'doomed_pressure_tick': None,
+                'doomed_crisis_tick': None, 'doomed_correct': False,
+            }
+            with patch.object(balance_sim, '__file__', str(fake_module)), \
+                    patch.object(balance_sim, 'simulate', return_value=sample):
+                balance_sim.run_matrix(args)
+
+            self.assertTrue((requested / 'playtest_baseline.json').exists())
+            reports = list((requested / 'playtest_reports').glob('*.md'))
+            self.assertEqual(len(reports), 1)
+
+
 class LockedCountryTickTests(unittest.TestCase):
     def setUp(self):
         balance.apply_difficulty('normal')
