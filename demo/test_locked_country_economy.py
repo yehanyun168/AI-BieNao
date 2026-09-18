@@ -1,11 +1,17 @@
 """未解锁国家经济口径的无头回归。"""
+import copy
+import json
 import os
+import tempfile
 import unittest
+from unittest.mock import patch
 os.environ.setdefault('KIVY_NO_ARGS', '1')
 os.environ.setdefault('KIVY_NO_FILELOG', '1')
 import balance
 import data
 import engine
+import commissions
+import save_manager
 class LockedCountryTickTests(unittest.TestCase):
     def setUp(self):
         balance.apply_difficulty('normal')
@@ -77,6 +83,109 @@ class LockedCountryPreviewTests(unittest.TestCase):
                 self.assertAlmostEqual(plain['downloads_after'], engine.player.total_downloads_m, places=5)
                 self.assertEqual(skill['growth_by_country'][newly[0].config.code], data.UNLOCK_SEED_DOWNLOADS_M)
                 self.assertEqual(sum(skill['growth_by_country'][c.config.code] > 0 for c in engine.player_countries if c.config.code not in before), 1)
+
+
+class LockedCountrySaveMigrationTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.save_dir_patch = patch.object(save_manager, 'SAVE_DIR', self.tmp.name)
+        self.log_patch = patch.object(save_manager, 'CRASH_LOG',
+                                      os.path.join(self.tmp.name, 'crash.log'))
+        self.save_dir_patch.start()
+        self.log_patch.start()
+        self.addCleanup(self.save_dir_patch.stop)
+        self.addCleanup(self.log_patch.stop)
+        balance.apply_difficulty('normal')
+        engine.init_game(seed=23)
+        self.addCleanup(balance.apply_difficulty, 'normal')
+
+    def _saved_data(self, name='slot.json'):
+        path = os.path.join(self.tmp.name, name)
+        save_manager.save(path)
+        with open(path, encoding='utf-8') as f:
+            return path, json.load(f)
+
+    def test_v4_load_repairs_locked_downloads_and_active_download_commission(self):
+        locked = next(c for c in engine.player_countries if not c.unlocked)
+        locked.downloads_m = 55.0
+        engine.player.tick_count = 3
+        active = commissions.CommissionState(
+            uid=101, template_id='C2', goal='downloads', icon='[D]',
+            name_zh='拉新冲刺', name_en='Growth Sprint', window=6,
+            reward_mult=1.0, status='active', accepted_tick=1,
+            deadline_tick=2, snap_downloads=555.0, reward=42.0)
+        offered = commissions.CommissionState(
+            uid=102, template_id='C2', goal='downloads', icon='[D]',
+            name_zh='拉新冲刺', name_en='Growth Sprint', window=6,
+            reward_mult=1.0, deadline_tick=None, snap_downloads=777.0)
+        compute = commissions.CommissionState(
+            uid=103, template_id='C3', goal='compute', icon='[C]',
+            name_zh='算力冲刺', name_en='Compute Sprint', window=8,
+            reward_mult=1.0, status='active', accepted_tick=2,
+            deadline_tick=20, snap_compute=19.0)
+        engine.player.commissions = [active, offered, compute]
+        expected_total = engine.player.total_downloads_m
+        path, saved = self._saved_data()
+        saved['version'] = 4
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(saved, f, ensure_ascii=False)
+        with open(path, 'rb') as f:
+            original_bytes = f.read()
+
+        self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+        self.assertEqual(next(c.downloads_m for c in engine.player_countries
+                              if c.config.code == locked.config.code), 0.0)
+        self.assertEqual(engine.player.total_downloads_m, expected_total)
+        by_uid = {c.uid: c for c in engine.player.commissions}
+        self.assertEqual(set(by_uid), {101, 102, 103})
+        self.assertEqual((by_uid[101].snap_downloads, by_uid[101].accepted_tick,
+                          by_uid[101].deadline_tick, by_uid[101].reward),
+                         (expected_total, 3, 9, 42.0))
+        self.assertEqual((by_uid[102].deadline_tick, by_uid[102].snap_downloads),
+                         (None, 777.0))
+        self.assertEqual((by_uid[103].deadline_tick, by_uid[103].snap_compute),
+                         (20, 19.0))
+        with open(path, 'rb') as f:
+            self.assertEqual(f.read(), original_bytes)
+        self.assertFalse(os.path.exists(save_manager.CRASH_LOG))
+
+    def test_migration_chain_is_idempotent_and_preserves_finished_game(self):
+        _, base = self._saved_data()
+        base['player']['game_over'] = True
+        base['player']['ending_id'] = 'survivor'
+        base['player']['achievements'] = ['first_steps', 'survivor']
+        for version in range(1, 5):
+            with self.subTest(version=version):
+                old = copy.deepcopy(base)
+                old['version'] = version
+                old['player'].pop('seed', None)
+                old['player'].pop('difficulty', None)
+                old['player'].pop('origin', None)
+                old['player'].pop('intro_seen', None)
+                migrated = save_manager._migrate(old, version)
+                self.assertEqual(migrated['version'], 5)
+                self.assertEqual(migrated['player']['ending_id'], 'survivor')
+                self.assertEqual(migrated['player']['achievements'],
+                                 ['first_steps', 'survivor'])
+                self.assertEqual(save_manager._v4_to_v5(copy.deepcopy(migrated)),
+                                 migrated)
+                self.assertEqual(save_manager._migrate(migrated, 5), migrated)
+
+    def test_native_v5_dirty_locked_downloads_log_code_and_leave_file_intact(self):
+        locked = next(c for c in engine.player_countries if not c.unlocked)
+        locked.downloads_m = 99.0
+        path, _ = self._saved_data()
+        with open(path, 'rb') as f:
+            original_bytes = f.read()
+
+        self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+        self.assertEqual(next(c.downloads_m for c in engine.player_countries
+                              if c.config.code == locked.config.code), 0.0)
+        with open(save_manager.CRASH_LOG, encoding='utf-8') as f:
+            self.assertIn(locked.config.code, f.read())
+        with open(path, 'rb') as f:
+            self.assertEqual(f.read(), original_bytes)
 
 if __name__ == '__main__':
     unittest.main()

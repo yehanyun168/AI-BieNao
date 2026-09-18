@@ -47,7 +47,8 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 # 跳过过开场动画），v3 老档经 _v3_to_v4 补 False —— 语义=「没播过」，
 # 老玩家下次继续游戏时补播一次新开场，此后不再重复。
 # v4（协作方改动）：新增游戏开局年月，日期随周期推进并可跨存档延续。
-SAVE_VERSION = 4
+# v5：清理旧档未解锁国家的下载脏值，并重置受影响的活动下载委托。
+SAVE_VERSION = 5
 
 
 from paths import _user_data_dir, migrate_legacy_data
@@ -319,7 +320,7 @@ def _v1_to_v2(d: dict) -> dict:
     if isinstance(ps, dict):
         ps.setdefault('seed', None)
         ps.setdefault('difficulty', balance.DEFAULT_DIFFICULTY)
-    d['version'] = SAVE_VERSION
+    d['version'] = 2
     return d
 
 
@@ -337,7 +338,7 @@ def _v2_to_v3(d: dict) -> dict:
     ps = d.get('player')
     if isinstance(ps, dict):
         ps.setdefault('origin', 'garage')
-    d['version'] = SAVE_VERSION
+    d['version'] = 3
     return d
 
 
@@ -359,11 +360,33 @@ def _v3_to_v4(d: dict) -> dict:
         now = datetime.now()
         ps.setdefault('start_year', now.year)
         ps.setdefault('start_month', now.month)
-    d['version'] = SAVE_VERSION
+    d['version'] = 4
     return d
 
 
 _MIGRATIONS[3] = _v3_to_v4
+
+
+def _v4_to_v5(d: dict) -> dict:
+    """旧档在内存中清理未解锁下载，并重新起算活动下载委托。"""
+    countries = d['countries']
+    total = sum(cs['downloads_m'] for cs in countries if cs['unlocked'])
+    for cs in countries:
+        if not cs['unlocked']:
+            cs['downloads_m'] = 0.0
+
+    ps = d['player']
+    tick = ps['tick_count']
+    for com in ps.get('commissions', []):
+        if com['status'] == 'active' and com['goal'] == 'downloads':
+            com['snap_downloads'] = total
+            com['accepted_tick'] = tick
+            com['deadline_tick'] = tick + com['window']
+    d['version'] = 5
+    return d
+
+
+_MIGRATIONS[4] = _v4_to_v5
 
 
 def _migrate(data: dict, from_version: int) -> dict:
@@ -445,13 +468,22 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
             return False, LOAD_BAD_VERSION
         try:
             data = _migrate(data, v)
+        except (TypeError, KeyError) as e:
+            _log_load_fail(LOAD_BAD_SCHEMA, path, e)
+            return False, LOAD_BAD_SCHEMA
         except (NotImplementedError, ValueError) as e:
             # 迁移链缺环 / 版本异常：明确报版本不支持，不静默、不崩
             _log_load_fail(LOAD_BAD_VERSION, path, e)
             return False, LOAD_BAD_VERSION
 
-    # 4) 字段搬运：缺 player 键 / 类型不对 / 委托反序列化炸 → 坏档
+    # 4) 字段搬运：原生 v5 脏值只在内存中修复并记诊断，不改原文件。
     try:
+        dirty_codes = []
+        if v == SAVE_VERSION:
+            for cs in data['countries']:
+                if not cs['unlocked'] and cs['downloads_m'] != 0.0:
+                    dirty_codes.append(cs['code'])
+                    cs['downloads_m'] = 0.0
         _apply_save(data)
     except (KeyError, TypeError, ValueError, AttributeError) as e:
         # _apply_save 里已经 init_game() 过，可能留下半写状态 → 回滚成干净新档
@@ -461,6 +493,9 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
             pass  # 回滚都失败也绝不掩盖本次的失败原因
         _log_load_fail(LOAD_BAD_SCHEMA, path, e)
         return False, LOAD_BAD_SCHEMA
+    if dirty_codes:
+        log_crash(f"[{datetime.now().isoformat(timespec='seconds')}] "
+                  f"LOAD_REPAIR locked_downloads countries={','.join(dirty_codes)}")
     return True, LOAD_OK
 
 
