@@ -9,6 +9,7 @@ from pathlib import Path
 from unittest.mock import patch
 os.environ.setdefault('KIVY_NO_ARGS', '1')
 os.environ.setdefault('KIVY_NO_FILELOG', '1')
+from kivy.core.window import Window
 import balance
 import data
 import engine
@@ -307,18 +308,35 @@ class LockedCountrySlotUiTests(unittest.TestCase):
                 self.assertEqual(save_manager.load_ex(path),
                                  (True, save_manager.LOAD_OK))
                 with patch.object(main.GameUI, '_reschedule_tick'), \
-                        patch.object(main.GameUI, '_reschedule_countdown'):
+                        patch.object(main.GameUI, '_reschedule_countdown'), \
+                        patch('cursor_fx.install', return_value=True):
                     game = main.GameUI()
-                game.refresh_all()
-                self.assertIn(
-                    f"[b]{unlocked_total / 1000:.2f}{i18n.t('unit_b')}[/b]",
-                    game.stats_downloads.text)
-                self.assertEqual(len(game.commission_bar.chips), 1)
-                self.assertIn('0.0/25.0M', game.commission_bar.chips[0].text)
-                self.assertIn('剩6周期', game.commission_bar.chips[0].text)
-                self.assertEqual(engine.player.tick_count, 3)
-                with open(path, 'rb') as stream:
-                    self.assertEqual(stream.read(), original_bytes)
+                try:
+                    game.refresh_all()
+                    settings_summary = game._slot_rows()[0][1]
+                    self.assertIn(f'{unlocked_total / 7480 * 100:.2f}%',
+                                  settings_summary)
+                    self.assertNotIn(
+                        f'{(unlocked_total + 748.0) / 7480 * 100:.2f}%',
+                        settings_summary)
+                    self.assertIn(
+                        f"[b]{unlocked_total / 1000:.2f}{i18n.t('unit_b')}[/b]",
+                        game.stats_downloads.text)
+                    self.assertEqual(len(game.commission_bar.chips), 1)
+                    self.assertIn('0.0/25.0M', game.commission_bar.chips[0].text)
+                    self.assertIn('剩6周期', game.commission_bar.chips[0].text)
+                    self.assertEqual(engine.player.tick_count, 3)
+                    with open(path, 'rb') as stream:
+                        self.assertEqual(stream.read(), original_bytes)
+                finally:
+                    game.stop_ticking()
+                    keyboard = game._keyboard
+                    game._keyboard_closed()
+                    if keyboard is not None:
+                        keyboard.release()
+                    game.commission_bar._unbind_window()
+                    Window.unbind(on_resize=game._on_window_resize,
+                                  mouse_pos=game._on_skill_hover)
 
 if __name__ == '__main__':
     unittest.main()
