@@ -644,7 +644,8 @@ def read_slot_rows(active_idx: int = 0):
                 if pl.get('game_over'):
                     summary = f"{t('slot_dead')} · {t('stats_tick')} {pl.get('tick_count', 0)}"
                 else:
-                    dl = sum(c.get('downloads_m', 0) for c in data.get('countries', []))
+                    dl = sum(c.get('downloads_m', 0) for c in data.get('countries', [])
+                             if c.get('unlocked'))
                     summary = t('slot_summary').format(
                         tick=pl.get('tick_count', 0),
                         pen=f"{dl / 7480 * 100:.2f}", n=unlocked)

@@ -13,6 +13,8 @@ import balance
 import data
 import engine
 import commissions
+import i18n
+import main
 import save_manager
 import balance_sim
 
@@ -260,6 +262,63 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
                 self.assertNotIn('LOAD_REPAIR', f.read())
         with open(path, 'rb') as f:
             self.assertEqual(f.read(), original_bytes)
+
+
+class LockedCountrySlotUiTests(unittest.TestCase):
+    def test_v4_slot_summary_and_loaded_hud_use_unlocked_downloads(self):
+        prior_lang = i18n.CURRENT_LANG
+        i18n.set_lang('zh')
+        self.addCleanup(i18n.set_lang, prior_lang)
+        balance.apply_difficulty('normal')
+        engine.init_game(seed=31)
+
+        with tempfile.TemporaryDirectory() as root:
+            with patch.object(save_manager, 'SAVE_DIR', root), \
+                    patch.object(save_manager, 'CRASH_LOG',
+                                 os.path.join(root, 'crash.log')):
+                engine.player.tick_count = 3
+                engine.player.commissions = [commissions.CommissionState(
+                    uid=201, template_id='C2', goal='downloads', icon='[D]',
+                    name_zh='拉新冲刺', name_en='Growth Sprint', window=6,
+                    reward_mult=1.0, status='active', accepted_tick=1,
+                    deadline_tick=2, snap_downloads=555.0,
+                    target_value=25.0)]
+                path = os.path.join(root, 'slot1.json')
+                save_manager.save(path)
+                with open(path, encoding='utf-8') as stream:
+                    old = json.load(stream)
+                old['version'] = 4
+                locked = next(c for c in old['countries'] if not c['unlocked'])
+                locked['downloads_m'] = 748.0
+                unlocked_total = sum(c['downloads_m'] for c in old['countries']
+                                     if c['unlocked'])
+                with open(path, 'w', encoding='utf-8') as stream:
+                    json.dump(old, stream, ensure_ascii=False)
+                with open(path, 'rb') as stream:
+                    original_bytes = stream.read()
+
+                slot_summary = main.read_slot_rows()[0][1]
+                self.assertIn(f'{unlocked_total / 7480 * 100:.2f}%',
+                              slot_summary)
+                self.assertNotIn(
+                    f'{(unlocked_total + 748.0) / 7480 * 100:.2f}%',
+                    slot_summary)
+
+                self.assertEqual(save_manager.load_ex(path),
+                                 (True, save_manager.LOAD_OK))
+                with patch.object(main.GameUI, '_reschedule_tick'), \
+                        patch.object(main.GameUI, '_reschedule_countdown'):
+                    game = main.GameUI()
+                game.refresh_all()
+                self.assertIn(
+                    f"[b]{unlocked_total / 1000:.2f}{i18n.t('unit_b')}[/b]",
+                    game.stats_downloads.text)
+                self.assertEqual(len(game.commission_bar.chips), 1)
+                self.assertIn('0.0/25.0M', game.commission_bar.chips[0].text)
+                self.assertIn('剩6周期', game.commission_bar.chips[0].text)
+                self.assertEqual(engine.player.tick_count, 3)
+                with open(path, 'rb') as stream:
+                    self.assertEqual(stream.read(), original_bytes)
 
 if __name__ == '__main__':
     unittest.main()

@@ -12,7 +12,9 @@
 |---|---:|---|
 | `demo/test_locked_country_economy.py MatrixOutputTests`，实现前 | 1 | 有效红灯：期望目录缺少 JSON；旧逻辑只写入临时 root 下 `tools/data`。首次沙箱执行因系统 TEMP 权限失败，权限提升后得到此断言失败。 |
 | `demo/test_locked_country_economy.py MatrixOutputTests`，实现后 | 0 | 1/1；指定目录有 JSON，报告子目录恰有 1 个 Markdown。 |
-| `demo/test_locked_country_economy.py` | 0 | 11/11；含锁国结算、预览、旧档迁移及隔离输出。 |
+| `demo/test_locked_country_economy.py LockedCountrySlotUiTests`，槽位摘要修正前 | 1 | 有效红灯：隔离 v4 `slot1.json` 的锁国隐藏下载使摘要显示 11.07%，高于仅计算已解锁国家的值。 |
+| `demo/test_locked_country_economy.py LockedCountrySlotUiTests`，修正后 | 0 | 1/1；槽位摘要只计已解锁国家，读档后的 Kivy 顶栏下载及活动下载委托芯片显示迁移后口径。 |
+| `demo/test_locked_country_economy.py` | 0 | 12/12；含锁国结算、预览、旧档迁移、隔离输出及旧档 UI。 |
 | `demo/verify_tables.py`，白名单更新前 | 1 | 37/38；唯一失败为 `engine.py` 实测 1748 行超出冻结 1741 行。 |
 | `demo/verify_tables.py`，只登记实测 1748 行后 | 0 | 38/38；冻结值净增 7 行，原因注明锁国结算与预览口径对齐；其他白名单未放宽。 |
 | `demo/verify_tech_tree.py` | 0 | 29/29。 |
@@ -45,6 +47,6 @@
 
 `--tutorial --seeds 30`：首危机均值 40.9 tick，超过 ≤26 目标；60 tick 内无危机 18/30，超过 ≤3 目标，两项为 FAIL。每 tick 解锁最多 2 国的门控校验 PASS；前 6 tick 无随机事件的引导期静默校验 PASS。CLI 退出码 0 仅表示报告运行完成，并不表示全部压力指标通过。
 
-旧档顶栏总下载显示及活动下载委托剩余时间的隔离 Kivy UI 人工检查：**未验证**。现有自动测试覆盖 v4→v5 迁移数据与委托重新计时，`test_build.py` 覆盖新局界面构建；但本次未以隔离复制档驱动旧档界面观察，且不得访问真实存档，因此不能宣称旧档 UI 显示通过。
+旧档 UI 自动检查：**通过**。测试在系统 TEMP 中生成完整 v4 `slot1.json`，将一个锁国的隐藏下载设为 748M，并设置活动下载委托；先读取槽位摘要，再以 `load_ex()` 加载、实例化 `GameUI()`，直接断言 `stats_downloads.text` 为迁移后的已解锁总量，`commission_bar.chips[0].text` 显示进度 `0.0/25.0M` 与剩余 `6` 周期。测试不推进游戏时间，且逐字节核对旧档文件在读档和建界面后未改变。真人视觉观感、点击交互及不同窗口尺寸仍**未验证**。
 
-旧档读入后，锁定国家以前计入的下载会被清零，顶栏总下载可能下降；活动中的下载委托会按迁移后的总下载重新取快照和计时。已记录的历史结局与成就不撤销。以上为兼容性告知，不代表曾修改真实存档。本次不发布 exe；发行前还需解决首危机节奏验收失败，并评估 AFK 未结束率、`soft_stall` 增幅和旧档 UI 观察结果。
+旧档读入后，锁定国家以前计入的下载会被清零，顶栏总下载相对旧版本可能下降；槽位渗透率摘要现已按已解锁国家口径计算，避免读档前虚高。活动中的下载委托会按迁移后的总下载重新取快照和计时。已记录的历史结局与成就不撤销。以上为兼容性告知，不代表曾修改真实存档。本次不发布 exe；发行前还需解决首危机节奏验收失败，并评估 AFK 未结束率、`soft_stall` 增幅和真人 UI 观感。
