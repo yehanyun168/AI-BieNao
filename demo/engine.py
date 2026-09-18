@@ -103,7 +103,7 @@ class PlayerState:
 
     @property
     def total_downloads_m(self) -> float:
-        return sum(c.downloads_m for c in player_countries)
+        return sum(c.downloads_m for c in player_countries if c.unlocked)
 
     @property
     def global_penetration(self) -> float:
@@ -324,6 +324,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
                 report["unlocked"].append(country.config.name)
                 country.downloads_m = data.UNLOCK_SEED_DOWNLOADS_M
                 continue
+            continue
 
         cfg = country.config
         # 基础增长（系数见 balance.TUNE）
