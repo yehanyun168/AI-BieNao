@@ -10,7 +10,7 @@ A) 拆分守卫 —— 2026-09-14 intro.py（1300 行）拆为 intro_common（�
 
 B) intro_seen 持久化契约（用户 2026-09-13 拍板规则）——
    跳过=载入存档继续且已播过；播放=开始新游戏（无论存档新旧）或载入从未
-   播过的旧档（v3 老档缺字段默认播）。守卫：字段默认 / SAVE_VERSION 4 迁移 /
+   播过的旧档（v3 老档缺字段默认播）。守卫：字段默认 / SAVE_VERSION 5 迁移 /
    存读往返 / main·ui_session 接线（源码扫描，test_build 同款手法）。
 
 运行：``python test_intro_split.py``
@@ -101,7 +101,7 @@ assert 'pixel_ui' in _common_deps or not _common_deps, "底座需从 pixel_ui �
 print("   ■ A4) 三模块 ≤800 行 / intro_common 零家族内依赖")
 
 # ============================================================
-# B1) intro_seen 默认值 + SAVE_VERSION 4 + v3→v4 迁移（老档默认补播）
+# B1) intro_seen 默认值 + SAVE_VERSION 5 + v3→v4 迁移（老档默认补播）
 # ============================================================
 import engine as _engine    # noqa: E402
 import save_manager as _sm  # noqa: E402
@@ -113,7 +113,9 @@ _tmp = os.path.join(HERE, '_tintro.json')
 _engine.player.intro_seen = True
 assert _sm.save(_tmp), "存档失败"
 _raw = json.load(open(_tmp, encoding='utf-8'))
-assert _raw['version'] == 4, f"SAVE_VERSION 应为 4，实际 {_raw['version']}"
+assert _sm.SAVE_VERSION == 5, f"SAVE_VERSION 应为 5，实际 {_sm.SAVE_VERSION}"
+assert _raw['version'] == _sm.SAVE_VERSION, \
+    f"存档版本应为 {_sm.SAVE_VERSION}，实际 {_raw['version']}"
 assert _raw['player']['intro_seen'] is True, "序列化应含 intro_seen=True"
 assert _sm.load(_tmp) and _engine.player.intro_seen is True, "往返丢失 intro_seen"
 # v3 老档迁移：缺字段 → 默认 False（老玩家下次读档补播一次，用户规则）
@@ -127,14 +129,14 @@ assert _sm.load(_tmp), "v3 档加载失败"
 assert _engine.player.intro_seen is False, \
     "v3 老档迁移后 intro_seen 应为 False（从未播过 → 补播一次）"
 os.remove(_tmp)
-print("   ■ B1) intro_seen：默认 False / v4 序列化往返 / v3→v4 迁移默认补播")
+print("   ■ B1) intro_seen：默认 False / v5 序列化往返 / v3→v4 迁移默认补播")
 
 # ============================================================
 # B2) 接线扫描：main 读档补播 + 进局置位落盘；ui_session 重开置位
 # ============================================================
 _sm_src = open(os.path.join(HERE, 'save_manager.py'), encoding='utf-8').read()
-for _n in ("SAVE_VERSION = 4", "'intro_seen'", "_v3_to_v4",
-           "_MIGRATIONS[3]"):
+for _n in ("SAVE_VERSION = 5", "'intro_seen'", "_v3_to_v4",
+           "_MIGRATIONS[3]", "_v4_to_v5", "_MIGRATIONS[4]"):
     assert _n in _sm_src, f"save_manager.py 缺 {_n}"
 _main_src = open(os.path.join(HERE, 'main.py'), encoding='utf-8').read()
 for _n in ("def _play_intro_then", "def _finish_intro_and_enter",
@@ -143,6 +145,6 @@ for _n in ("def _play_intro_then", "def _finish_intro_and_enter",
 _us_src = open(os.path.join(HERE, 'ui_session.py'), encoding='utf-8').read()
 assert 'intro_seen = True' in _us_src, \
     "ui_session.restart_game 应置 intro_seen=True（重开不重复播）"
-print("   ■ B2) 接线：save_manager v4 迁移 / main 补播+置位 / ui_session 重开置位")
+print("   ■ B2) 接线：save_manager v3→v4→v5 迁移 / main 补播+置位 / ui_session 重开置位")
 
 print("\n 全部通过 - 拆分契约与 intro_seen 持久化契约成立")
