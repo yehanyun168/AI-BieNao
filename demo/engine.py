@@ -1275,7 +1275,7 @@ def preview_skill(skill_id: str, targets: list = None,
         return out
     out['compute_before'] = float(p.compute)
     out['suspicion_before'] = float(p.suspicion)
-    out['downloads_before'] = float(sum(c.downloads_m for c in cslist))
+    out['downloads_before'] = float(sum(c.downloads_m for c in cslist if c.unlocked))
     # 不可用时 *_after 一律等于 *_before —— **不给假数值**
     # （预测一个不会发生的增量，比没有预览更伤信任）。
     out['compute_after'] = out['compute_before']
@@ -1338,13 +1338,13 @@ def preview_skill(skill_id: str, targets: list = None,
                'growth': 0.0, 'block': c.current_block_intensity}
               for c in cslist]
     by = {s['code']: s for s in shadow}
-    out['growth_by_country'] = {s['code']: s['growth'] for s in shadow}
 
     def _pen(s):
         pop = s['cfg'].population_m
         return (s['dl'] / pop) if pop > 0 else 0.0
 
-    total_dl = sum(s['dl'] for s in shadow)
+    total_dl = sum(s['dl'] for s in shadow if s['unlocked'])
+    cap, unlocked_this_tick = onboarding.unlock_budget(TUNE), 0
 
     # === 阶段1: 各国下载量增长 ===
     for s in shadow:
@@ -1353,12 +1353,14 @@ def preview_skill(skill_id: str, targets: list = None,
             # 未解锁国家按邻国渗透触发（与引擎同一顺序、同一阈值）
             boost = sum(_pen(by[n]) for n in cfg.neighbors
                         if n in by and by[n]['unlocked'])
-            if boost >= data.UNLOCK_PENETRATION_THRESHOLD:
+            if ((not cap or unlocked_this_tick < cap)
+                    and boost >= data.UNLOCK_PENETRATION_THRESHOLD):
                 s['unlocked'] = True
-                s['growth'] = data.UNLOCK_SEED_DOWNLOADS_M - s['dl']
+                unlocked_this_tick += 1
+                s['growth'] = data.UNLOCK_SEED_DOWNLOADS_M
                 s['dl'] = data.UNLOCK_SEED_DOWNLOADS_M
                 total_dl += s['dl']
-                continue
+            continue
         age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
         base_growth = (cfg.population_m * TUNE['growth_base']
                        * cfg.tech_adoption * age_bonus)
@@ -1380,6 +1382,7 @@ def preview_skill(skill_id: str, targets: list = None,
         s['dl'] += growth
         s['growth'] = growth
         total_dl += growth
+    out['growth_by_country'] = {s['code']: s['growth'] for s in shadow}
 
     # === 阶段2: 偷算力 + 怀疑度 ===
     stolen_total = 0.0
@@ -1419,7 +1422,7 @@ def preview_skill(skill_id: str, targets: list = None,
 
     # === 阶段5: 危机 → 各国下载量衰减（确定性）===
     if sus_after >= data.SUSPICION_CRISIS:
-        dl_after = sum(s['dl'] for s in shadow) * data.CRISIS_DOWNLOAD_DECAY
+        dl_after = sum(s['dl'] for s in shadow if s['unlocked']) * data.CRISIS_DOWNLOAD_DECAY
     # === 阶段5.1: 收网压力（确定性）===
     if (TUNE['sus_pressure_per_tick'] > 0
             and sus_after >= TUNE['sus_pressure_threshold']):
@@ -1471,7 +1474,7 @@ def preview_next_cycle(player=None, countries=None) -> Dict:
     }
     if p is None:
         return out
-    dl_before = float(sum(c.downloads_m for c in cslist))
+    dl_before = float(sum(c.downloads_m for c in cslist if c.unlocked))
     out['downloads_before'] = dl_before
     out['compute_before'] = float(p.compute)
     out['suspicion_before'] = float(p.suspicion)
@@ -1494,7 +1497,8 @@ def preview_next_cycle(player=None, countries=None) -> Dict:
         pop = s['cfg'].population_m
         return (s['dl'] / pop) if pop > 0 else 0.0
 
-    total_dl = sum(s['dl'] for s in shadow)
+    total_dl = sum(s['dl'] for s in shadow if s['unlocked'])
+    cap, unlocked_this_tick = onboarding.unlock_budget(TUNE), 0
 
     # === 阶段1: 各国下载量增长（无技能 → 全局乘 1.0）===
     for s in shadow:
@@ -1502,12 +1506,14 @@ def preview_next_cycle(player=None, countries=None) -> Dict:
         if not s['unlocked']:
             boost = sum(_pen(by[n]) for n in cfg.neighbors
                         if n in by and by[n]['unlocked'])
-            if boost >= data.UNLOCK_PENETRATION_THRESHOLD:
+            if ((not cap or unlocked_this_tick < cap)
+                    and boost >= data.UNLOCK_PENETRATION_THRESHOLD):
                 s['unlocked'] = True
-                s['growth'] = data.UNLOCK_SEED_DOWNLOADS_M - s['dl']
+                unlocked_this_tick += 1
+                s['growth'] = data.UNLOCK_SEED_DOWNLOADS_M
                 s['dl'] = data.UNLOCK_SEED_DOWNLOADS_M
                 total_dl += s['dl']
-                continue
+            continue
         age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
         base_growth = (cfg.population_m * TUNE['growth_base']
                        * cfg.tech_adoption * age_bonus)
@@ -1554,7 +1560,7 @@ def preview_next_cycle(player=None, countries=None) -> Dict:
     sus_after = max(0.0, min(100.0, sus_after))
     # 阶段5: 危机下载衰减（确定性）
     if sus_after >= data.SUSPICION_CRISIS:
-        dl_after = sum(s['dl'] for s in shadow) * data.CRISIS_DOWNLOAD_DECAY
+        dl_after = sum(s['dl'] for s in shadow if s['unlocked']) * data.CRISIS_DOWNLOAD_DECAY
     # 阶段5.1: 收网压力（确定性）
     if (TUNE['sus_pressure_per_tick'] > 0
             and sus_after >= TUNE['sus_pressure_threshold']):
