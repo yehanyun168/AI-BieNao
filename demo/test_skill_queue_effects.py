@@ -5,6 +5,7 @@ import sys
 import unittest
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
+from unittest.mock import patch
 
 import engine
 import skill_state
@@ -283,6 +284,241 @@ class SkillQueueCastTests(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     skill_state.normalize_targets(value)
+
+
+class SkillCycleTests(unittest.TestCase):
+    def setUp(self):
+        apply_difficulty('normal')
+        self.player = engine.init_game(seed=73)
+        self.player.unlocked_skills.update(SKILLS)
+        self.patchers = [
+            patch.object(engine.onboarding, 'try_unlock', return_value=False),
+            patch.object(engine, '_pick_boundary_event', return_value=(None, None)),
+            patch.object(engine, '_tick_counterplay', return_value=None),
+            patch.object(engine, '_tick_commissions', return_value=(None, None, None)),
+            patch.object(engine, 'check_achievements', return_value=[]),
+            patch.object(engine, 'check_ending', return_value=None),
+        ]
+        for patcher in self.patchers:
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def tearDown(self):
+        apply_difficulty('normal')
+
+    def _reset(self):
+        self.player = engine.init_game(seed=73)
+        self.player.unlocked_skills.update(SKILLS)
+        return self.player
+
+    def _country(self, code):
+        return next(
+            country for country in engine.player_countries
+            if country.config.code == code
+        )
+
+    def _zero_downloads(self):
+        for country in engine.player_countries:
+            country.downloads_m = 0.0
+
+    def _tick_state(self):
+        return (
+            copy.deepcopy(engine.player),
+            copy.deepcopy(engine.player_countries),
+            random.getstate(),
+        )
+
+    def test_drains_fifo_queue_and_keeps_only_persistent_effect(self):
+        self.assertTrue(engine.use_skill('algo_top'))
+        self.assertTrue(engine.use_skill('stealth'))
+
+        report = engine.tick_one_round()
+
+        self.assertEqual(report['skills_activated'], ['algo_top', 'stealth'])
+        self.assertEqual(self.player.skill_queue, [])
+        self.assertEqual(
+            [(a.skill_id, a.remaining_ticks)
+             for a in self.player.active_skill_effects],
+            [('stealth', 1)],
+        )
+
+    def test_stealth_settles_twice_and_cooldown_stays_positive_while_active(self):
+        self.assertTrue(engine.use_skill('stealth'))
+
+        engine.tick_one_round()
+        self.assertEqual(self.player.active_skill_effects[0].remaining_ticks, 1)
+        self.assertGreater(self.player.skill_cooldowns['stealth'], 0)
+
+        engine.tick_one_round()
+        self.assertEqual(self.player.active_skill_effects, [])
+        self.assertGreater(self.player.skill_cooldowns['stealth'], 0)
+
+    def test_equal_duration_and_cooldown_expire_together(self):
+        original = SKILLS['stealth']
+        SKILLS['stealth'] = replace(original, duration=2, cooldown=2)
+        self.addCleanup(SKILLS.__setitem__, 'stealth', original)
+        self.assertTrue(engine.use_skill('stealth'))
+
+        engine.tick_one_round()
+        self.assertEqual(self.player.active_skill_effects[0].remaining_ticks, 1)
+        self.assertEqual(self.player.skill_cooldowns['stealth'], 1)
+
+        engine.tick_one_round()
+        self.assertEqual(self.player.active_skill_effects, [])
+        self.assertNotIn('stealth', self.player.skill_cooldowns)
+
+    def test_global_instant_deltas_apply_once(self):
+        self._zero_downloads()
+        self.assertTrue(engine.use_skill('open_bait'))
+
+        with patch.dict(TUNE, {'growth_base': 0.0}):
+            first = engine.tick_one_round()
+            second = engine.tick_one_round()
+
+        self.assertEqual(first['suspicion_breakdown']['skill'], 8.0)
+        self.assertEqual(first['suspicion_gain'], 8.0)
+        self.assertEqual(first['compute_gain'], 150.0)
+        self.assertNotIn('skill', second['suspicion_breakdown'])
+        self.assertEqual(second['suspicion_gain'], 0.0)
+        self.assertEqual(second['compute_gain'], 0.0)
+
+    def test_targeted_instant_deltas_scale_by_distinct_target_count(self):
+        gains = []
+        for targets in (['CN', 'CN'], ['CN', 'US', 'CN']):
+            self._reset()
+            self._zero_downloads()
+            self.assertTrue(engine.use_skill('open_bait', targets))
+
+            with patch.dict(TUNE, {'growth_base': 0.0}):
+                report = engine.tick_one_round()
+            gains.append((report['compute_gain'], report['suspicion_gain']))
+
+        self.assertEqual(gains, [(150.0, 8.0), (300.0, 16.0)])
+
+    def test_download_multipliers_compose_for_same_country(self):
+        for country in engine.player_countries:
+            country.unlocked = country.config.code == 'CN'
+        before = self._country('CN').downloads_m
+        baseline = engine.tick_one_round()['download_growth']
+        self._reset()
+        for country in engine.player_countries:
+            country.unlocked = country.config.code == 'CN'
+        self.assertTrue(engine.use_skill('push_song'))
+        self.assertTrue(engine.use_skill('algo_top'))
+
+        combined = engine.tick_one_round()['download_growth']
+
+        self.assertGreater(before, 0)
+        self.assertAlmostEqual(combined, baseline * 1.10 * 1.30)
+
+    def test_targeted_download_multiplier_only_affects_target_country(self):
+        cn = self._country('CN')
+        us = self._country('US')
+        cn.downloads_m = us.downloads_m = 1.0
+        before = {'CN': cn.downloads_m, 'US': us.downloads_m}
+        with patch.dict(TUNE, {'growth_network': 0.0}):
+            engine.tick_one_round()
+        baseline = {
+            code: self._country(code).downloads_m - before[code]
+            for code in ('CN', 'US')
+        }
+
+        self._reset()
+        cn = self._country('CN')
+        us = self._country('US')
+        cn.downloads_m = us.downloads_m = 1.0
+        before = {'CN': cn.downloads_m, 'US': us.downloads_m}
+        self.assertTrue(engine.use_skill('algo_top', 'CN'))
+        with patch.dict(TUNE, {'growth_network': 0.0}):
+            engine.tick_one_round()
+        skilled = {
+            code: self._country(code).downloads_m - before[code]
+            for code in ('CN', 'US')
+        }
+
+        self.assertAlmostEqual(skilled['CN'], baseline['CN'] * 1.30)
+        self.assertAlmostEqual(skilled['US'], baseline['US'])
+
+    def test_anon_cdn_settles_three_times_then_expires(self):
+        self.assertTrue(engine.use_skill('anon_cdn'))
+        skilled_gains = []
+        remaining = []
+        for _ in range(3):
+            skilled_gains.append(engine.tick_one_round()['suspicion_gain'])
+            remaining.append(
+                self.player.active_skill_effects[0].remaining_ticks
+                if self.player.active_skill_effects else 0
+            )
+
+        self._reset()
+        baseline_gains = [
+            engine.tick_one_round()['suspicion_gain'] for _ in range(3)
+        ]
+
+        self.assertEqual(remaining, [2, 1, 0])
+        for skilled, baseline in zip(skilled_gains, baseline_gains):
+            self.assertAlmostEqual(skilled, baseline * 0.55)
+
+    def test_malformed_live_state_is_rejected_atomically(self):
+        corruptions = {
+            'duplicate_queue_id': lambda p: p.skill_queue.extend([
+                SkillCast('push_song'), SkillCast('push_song')
+            ]),
+            'cross_list_duplicate_id': lambda p: (
+                p.skill_queue.append(SkillCast('stealth')),
+                p.active_skill_effects.append(ActiveSkill('stealth', (), 1)),
+                p.skill_cooldowns.__setitem__('stealth', 2),
+            ),
+            'remaining_equals_duration': lambda p: (
+                p.active_skill_effects.append(ActiveSkill('stealth', (), 2)),
+                p.skill_cooldowns.__setitem__('stealth', 2),
+            ),
+            'remaining_exceeds_cooldown': lambda p: (
+                p.active_skill_effects.append(ActiveSkill('anon_cdn', (), 2)),
+                p.skill_cooldowns.__setitem__('anon_cdn', 1),
+            ),
+            'unknown_id': lambda p: p.skill_queue.append(SkillCast('missing')),
+            'invalid_cooldown': lambda p: p.skill_cooldowns.__setitem__(
+                'stealth', float('inf')
+            ),
+            'queued_cooldown_shorter_than_duration': lambda p: (
+                p.skill_queue.append(SkillCast('anon_cdn')),
+                p.skill_cooldowns.__setitem__('anon_cdn', 1),
+            ),
+            'duplicate_targets': lambda p: (
+                p.skill_queue.append(SkillCast('open_bait', ('CN', 'CN'))),
+                p.skill_cooldowns.__setitem__('open_bait', 9),
+            ),
+            'non_tuple_targets': lambda p: (
+                p.skill_queue.append(SkillCast('open_bait', None)),
+                p.skill_cooldowns.__setitem__('open_bait', 9),
+            ),
+            'unknown_target': lambda p: (
+                p.skill_queue.append(SkillCast('open_bait', ('UNKNOWN',))),
+                p.skill_cooldowns.__setitem__('open_bait', 9),
+            ),
+        }
+        for name, corrupt in corruptions.items():
+            with self.subTest(name=name):
+                self._reset()
+                corrupt(self.player)
+                before = self._tick_state()
+
+                with self.assertLogs('skill_state', level='ERROR'):
+                    with self.assertRaisesRegex(
+                        ValueError, r'^invalid live skill state$'
+                    ):
+                        engine.tick_one_round()
+
+                self.assertEqual(self._tick_state(), before)
+
+    def test_report_always_contains_skills_activated(self):
+        report = engine.tick_one_round()
+        self.assertEqual(report['skills_activated'], [])
+
+        self.player.game_over = True
+        report = engine.tick_one_round()
+        self.assertEqual(report['skills_activated'], [])
 
 
 if __name__ == "__main__":

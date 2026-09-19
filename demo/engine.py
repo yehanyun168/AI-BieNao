@@ -11,6 +11,7 @@ engine.py - Day 2 Demo 游戏引擎
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 import math
+import logging
 from numbers import Real
 import random
 from datetime import datetime
@@ -32,7 +33,14 @@ from data import (
 #    不能 ``from data import``（那是一次性快照）——一律用 ``data.XXX``
 #    属性访问，见下方各调用点。
 from tech_tree import PlayerTech, aggregate_effects, SLOT_MAP
-from skill_state import ActiveSkill, SkillCast, normalize_targets
+from skill_state import (
+    ActiveSkill,
+    SkillCast,
+    instant_deltas,
+    modifiers,
+    normalize_targets,
+    validate_live_skill_state,
+)
 # P2-3 难度档：init_game 经 apply_difficulty/current_difficulty 读写 TUNE 预设
 # T16 觉醒出身：init_game 按「出身绑定档 apply_difficulty + 出身乘区
 # apply_origin_tune_mult」两步应用（balance.apply_origin 是其等价封装）
@@ -119,6 +127,7 @@ player: PlayerState = None
 # 当前周期内怀疑度变化的来源拆解（玩家反馈 #5）：每个写 suspicion 的地方
 # 调 _sus(tag, delta) 记账，tick 结束放进 report。**纯观测**设施。
 _suspicion_trace: Dict[str, float] = {}
+logger = logging.getLogger(__name__)
 
 
 def _sus(tag: str, delta: float) -> None:
@@ -250,6 +259,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         "download_growth": 0,
         "compute_gain": 0,
         "suspicion_gain": 0,
+        "skills_activated": [],
         # 怀疑度变化的来源拆解（玩家反馈 #5：26%→95% 玩家看不懂为什么）
         # key = 来源分类（偷算力/技能/通用事件/国家事件/v2事件/反制/委托），
         # value = 该来源本周期带来的怀疑度净变化。
@@ -272,25 +282,27 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         report["ending"] = player.ending
         return report
 
+    validate_live_skill_state(
+        player.skill_queue,
+        player.active_skill_effects,
+        player.skill_cooldowns,
+    )
+    queued_count = len(player.skill_queue)
+    new_casts = list(player.skill_queue[:queued_count])
+    del player.skill_queue[:queued_count]
+    player.active_skill_effects.extend(
+        ActiveSkill(cast.skill_id, cast.targets, SKILLS[cast.skill_id].duration)
+        for cast in new_casts
+    )
+    report['skills_activated'] = [cast.skill_id for cast in new_casts]
+    instant_compute, instant_suspicion = instant_deltas(new_casts)
+
     player.tick_count += 1
     report["tick"] = player.tick_count
     # 重置怀疑度来源拆解（本周期开始）
     global _suspicion_trace
     _suspicion_trace = {}
     effects = aggregate_effects(player.tech)
-
-    # 计算技能乘数（覆盖科技效果中的同类项）
-    skill_dl_mult = 1.0
-    skill_suspicion_mult = 1.0
-    skill_compute_bonus = 0.0
-    skill_suspicion_delta = 0.0
-    skill_compute_mult = 1.0
-    skill_stealth_bonus = 0.0
-    skill_stealth_mult = 1.0
-
-    # 队列与持续效果由后续结算阶段统一消费。
-    skill_targets = []
-    targeted = bool(skill_targets)
 
     # === 阶段1: 各国下载量增长 ===
     # T03 解锁门控：判定逻辑见 onboarding（0 = 不设限，矩阵/回归用）
@@ -307,6 +319,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
             continue
 
         cfg = country.config
+        skill_mod = modifiers(player.active_skill_effects, cfg.code)
         # 基础增长（系数见 balance.TUNE）
         age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
         base_growth = (cfg.population_m * TUNE['growth_base']
@@ -320,8 +333,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         # T16 起源乘区：觉醒地点对下载增速的修正（univ_lab ×0.9 / game_studio ×1.25）
         growth *= TUNE['dl_growth_origin_mult']
         # 应用科技乘数
-        dl_skill = skill_dl_mult if (not targeted or cfg.code in skill_targets) else 1.0
-        growth *= effects['global_downloads_mult'] * dl_skill
+        growth *= effects['global_downloads_mult'] * skill_mod['downloads_mult']
         # 应用地区乘数（scope-based）
         for scope, mult in effects['regional_downloads_mult'].items():
             if scope == 'unlocked':
@@ -347,22 +359,20 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         if country.downloads_m <= 0 or not country.unlocked:
             continue
         cfg = country.config
-        # 精准投放：技能效果只作用于目标国家
-        on_target = (not targeted) or (cfg.code in skill_targets)
+        skill_mod = modifiers(player.active_skill_effects, cfg.code)
         # 单位用户算力
         unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
         active_users_m = country.downloads_m * TUNE['active_user_ratio']
         # 偷算力比例（科技加成 + 技能加成，再乘技能倍率，最后封顶）
         ratio = min(data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
-                    + (skill_stealth_bonus if on_target else 0.0),
+                    + skill_mod['stealth_ratio_bonus'],
                     data.MAX_STEALTH_RATIO)
-        ratio = min(ratio * (skill_stealth_mult if on_target else 1.0),
+        ratio = min(ratio * skill_mod['stealth_ratio_mult'],
                     data.MAX_STEALTH_RATIO)
         stolen_base = (active_users_m * unit_compute * ratio
                        * TUNE['compute_scale']
-                       * (skill_compute_mult if on_target else 1.0))
-        stolen = stolen_base + (skill_compute_bonus if on_target else 0.0)
-        total_stolen += stolen
+                       * skill_mod['compute_mult'])
+        total_stolen += stolen_base
         # 怀疑度（信任度模型：年轻人 + 高采纳率 → 更敏感）
         # ⚠️ 平衡调整：旧系数（0.015+0.015）实测 26 周期就顶满 100%，
         #    玩家几乎没有任何操作窗口，故下调约 45%。
@@ -374,8 +384,9 @@ def tick_one_round(skill_in_use: Optional[str] = None,
             sensitivity *= TUNE['suspicion_young_mult']
         elif cfg.age_structure == 'aging':
             sensitivity *= TUNE['suspicion_aging_mult']
-        suspicion_growth = stolen_base * sensitivity * effects['suspicion_mult'] * (skill_suspicion_mult if on_target else 1.0)
-        suspicion_growth += (skill_suspicion_delta if on_target else 0.0)
+        suspicion_growth = (stolen_base * sensitivity
+                            * effects['suspicion_mult']
+                            * skill_mod['suspicion_mult'])
         total_suspicion += suspicion_growth
 
     # T04 尖峰治理：偷算力聚合项过软饱和（记账值 = 实际落地值，保观测可信）
@@ -386,15 +397,17 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     compute_before = player.compute
     report['maintenance_fee'] = player.tick_count * TUNE['maintenance_per_tick']
     player.compute = max(0.0, player.compute + total_stolen
-                         + (skill_compute_bonus if not targeted else 0.0)
+                         + instant_compute
                          - report['maintenance_fee'])
     player.compute_peak = max(player.compute_peak, player.compute)
     _sus('steal', total_suspicion)                       # 偷算力（基础）
-    _sus('skill', (skill_suspicion_delta if not targeted else 0.0))  # 技能附带
-    player.suspicion = max(0, min(100, player.suspicion + total_suspicion + (skill_suspicion_delta if not targeted else 0.0)))
+    _sus('skill', instant_suspicion)                     # 技能附带
+    player.suspicion = max(
+        0, min(100, player.suspicion + total_suspicion + instant_suspicion)
+    )
     player.suspicion_peak = max(player.suspicion_peak, player.suspicion)
     report["compute_gain"] = player.compute - compute_before
-    report["suspicion_gain"] = total_suspicion
+    report["suspicion_gain"] = total_suspicion + instant_suspicion
     # P0-3 快照计数：历史累计偷取算力（C3「算力冲刺」委托的判定基准）
     player.compute_earned_total += total_stolen
 
@@ -445,9 +458,22 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     # === 阶段5: 冷却递减（按周期，与 tick 墙钟时长解耦）===
     # 技能冷却单位是「周期」（data.SKILLS.cooldown），每推进一个周期减 1。
     # 不能用 dt_seconds 递减：base_tick_seconds=30，会把 cooldown=3 一步扣成负数。
+    for active in player.active_skill_effects:
+        active.remaining_ticks -= 1
+    player.active_skill_effects = [
+        active for active in player.active_skill_effects
+        if active.remaining_ticks > 0
+    ]
     player.skill_cooldowns = {
         k: v - 1 for k, v in player.skill_cooldowns.items() if v > 1
     }
+    if any(
+        active.skill_id not in player.skill_cooldowns
+        or player.skill_cooldowns[active.skill_id] <= 0
+        for active in player.active_skill_effects
+    ):
+        logger.error('active skill survived without a positive cooldown')
+        raise ValueError('invalid live skill state')
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
     # === 阶段6: 回合边界事件（危机 > V2 > 国家 > 通用；至多一个）===
     crisis_active = player.suspicion >= data.SUSPICION_CRISIS
