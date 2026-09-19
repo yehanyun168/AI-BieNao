@@ -364,11 +364,12 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
         active_users_m = country.downloads_m * TUNE['active_user_ratio']
         # 偷算力比例（科技加成 + 技能加成，再乘技能倍率，最后封顶）
-        ratio = min(data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
-                    + skill_mod['stealth_ratio_bonus'],
-                    data.MAX_STEALTH_RATIO)
-        ratio = min(ratio * skill_mod['stealth_ratio_mult'],
-                    data.MAX_STEALTH_RATIO)
+        ratio = min(
+            (data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
+             + skill_mod['stealth_ratio_bonus'])
+            * skill_mod['stealth_ratio_mult'],
+            data.MAX_STEALTH_RATIO,
+        )
         stolen_base = (active_users_m * unit_compute * ratio
                        * TUNE['compute_scale']
                        * skill_mod['compute_mult'])

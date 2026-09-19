@@ -459,6 +459,35 @@ class SkillCycleTests(unittest.TestCase):
         for skilled, baseline in zip(skilled_gains, baseline_gains):
             self.assertAlmostEqual(skilled, baseline * 0.55)
 
+    def test_stealth_ratio_caps_only_after_bonus_and_multiplier(self):
+        original = SKILLS['stealth']
+        bonus = engine.data.MAX_STEALTH_RATIO
+        SKILLS['stealth'] = replace(
+            original,
+            stealth_ratio_bonus=bonus,
+            stealth_ratio_mult=0.5,
+        )
+        self.addCleanup(SKILLS.__setitem__, 'stealth', original)
+        for country in engine.player_countries:
+            country.unlocked = country.config.code == 'CN'
+            country.downloads_m = 1.0 if country.unlocked else 0.0
+        self.assertTrue(engine.use_skill('stealth'))
+
+        expected_ratio = min(
+            (engine.data.BASE_STEALTH_RATIO + bonus) * 0.5,
+            engine.data.MAX_STEALTH_RATIO,
+        )
+        expected_compute = (
+            TUNE['active_user_ratio']
+            * TUNE['compute_per_user']
+            * expected_ratio
+            * TUNE['compute_scale']
+        )
+        with patch.dict(TUNE, {'growth_base': 0.0}):
+            report = engine.tick_one_round()
+
+        self.assertAlmostEqual(report['compute_gain'], expected_compute)
+
     def test_malformed_live_state_is_rejected_atomically(self):
         corruptions = {
             'duplicate_queue_id': lambda p: p.skill_queue.extend([
