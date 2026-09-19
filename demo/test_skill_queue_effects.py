@@ -179,6 +179,11 @@ class SkillQueueCastTests(unittest.TestCase):
                     'algo_top', reason='cooldown'
                 )
 
+    def test_huge_integer_cooldown_fails_atomically(self):
+        self.player.skill_cooldowns['algo_top'] = 10 ** 1000
+
+        self._assert_atomic_failure('algo_top', reason='cooldown')
+
     def test_use_skill_reads_stateful_target_container_only_once(self):
         class ChangingTargets(list):
             def __init__(self):

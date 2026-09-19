@@ -1075,8 +1075,8 @@ def _skill_cast_decision(skill_id: str, target_codes=None) -> tuple:
         cooldown = player.skill_cooldowns[skill_id]
         if (isinstance(cooldown, bool)
                 or not isinstance(cooldown, Real)
-                or not math.isfinite(cooldown)
-                or cooldown != 0):
+                or cooldown != 0
+                or not math.isfinite(cooldown)):
             return 'cooldown', ()
     if any(active.skill_id == skill_id
            for active in player.active_skill_effects):
