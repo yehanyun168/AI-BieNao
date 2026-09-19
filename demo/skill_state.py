@@ -17,6 +17,26 @@ class ActiveSkill:
     remaining_ticks: int
 
 
+def normalize_targets(value):
+    """Return validated, de-duplicated target codes in first-seen order."""
+    if value is None or value == '':
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if not isinstance(value, (list, tuple)):
+        raise ValueError("invalid skill targets")
+
+    targets = []
+    seen = set()
+    for code in value:
+        if not isinstance(code, str) or not code:
+            raise ValueError("invalid skill targets")
+        if code not in seen:
+            seen.add(code)
+            targets.append(code)
+    return tuple(targets)
+
+
 def validate_skill_table(skills=SKILLS):
     for sid, skill in skills.items():
         duration = skill.duration

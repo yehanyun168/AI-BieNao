@@ -4,8 +4,15 @@ import unittest
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
+import engine
+import skill_state
+from balance import TUNE, apply_difficulty
 from data import SKILLS
-from skill_state import ActiveSkill, SkillCast, validate_skill_table
+from skill_state import (
+    ActiveSkill,
+    SkillCast,
+    validate_skill_table,
+)
 
 
 class SkillTimingTests(unittest.TestCase):
@@ -86,6 +93,130 @@ class SkillStateTests(unittest.TestCase):
 
         self.assertEqual(active.remaining_ticks, 1)
         self.assertIsInstance(active.targets, tuple)
+
+
+class SkillQueueCastTests(unittest.TestCase):
+    def setUp(self):
+        apply_difficulty('normal')
+        self.player = engine.init_game(seed=41)
+        self.player.unlocked_skills.update({'algo_top', 'stealth'})
+
+    def tearDown(self):
+        apply_difficulty('normal')
+
+    def _cast_state(self):
+        return (
+            self.player.compute,
+            dict(self.player.skill_cooldowns),
+            dict(self.player.skill_uses),
+            list(self.player.skill_queue),
+        )
+
+    def _assert_atomic_failure(self, skill_id, targets=None, reason=None):
+        before = self._cast_state()
+        if reason is not None:
+            self.assertEqual(
+                engine.skill_cast_reason(skill_id, targets),
+                reason,
+            )
+            self.assertEqual(self._cast_state(), before)
+        self.assertFalse(engine.use_skill(skill_id, targets))
+        self.assertEqual(self._cast_state(), before)
+
+    def test_successive_casts_append_in_order_and_charge_once_each(self):
+        compute_before = self.player.compute
+
+        self.assertTrue(engine.use_skill('algo_top'))
+        self.assertTrue(engine.use_skill('stealth'))
+
+        self.assertEqual(
+            [cast.skill_id for cast in self.player.skill_queue],
+            ['algo_top', 'stealth'],
+        )
+        self.assertEqual(self.player.compute, compute_before - 50)
+        self.assertEqual(self.player.skill_uses['algo_top'], 1)
+        self.assertEqual(self.player.skill_uses['stealth'], 1)
+
+    def test_mixed_valid_and_unknown_targets_fail_atomically(self):
+        self._assert_atomic_failure(
+            'algo_top', ['CN', 'UNKNOWN'], 'invalid_target'
+        )
+
+    def test_second_reservation_of_same_skill_has_no_side_effects(self):
+        self.assertTrue(engine.use_skill('stealth', 'CN'))
+        before = self._cast_state()
+
+        self.assertEqual(engine.skill_cast_reason('stealth', 'CN'), 'cooldown')
+        self.assertEqual(self._cast_state(), before)
+        self.assertFalse(engine.use_skill('stealth', 'CN'))
+        self.assertEqual(self._cast_state(), before)
+
+    def test_all_rejection_reasons_leave_cast_state_unchanged(self):
+        self.player.game_over = True
+        self._assert_atomic_failure('algo_top', reason='game_over')
+        self.player.game_over = False
+
+        self._assert_atomic_failure('missing_skill', reason='locked')
+        self._assert_atomic_failure('hit_maker', reason='locked')
+
+        self.player.skill_cooldowns['algo_top'] = 1
+        self._assert_atomic_failure('algo_top', reason='cooldown')
+        self.player.skill_cooldowns['algo_top'] = 0
+
+        self.player.active_skill_effects.append(
+            ActiveSkill('algo_top', (), remaining_ticks=1)
+        )
+        self._assert_atomic_failure('algo_top', reason='cooldown')
+        self.player.active_skill_effects.clear()
+
+        for targets in ({'CN'}, {'CN': True}, True, ['']):
+            with self.subTest(targets=targets):
+                self._assert_atomic_failure(
+                    'algo_top', targets, 'invalid_target'
+                )
+
+        self._assert_atomic_failure(
+            'algo_top', ['CN', 'UNKNOWN'], 'invalid_target'
+        )
+
+        locked = next(c for c in engine.player_countries if not c.unlocked)
+        self._assert_atomic_failure('algo_top', locked.config.code, 'locked')
+
+        cn = next(c for c in engine.player_countries if c.config.code == 'CN')
+        old_downloads = cn.downloads_m
+        cn.downloads_m = cn.config.population_m * TUNE['penetration_saturated']
+        self._assert_atomic_failure('algo_top', 'CN', 'saturated')
+        cn.downloads_m = old_downloads
+
+        self.player.compute = 49
+        self._assert_atomic_failure('algo_top', reason='no_compute')
+
+    def test_blocked_target_remains_castable_and_targets_are_deduplicated(self):
+        cn = next(c for c in engine.player_countries if c.config.code == 'CN')
+        cn.current_block_intensity = 0.8
+
+        self.assertEqual(
+            engine.skill_cast_reason('algo_top', ['CN', 'CN']),
+            'ok',
+        )
+        self.assertTrue(engine.use_skill('algo_top', ['CN', 'CN']))
+        self.assertEqual(self.player.skill_queue[-1].targets, ('CN',))
+        self.assertEqual(self.player.compute, 50)
+
+    def test_normalize_targets_accepts_supported_forms_and_rejects_others(self):
+        self.assertEqual(skill_state.normalize_targets(None), ())
+        self.assertEqual(skill_state.normalize_targets(''), ())
+        self.assertEqual(skill_state.normalize_targets('CN'), ('CN',))
+        self.assertEqual(
+            skill_state.normalize_targets(['CN', 'US', 'CN']),
+            ('CN', 'US'),
+        )
+        self.assertEqual(skill_state.normalize_targets(('CN',)), ('CN',))
+
+        for value in (True, {'CN'}, {'CN': True}, [''], [1]):
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    skill_state.normalize_targets(value)
 
 
 if __name__ == "__main__":
