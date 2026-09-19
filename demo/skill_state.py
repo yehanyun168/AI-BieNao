@@ -19,10 +19,10 @@ class ActiveSkill:
 
 def normalize_targets(value):
     """Return validated, de-duplicated target codes in first-seen order."""
-    if value is None or value == '':
+    if value is None:
         return ()
     if isinstance(value, str):
-        return (value,)
+        return (value,) if value else ()
     if not isinstance(value, (list, tuple)):
         raise ValueError("invalid skill targets")
 

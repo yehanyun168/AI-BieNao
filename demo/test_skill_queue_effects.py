@@ -1,3 +1,5 @@
+import copy
+import random
 import subprocess
 import sys
 import unittest
@@ -107,9 +109,27 @@ class SkillQueueCastTests(unittest.TestCase):
     def _cast_state(self):
         return (
             self.player.compute,
-            dict(self.player.skill_cooldowns),
+            tuple(
+                (skill_id, type(value), repr(value))
+                for skill_id, value in self.player.skill_cooldowns.items()
+            ),
             dict(self.player.skill_uses),
             list(self.player.skill_queue),
+            self.player.selected_country,
+            tuple(
+                (active.skill_id, active.targets, active.remaining_ticks)
+                for active in self.player.active_skill_effects
+            ),
+            tuple(
+                (
+                    country.config.code,
+                    country.unlocked,
+                    country.downloads_m,
+                    country.current_block_intensity,
+                    country.block_budget_remaining,
+                )
+                for country in engine.player_countries
+            ),
         )
 
     def _assert_atomic_failure(self, skill_id, targets=None, reason=None):
@@ -150,6 +170,47 @@ class SkillQueueCastTests(unittest.TestCase):
         self.assertEqual(self._cast_state(), before)
         self.assertFalse(engine.use_skill('stealth', 'CN'))
         self.assertEqual(self._cast_state(), before)
+
+    def test_invalid_cooldown_states_fail_atomically(self):
+        for cooldown in (-1, float('nan'), '0', True):
+            with self.subTest(cooldown=cooldown):
+                self.player.skill_cooldowns['algo_top'] = cooldown
+                self._assert_atomic_failure(
+                    'algo_top', reason='cooldown'
+                )
+
+    def test_use_skill_reads_stateful_target_container_only_once(self):
+        class ChangingTargets(list):
+            def __init__(self):
+                super().__init__()
+                self.iterations = 0
+
+            def __iter__(self):
+                self.iterations += 1
+                if self.iterations == 1:
+                    return iter(['CN'])
+                return iter(['UNKNOWN'])
+
+        targets = ChangingTargets()
+
+        self.assertTrue(engine.use_skill('algo_top', targets))
+        self.assertEqual(targets.iterations, 1)
+        self.assertEqual(self.player.skill_queue[-1].targets, ('CN',))
+
+    def test_explicit_skill_tick_is_rejected_before_any_state_change(self):
+        player_before = copy.deepcopy(engine.player)
+        countries_before = copy.deepcopy(engine.player_countries)
+        rng_before = random.getstate()
+
+        with self.assertRaisesRegex(
+            ValueError,
+            r'^explicit skill tick path is retired$',
+        ):
+            engine.tick_one_round('stealth')
+
+        self.assertEqual(engine.player, player_before)
+        self.assertEqual(engine.player_countries, countries_before)
+        self.assertEqual(random.getstate(), rng_before)
 
     def test_all_rejection_reasons_leave_cast_state_unchanged(self):
         self.player.game_over = True

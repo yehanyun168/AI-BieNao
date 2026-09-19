@@ -10,6 +10,8 @@ engine.py - Day 2 Demo 游戏引擎
 """
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
+import math
+from numbers import Real
 import random
 from datetime import datetime
 
@@ -238,6 +240,8 @@ def tick_one_round(skill_in_use: Optional[str] = None,
                         模拟/测试默认 1.0，真实 UI 传实际 tick 间隔。
                         注意：技能冷却按「周期」递减，与此参数无关。
     """
+    if skill_in_use is not None:
+        raise ValueError('explicit skill tick path is retired')
     if player is None:
         init_game()
 
@@ -284,18 +288,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     skill_stealth_bonus = 0.0
     skill_stealth_mult = 1.0
 
-    # 队列与持续效果由后续结算阶段统一消费；保留显式参数兼容路径。
-    if skill_in_use and skill_in_use in SKILLS:
-        s = SKILLS[skill_in_use]
-        skill_dl_mult *= s.downloads_mult
-        skill_suspicion_mult *= s.suspicion_mult
-        skill_compute_bonus += s.compute_delta
-        skill_suspicion_delta += s.suspicion_delta
-        skill_compute_mult *= s.compute_mult
-        skill_stealth_bonus += s.stealth_ratio_bonus
-        skill_stealth_mult *= s.stealth_ratio_mult
-
-    # 显式兼容路径没有队列目标信息，按全局投放处理。
+    # 队列与持续效果由后续结算阶段统一消费。
     skill_targets = []
     targeted = bool(skill_targets)
 
@@ -1071,35 +1064,47 @@ def _apply_country_event(evt: ce.CountryEvent):
 # ============================================================
 # 玩家操作 API
 # ============================================================
-def skill_cast_reason(skill_id: str, target_codes=None) -> str:
-    """Return a reason code for a prospective cast without mutating state."""
+def _skill_cast_decision(skill_id: str, target_codes=None) -> tuple:
+    """Return one immutable validation decision for a prospective cast."""
     if player is None or player.game_over:
-        return 'game_over'
+        return 'game_over', ()
     if skill_id not in SKILLS or skill_id not in player.unlocked_skills:
-        return 'locked'
-    if (player.skill_cooldowns.get(skill_id, 0) > 0
-            or any(active.skill_id == skill_id
-                   for active in player.active_skill_effects)):
-        return 'cooldown'
+        return 'locked', ()
+
+    if skill_id in player.skill_cooldowns:
+        cooldown = player.skill_cooldowns[skill_id]
+        if (isinstance(cooldown, bool)
+                or not isinstance(cooldown, Real)
+                or not math.isfinite(cooldown)
+                or cooldown != 0):
+            return 'cooldown', ()
+    if any(active.skill_id == skill_id
+           for active in player.active_skill_effects):
+        return 'cooldown', ()
 
     try:
         targets = normalize_targets(target_codes)
     except ValueError:
-        return 'invalid_target'
+        return 'invalid_target', ()
 
     countries = {c.config.code: c for c in player_countries}
     for code in targets:
         country = countries.get(code)
         if country is None:
-            return 'invalid_target'
+            return 'invalid_target', targets
         if not country.unlocked:
-            return 'locked'
+            return 'locked', targets
         if country.penetration_rate >= TUNE['penetration_saturated']:
-            return 'saturated'
+            return 'saturated', targets
 
     if player.compute < skill_cost_for(skill_id, len(targets)):
-        return 'no_compute'
-    return 'ok'
+        return 'no_compute', targets
+    return 'ok', targets
+
+
+def skill_cast_reason(skill_id: str, target_codes=None) -> str:
+    """Return a reason code for a prospective cast without mutating state."""
+    return _skill_cast_decision(skill_id, target_codes)[0]
 
 
 def use_skill(skill_id: str, target_codes=None) -> bool:
@@ -1119,10 +1124,10 @@ def use_skill(skill_id: str, target_codes=None) -> bool:
         本函数只负责完整校验，并在成功点原子地扣费、设冷却、计次和入队；
         不提前应用技能效果。
     """
-    if skill_cast_reason(skill_id, target_codes) != 'ok':
+    reason, targets = _skill_cast_decision(skill_id, target_codes)
+    if reason != 'ok':
         return False
 
-    targets = normalize_targets(target_codes)
     skill = SKILLS[skill_id]
     total_cost = skill_cost_for(skill_id, len(targets))
     player.compute -= total_cost
