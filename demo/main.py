@@ -13,7 +13,7 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
               │    ├─ 图例 HUD（左下）
               │    ├─ 指令栏 Rail（右侧居中，44px 达标）
               │    ├─ InspectorPanel S03 检视卡（点击国家左滑出）
-              │    ├─ DropPreview    S04 投放预览（投放模式右下）
+              │    ├─ 投放准星       S04 单目标点击/拖放反馈
               │    ├─ LogDrawer      S14 事件日志（右侧滑出）
               │    └─ 准星层         S04 可投目标准星 + 标签
               ├─ SkillBar            底部技能带 92px
@@ -24,7 +24,7 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
 快捷键（F11 —— 计划书 8.3 节，v0.4 帮助页同源）：
   Space 暂停 · 1–6 选技能（进投放模式）· F 投放 · K 科技树 · A 成就
   Tab 切区域 · F11 全屏 · 窗口变化自动适配 · F1 帮助
-  S/R 存/读档 · L 中英切换 · Esc 返回上一层 · Enter 确认投放
+  S/R 存/读档 · L 中英切换 · Esc 返回上一层
 
 性能探针（P1-3，**默认关闭**，零开销）：
   python main.py --perf   或   set AI_PERF=1
@@ -500,19 +500,22 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self.speed_idx: int = ST.CURRENT_SPEED_IDX
         self.speed_mult: float = ST.SPEED_STEPS[self.speed_idx]
         self._tick_deadline: float = Clock.get_time() + ST.BASE_TICK_SECONDS
+        # 所有暂停入口都可安全读取。教程会直接设置 paused=True，而不经过
+        # toggle_pause()；若这里只等手动暂停时再创建，倒计时刷新会闪退。
+        self._paused_remaining: float = ST.BASE_TICK_SECONDS / self.speed_mult
         self._cd_clock = None
         self._scalables = []
         self.scale = self._compute_scale()
         self.active_region = None
         self.active_layer = 'unlock'
-        self.selected_skill = None            # 已确认投放的技能
+        self.selected_skill = None            # 最近成功投放的技能
         self.focus_country = None             # 检视卡当前国家
         self.stats = S.UiStats()
         self._last_growth = 0.0
 
         # 投放模式状态机（设计稿 S04）
         self.drop_mode = False
-        self.drop_step = 0                    # 0 选技能 / 1 选目标 / 2 确认
+        self.drop_step = 0                    # 0 选技能 / 1 等待单个目标
         self.drop_skill = None
         self.drop_targets: list = []
 
@@ -724,22 +727,6 @@ def _parse_seed_input(text: str):
 # ============================================================
 # S01 主菜单（F01 启动页）
 # ============================================================
-class _MenuSlot(SaveSlotRow):
-    """可点选的存档槽行（设计稿 .slotrow）。"""
-
-    def __init__(self, title: str, summary: str, on_pick=None,
-                 active: bool = False, **kwargs):
-        super().__init__(title, summary, (), active, **kwargs)
-        self._on_pick = on_pick
-
-    def on_touch_down(self, touch):
-        if self.collide_point(*touch.pos) and self._on_pick:
-            sfx.play('select')          # 存档槽选中音（2026-09-13 修：原为零接线静默）
-            self._on_pick()
-            return True
-        return super().on_touch_down(touch)
-
-
 class MainMenu(FloatLayout):
     """S01 启动页：左品牌与操作区 + 右像素世界地图剪影（只读）。
 
@@ -769,6 +756,8 @@ class MainMenu(FloatLayout):
         self._scalables = []
         self._overlay = None
         self._ng_modal = None            # P2-3 新档弹窗（打开时接管按键）
+        self._continue_modal = None      # 继续游戏槽位选择弹窗
+        self._continue_rows = []         # 测试与语言重建使用的槽位行引用
         self._origin_flow = None         # T16 开场动画/出身页浮层（打开时接管按键）
         self._sel_slot = 1                # 默认选中槽位 02（设计稿）
         self.scale = self._compute_scale()
@@ -875,12 +864,11 @@ class MainMenu(FloatLayout):
 
         # 主按钮（5 枚）
         has_save = newest_save_path() is not None
-        slot_txt = t('slot_name_fmt').format(n=f"{self._sel_slot + 1:02d}")
         ach_total = len(achievements_mod.ALL_BY_ID)
         ach_got = len(getattr(engine.player, 'achievements', set())) if engine.player else 0
         btns = [
             (f"{U.SYM['play']} {t('menu_start')}", 'primary', self._fire_start, True),
-            (f"■ {t('menu_continue_slot').format(slot=slot_txt)}", 'plain',
+            (f"■ {t('menu_continue')}", 'plain',
              self._fire_continue, has_save),
             (t('menu_settings'), 'plain', self._open_settings, True),
             (f"{t('menu_achievements')}  {ach_got} / {ach_total}", 'plain',
@@ -893,16 +881,6 @@ class MainMenu(FloatLayout):
 
         left.add_widget(Widget(size_hint_y=None, height=int(8 * self.scale)))
         left.add_widget(self._lang_row())
-        left.add_widget(Widget(size_hint_y=None, height=int(14 * self.scale)))
-
-        # 3 个存档槽
-        for i, (title, summary, active) in enumerate(read_slot_rows(self._sel_slot)):
-            row = _MenuSlot(title, summary,
-                            on_pick=lambda k=i: self._slot_pick(k), active=active,
-                            height=self.SLOT_H)
-            self._reg(row, height=self.SLOT_H)
-            left.add_widget(row)
-            left.add_widget(Widget(size_hint_y=None, height=int(6 * self.scale)))
 
         left.add_widget(Widget())
         root.add_widget(left)
@@ -1212,8 +1190,42 @@ class MainMenu(FloatLayout):
         pop.open()
 
     def _fire_continue(self) -> None:
-        path = newest_save_path()
-        if path and callable(self.on_continue):
+        """打开槽位选择弹窗；不再自动读取最近修改的存档。"""
+        newest = newest_save_path()
+        if newest is None:
+            return
+
+        body = BoxLayout(orientation='vertical', spacing=10, padding=(16, 14))
+        body.add_widget(modal_header('■', t('continue_slot_title')))
+        body.add_widget(hline())
+        body.add_widget(auto_h_label(t('continue_slot_hint'), U.FS_BODY,
+                                     color=COLORS['text_dim']))
+
+        self._continue_rows = []
+        for i, (title, summary, _active) in enumerate(read_slot_rows()):
+            path = os.path.join(save_manager.SAVE_DIR, f'slot{i + 1}.json')
+            actions = ()
+            if os.path.exists(path):
+                actions = ((t('menu_continue'), 'primary',
+                            lambda p=path: self._continue_from_slot(p)),)
+            row = SaveSlotRow(title, summary, actions,
+                              active=os.path.normcase(path) == os.path.normcase(newest),
+                              height=60)
+            self._continue_rows.append(row)
+            body.add_widget(row)
+
+        pop = make_modal(body, size_hint=(0.58, 0.60), skin='win',
+                         close_on_outside=True)
+        pop.bind(on_dismiss=lambda *_: setattr(self, '_continue_modal', None))
+        self._continue_modal = pop
+        pop.open()
+
+    def _continue_from_slot(self, path: str) -> None:
+        """关闭槽位弹窗并把所选存档交给既有读档流程。"""
+        pop = self._continue_modal
+        if pop is not None:
+            pop.dismiss()
+        if callable(self.on_continue):
             self.on_continue(path)
 
     def _fire_exit(self) -> None:
@@ -1382,6 +1394,12 @@ class MainMenu(FloatLayout):
             # P2-3：新档弹窗打开时按键交还弹窗 / TextInput，
             # 防 'l' 切语言、Enter 开局等主菜单快捷键劫持输入框。
             return False
+        if self._continue_modal is not None:
+            # 槽位选择期间不让主菜单快捷键穿透；Esc 只关闭当前弹窗。
+            if key == 'escape':
+                self._continue_modal.dismiss()
+                return True
+            return False
         if self._overlay is not None:
             if key == 'escape':
                 self._close_overlay()
@@ -1391,13 +1409,10 @@ class MainMenu(FloatLayout):
             self._fire_exit()
             return True
         if key in ('enter', 'numpadenter'):
-            self._slot_pick(self._sel_slot)
-            return True
-        if key == 'up':
-            self._pick_slot(max(self._sel_slot - 1, 0))
-            return True
-        if key == 'down':
-            self._pick_slot(min(self._sel_slot + 1, 2))
+            if newest_save_path() is not None:
+                self._fire_continue()
+            else:
+                self._fire_start()
             return True
         if key == 'l':
             self._set_lang_idx(1 if get_lang() == LANG_ZH else 0)

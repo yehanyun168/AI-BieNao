@@ -5,7 +5,7 @@ tutorial.py — 新手引导步骤机（P0-1：解决"首局懵、无上手路�
 - 在 GameUI 上叠一层遮罩 + 高亮目标控件 + 讲解气泡，不改动任何游戏逻辑。
 - 引导期间冻结回合推进（game_tick 里有 overlay 守卫），用户不被倒计时催促。
 - 引导状态持久化到 engine.player.seen_tutorial，存盘后新游戏不再重复弹；
-  设置页「重看教程」可随时 replay（即使已看过）。
+  教程状态可由 replay() 重新启动（保留内部接口）。
 - 为避免与 main.py 循环依赖，本模块只依赖 pixel_ui / ui_v4 / engine / save_manager / kivy。
 
 坐标说明：GameUI 是充满窗口的 FloatLayout（pos=(0,0)），overlay 作为其子控件，
@@ -158,9 +158,10 @@ class TutorialController:
         TutorialStep(
             '投放流程',
             '右侧指令栏是你的操作中枢：\n'
-            f'[color={MK["st_on"]}]投放[/color] → 选技能+选目标 → 确认；\n'
+            f'[color={MK["st_on"]}]投放[/color] → 选技能 → 点一个国家立即投放；\n'
+            '也可以把技能卡直接拖到目标国家，松手即投放。\n'
             '科技 / 技能 / 日志 / 成就 / 帮助 也都在这。\n'
-            '记住三步：选国家 → 选技能 → 确认投放。',
+            '指向性技能每次只能选择一个国家。',
             target='rail', anchor='bottom', dim=0.62),
         TutorialStep(
             '科技才是最大加速器',
@@ -175,15 +176,15 @@ class TutorialController:
             action='open_tech_page'),
         TutorialStep(
             '周期倒计时',
-            '顶部的细条 = 一个「周期」的剩余时间。\n'
+            '时间框的暗色背景 = 一个「周期」的剩余时间。\n'
             '周期结束，游戏自动推进一回合（渗透增长、事件触发）。\n'
             '已减速到 30 秒/周期，你有充足时间思考。\n\n'
             '顶栏每个数字下方的趋势线，能看出它在涨还是在跌。',
-            target='cd_bar', anchor='top', dim=0.62),
+            target='tick_box', anchor='top', dim=0.62),
         TutorialStep(
             '随时暂停 / 帮助 / 设置',
             '右上角：暂停（Space）、切语言（L）、看帮助（F1）。\n'
-            '设置里还能调速、减弱动效、开色盲辅助，以及「重看教程」。',
+            '设置里还能调速、减弱动效和开启色盲辅助。',
             target='pause_chip', anchor='top', dim=0.62),
         TutorialStep(
             '上手路线（照着推）',
@@ -219,7 +220,7 @@ class TutorialController:
         self._begin()
 
     def replay(self) -> None:
-        """设置页「重看教程」：即使看过也重来。"""
+        """内部重播入口：即使已经看过也从头开始。"""
         if self.overlay is not None:
             self._teardown()
         self._begin()

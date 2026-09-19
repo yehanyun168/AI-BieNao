@@ -144,9 +144,8 @@ class PagesMixin:
             self.close_page()
             self._cast_skill_direct(sid)
             return
-        code = engine.player.selected_country or 'CN'
         self.close_page()
-        self.start_drop(sid, [code])
+        self.start_drop(sid)
 
     def _refresh_skill_page(self, page=None, sort=None) -> None:
         page = page if page is not None else self._page
@@ -560,7 +559,7 @@ class PagesMixin:
     # 检视卡（S03）
     # ========================================================
     def on_map_country_click(self, code: str) -> None:
-        """地图点击分发：投放模式 → 切换目标；否则 → 打开检视卡"""
+        """地图点击分发：投放模式 → 单目标立即投放；否则打开检视卡。"""
         sfx.play('select')
         if self.drop_mode and self.drop_step >= 1:
             self.toggle_target(code)
@@ -597,12 +596,12 @@ class PagesMixin:
     def _refresh_lang_panels(self) -> None:
         """语言切换后刷新**缓存在 map_stage 上的浮层**文案。
 
-        检视卡 / 投放预览 / 日志抽屉都是「首次打开时建、关闭才销毁」的常驻
+        检视卡 / 日志抽屉都是「首次打开时建、关闭才销毁」的常驻
         浮层，语言切换走的 ``_rebuild_lang()`` 只重建带页码的页面，碰不到它们
         —— 不显式重查，中英切换后这三块会继续显示旧语种（实测：EN 下左列仍是
         「政府状态」「邻国」）。面板自带 ``refresh_lang()``，这里只负责派发。
         """
-        for attr in ('_inspector', '_drop_preview', '_log_drawer'):
+        for attr in ('_inspector', '_log_drawer'):
             panel = getattr(self, attr, None)
             fn = getattr(panel, 'refresh_lang', None)
             if callable(fn):
@@ -613,7 +612,7 @@ class PagesMixin:
         self._notify(f"★ {get_country_name(code)}")
 
     def _on_inspector_drop(self, code: str) -> None:
-        self.start_drop(None, [code])
+        self.start_drop(None)
 
     @staticmethod
     def _country_state(code: str):
@@ -665,5 +664,5 @@ class PagesMixin:
             self._notify(t('load_fail'))
 
     # ========================================================
-    # 投放模式（S04 三步状态机）
+    # 投放模式（S04：选技能 → 单目标即时投放）
     # ========================================================

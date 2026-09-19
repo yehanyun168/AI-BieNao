@@ -91,9 +91,6 @@ def main():
     print("\n=== ui_v4_screens 屏幕级组件 ===")
     check('InspectorPanel', lambda: S.InspectorPanel().update(
         engine.player_countries[0], stats, 500.0, 41.0))
-    check('DropPreview', lambda: S.DropPreview().update(
-        'algo_top', '算法霸榜', ['CN', 'JP'], 50, 1284.0,
-        [('下载量 +30% ×3', 'up')], [('CN', 79.3, 103.1)], '警告文案'))
     check('SkillPage', lambda: (lambda p: (p.ensure_cards(['push_song', 'algo_top']),
                                            p.set_compute(1284),
                                            p.set_sort_visual('profit')))(S.SkillPage()))

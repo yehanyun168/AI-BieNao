@@ -32,6 +32,7 @@ import sfx
 
 from pixel_ui import (COLORS, PixelLabel, add_pixel_border, hex_rgba,
                       snap, snap_pt)
+from ui_gestures import DragReleaseGesture
 
 
 # ============================================================
@@ -95,7 +96,6 @@ MIN_TOUCH = 44
 # 新增图标前请先跑 ``demo/_check_glyphs.py`` 核验；本表是图标符号的单一来源。
 SYM: Dict[str, str] = {
     'play': '■',          # 运行/继续（■ 缺失）→ 实心方块
-    'pause': '‖',         # 暂停（‖ 缺失）
     'drop': '⊕',          # 投放
     'tech': '◆',          # 科技（◆ 缺失）→ 菱形
     'skills': '◇',        # 技能（▦ 缺失）→ 空心菱形
@@ -354,14 +354,17 @@ class PxChip(PixelLabel):
     BASE_H = 26          # 20 → 26：芯片内文字升到 FS_CAP(16)，高度要留够
 
     def __init__(self, text: str = '', tone: str = 'plain', font_size: float = FS_CAP,
-                 height: float = None, on_press: Callable = None, **kwargs):
+                 height: float = None, on_press: Callable = None,
+                 square: bool = False, **kwargs):
         kwargs.setdefault('size_hint', (None, None))
         kwargs.setdefault('halign', 'center')
         kwargs.setdefault('valign', 'middle')
         super().__init__(text=text, font_size=font_size, **kwargs)
         self.tone = tone
         self._fs = font_size
-        self._h = height or self.BASE_H
+        self._base_h = height or self.BASE_H
+        self._h = self._base_h
+        self._square = square
         self._on_press = on_press
         self._syncing = False
         self._apply_tone()
@@ -410,7 +413,8 @@ class PxChip(PixelLabel):
             # （顶栏 chip 集体塌成 26px 就是这个原因）。
             self.text_size = (None, None)
             self.texture_update()
-            w = max(float(self.texture_size[0]) + self.PAD_X * 2, 26)
+            w = (self._h if self._square else
+                 max(float(self.texture_size[0]) + self.PAD_X * 2, 26))
             if abs(self.width - w) > 0.5 or abs(self.height - self._h) > 0.5:
                 self.size = (w, self._h)
             self.text_size = (max(w - self.PAD_X * 2, 1), self._h)
@@ -434,7 +438,7 @@ class PxChip(PixelLabel):
     def refresh_scale(self, scale: float) -> None:
         """窗口自适应：字号随窗口缩放，重新计算宽度。"""
         self.font_size = self._fs * scale
-        self._h = self.BASE_H * scale
+        self._h = self._base_h * scale
         self._resize()
 
     def on_touch_down(self, touch):
@@ -676,7 +680,7 @@ class BlockBar(Widget):
 
 
 # ============================================================
-# Steps —— 三步状态机（设计稿 .steps）
+# Steps —— 投放步骤状态条（设计稿 .steps）
 # ============================================================
 class Steps(Widget):
     """横向步骤条：已完成为绿、当前为青、未到为静音。
@@ -1267,7 +1271,7 @@ class KvGrid(GridLayout):
 # ============================================================
 # SkillBarCard —— 底部技能带的一张卡（设计稿 .skill）
 # ============================================================
-class SkillBarCard(Widget):
+class SkillBarCard(DragReleaseGesture, Widget):
     """技能带卡：键位 + 名字 + 消耗 + 效果 + 冷却遮罩 + 目标标记。
 
     Args:
@@ -1280,10 +1284,16 @@ class SkillBarCard(Widget):
 
     def __init__(self, code: str, key_hint: str = '', name: str = '',
                  effect: str = '', cost: float = 0, on_click: Callable = None,
+                 on_drag_start: Callable = None, on_drag_move: Callable = None,
+                 on_drag_end: Callable = None,
                  **kwargs):
         super().__init__(**kwargs)
         self.code = code
         self._on_click = on_click
+        self._on_drag_start = on_drag_start
+        self._on_drag_move = on_drag_move
+        self._on_drag_end = on_drag_end
+        self._init_drag_release()
         self.state = 'ready'          # ready / cd / no_compute / sel
         self.cd_ratio = 0.0
         self.cd_left = 0
@@ -1296,14 +1306,10 @@ class SkillBarCard(Widget):
         self.lbl_cost = mk_label(str(int(cost)) if cost else '0',
                                  font_size=FS_CAP, color=COLORS['text_dim'],
                                  halign='right', size_hint=(None, None))
-        # ⚠️ 效果说明 / 状态行用 FS_TINY：此前误用 FS_CAP(16px)，而 _layout 只给
-        # FS_TINY*1.35≈15px 的行高 → 字形上下被裁（玩家看到"半截字/像错别字"，
-        # 例：'楚' 裁后视觉上像别的字），且长说明换行后必然溢出裁切。
+        # 效果说明 / 状态行用 FS_TINY，避免小区域内换行后裁字。
         self.lbl_fx = mk_label(effect, font_size=FS_TINY, color=COLORS['text_mute'])
-        self.lbl_state = mk_label('', font_size=FS_TINY, color=COLORS['text_dim'],
-                                  halign='right', size_hint=(None, None))
-        for w in (self.lbl_key, self.lbl_name, self.lbl_cost,
-                  self.lbl_fx, self.lbl_state):
+        self.lbl_state = mk_label('', font_size=FS_TINY, color=COLORS['text_dim'], halign='right', size_hint=(None, None))
+        for w in (self.lbl_key, self.lbl_name, self.lbl_cost, self.lbl_fx, self.lbl_state):
             self.add_widget(w)
 
         self.bind(pos=self._layout, size=self._layout)
@@ -1365,15 +1371,15 @@ class SkillBarCard(Widget):
         cost_left = x + w - pad - fs_w
         name_left = x + pad + kw + 4 * s
         self.lbl_name.pos = (name_left, top - row_h)
-        # shrink-to-fit：技能名在任意卡宽下都完整显示（不再被裁切）。
-        # 先按 FS_CAP 估算文字宽度（CJK≈1em、ASCII≈0.55em），若超出可用宽则
-        # 等比缩小字号到能容纳为止（下限 FS_TINY*0.85）。avail 留 0.92 安全余量。
+        # shrink-to-fit：先测真实字形宽度，再缩到名称区域以内，避免单行裁尾。
         avail = max(cost_left - name_left - 4 * s, 1)
         fs = FS_CAP * s
-        txt = self.lbl_name.text or ''
-        need = sum((fs if ord(c) > 0x2E80 else fs * 0.55) for c in txt)
+        self.lbl_name.font_size = fs
+        self.lbl_name.text_size = (None, None)
+        self.lbl_name.texture_update()
+        need = float(self.lbl_name.texture_size[0])
         if need > avail and need > 0:
-            fs = max(fs * (avail * 0.92) / need, FS_TINY * 0.85 * s)
+            fs = max(fs * (avail * 0.94) / need, 1 * s)
         self.lbl_name.font_size = fs
         self.lbl_name.size = (avail, row_h)
         self.lbl_name.text_size = (avail, row_h)
@@ -1431,11 +1437,6 @@ class SkillBarCard(Widget):
                 Color(*COLORS['yellow'])
                 Rectangle(pos=(x, y + h - 3), size=(w, 3))
 
-    def on_touch_down(self, touch):
-        if self._on_click and self.collide_point(*touch.pos):
-            self._on_click(self.code)
-            return True
-        return super().on_touch_down(touch)
 
 
 # ============================================================
@@ -1885,9 +1886,7 @@ class KeyBox(StrokePanel):
         kbd._edge = list(COLORS['border_2'])
         kbd._bg = list(COLORS['panel'])
         kbd._resize()
-        kbd.pos_hint = {'x': 0, 'center_y': 0.5}
         lbl = mk_label(desc, font_size=FS_CAP, color=COLORS['text_dim'])
-        lbl.pos_hint = {'x': 0, 'center_y': 0.5}
         row.add_widget(kbd)
         row.add_widget(lbl)
         row._kbd, row._lbl = kbd, lbl

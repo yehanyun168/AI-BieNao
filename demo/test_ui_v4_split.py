@@ -5,7 +5,7 @@
 白名单。按职责拆成 6 个模块：
 
     ui_v4_common.py    UiStats / small_btn（公共底座，零 ui_v4_* 依赖）
-    ui_v4_panels.py    InspectorPanel / DropPreview / LogDrawer
+    ui_v4_panels.py    InspectorPanel / LogDrawer
     ui_v4_cards.py     SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     ui_v4_canvas.py    TechNode / TechCanvas
     ui_v4_syspages.py  HelpPage / SettingsPage / SaveSlotRowSlot / Origin*
@@ -16,7 +16,7 @@
   风险 1：转发层漏符号 —— 外部 7 个模块（main.py / ui_*.py / 测试）都写
           `import ui_v4_screens as S` 再 `S.Xxx()`。谁哪天往新模块加了类却
           忘了在 ui_v4_screens 转发，只有运行到那行才 AttributeError。
-          → 断言 1：21 个原符号全部可从 S 取到。
+          → 断言 1：20 个原符号全部可从 S 取到。
 
   风险 2：新模块反向 import ui_v4_screens —— 会立刻构成循环导入，
           Kivy 应用启动就崩。
@@ -39,9 +39,9 @@ if HERE not in sys.path:
 FAMILY = ('ui_v4_common.py', 'ui_v4_panels.py', 'ui_v4_cards.py',
           'ui_v4_canvas.py', 'ui_v4_syspages.py', 'ui_v4_screens.py')
 
-# 拆分前的 21 个顶层符号（2026-09-13 冻结，改名需同步本表）
+# 当前需要从统一入口转发的 20 个顶层符号（改名需同步本表）
 LEGACY_NAMES = (
-    'UiStats', 'InspectorPanel', 'DropPreview', 'SkillPageCard', 'SlotRow',
+    'UiStats', 'InspectorPanel', 'SkillPageCard', 'SlotRow',
     'LinkBar', 'LvRow', 'BranchCard', 'TechNode', 'TechCanvas', 'small_btn',
     'SkillPage', 'TechPage', 'AchPage', 'HelpPage', 'SettingsPage',
     'SaveSlotRowSlot', 'LogDrawer', '_ORIGIN_DIFF_TONE', 'OriginCard',
@@ -81,7 +81,7 @@ def _ok(msg):
 def main():
     print('=== ui_v4_screens 拆分守卫 ===')
 
-    # ---- 1) 转发层完整性：21 个符号全部可从 S 取到 ----
+    # ---- 1) 转发层完整性：20 个符号全部可从 S 取到 ----
     import ui_v4_screens as S
     missing = [n for n in LEGACY_NAMES if not hasattr(S, n)]
     assert not missing, '转发层漏符号: %s' % missing

@@ -1,7 +1,7 @@
 """顶部回合调速按钮必须与设置页共用统一速度入口。"""
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import balance
 import engine
@@ -35,6 +35,20 @@ class TickSpeedControlsTests(unittest.TestCase):
                        view.lbl_tick_cap, view.lbl_tick_val,
                        view.btn_speed_up):
             self.assertEqual(widget.pos_hint, {'center_y': 0.5})
+
+    def test_pause_icon_is_leftmost_and_speed_buttons_are_rightmost(self):
+        engine.init_game()
+        view = main.GameUI()
+        children = list(reversed(view.tick_box.children))
+
+        self.assertEqual(children,
+                         [view.pause_chip, view.lbl_game_date,
+                          view.lbl_tick_cap, view.lbl_tick_val,
+                          view.btn_speed_down, view.btn_speed_up])
+        self.assertAlmostEqual(view.pause_chip.width, view.pause_chip.height)
+        self.assertGreaterEqual(view.pause_chip.width, 40)
+        self.assertEqual(view.pause_chip_icon.size, [28, 28])
+        self.assertFalse(hasattr(view, 'lang_switch'))
 
     def test_settings_speed_uses_same_entry_point(self):
         engine.init_game()
@@ -72,6 +86,31 @@ class TickSpeedControlsTests(unittest.TestCase):
         self.assertAlmostEqual(rects[0].pos[1],
                                view.tick_box.top + 3 * view.scale,
                                delta=0.01)
+
+    def test_countdown_is_a_dim_background_inside_tick_box(self):
+        engine.init_game()
+        view = main.GameUI()
+        self.assertFalse(hasattr(view, 'cd_label'))
+        self.assertFalse(hasattr(view, 'cd_bar'))
+        view.speed_idx = 1
+        view.speed_mult = 1.0
+        view.tick_box.pos = (100, 50)
+        view.tick_box.size = (300, 44)
+        view._tick_deadline = 108.0
+
+        with patch('ui_session.Clock.get_time', return_value=100.0):
+            view._update_countdown(0.0)
+
+        rect = view.tick_box._countdown_rect
+        self.assertEqual(rect.pos, (102, 52))
+        self.assertEqual(rect.size, (148, 40))
+
+        view._tick_deadline = 104.0
+        with patch('ui_session.Clock.get_time', return_value=100.0):
+            view._update_countdown(0.0)
+
+        self.assertIs(view.tick_box._countdown_rect, rect)
+        self.assertEqual(rect.size, (74, 40))
 
 
 if __name__ == '__main__':

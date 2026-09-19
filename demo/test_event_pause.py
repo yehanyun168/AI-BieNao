@@ -7,7 +7,6 @@ import engine
 import main
 import v2_events
 import ui_v4 as U
-from i18n import t
 
 
 class _FakePopup:
@@ -48,7 +47,18 @@ class EventPauseTests(unittest.TestCase):
     def _assert_manual_pause_state(self, game):
         self.assertTrue(game.paused)
         self.assertGreaterEqual(game._paused_remaining, 0.0)
-        self.assertIn(t('quick_resume'), game.btn_pause.text)
+        self.assertTrue(game.pause_chip_icon.source.endswith('resume.png'))
+
+    def test_countdown_is_safe_when_tutorial_sets_paused_directly(self):
+        engine.init_game()
+        game = main.GameUI()
+
+        # TutorialController._begin() preserves/restores its own pause state and
+        # therefore sets this flag directly rather than calling toggle_pause().
+        game.paused = True
+        game._update_countdown(0.0)
+
+        self.assertGreaterEqual(game._paused_remaining, 0.0)
 
     def test_v2_event_uses_manual_pause_state(self):
         engine.init_game()

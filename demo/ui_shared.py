@@ -8,11 +8,26 @@ ui_shared.py - UI 层共享配置与运行时全局（模块化拆分的最低�
                        !️ bool/int 不可变对象不能 from-import 共享写，
                        跨模块读写必须走 ``import ui_shared as ST; ST.XXX = …``
 """
+import os
+
 from pixel_ui import COLORS as PIXEL_COLORS, PixelPanel
 from balance import TUNE, SPEED_STEPS
 
 from kivy.core.window import Window
+from kivy.uix.image import Image
 from i18n import t
+
+PAUSE_ICON = os.path.join(os.path.dirname(__file__), 'assets', 'icons', 'pause.png')
+RESUME_ICON = os.path.join(os.path.dirname(__file__), 'assets', 'icons', 'resume.png')
+
+
+def attach_centered_icon(host, source, size):
+    icon = Image(source=source, size_hint=(None, None), size=(size, size))
+    host.add_widget(icon)
+    host.bind(pos=lambda *_: setattr(icon, 'center', host.center),
+              size=lambda *_: setattr(icon, 'center', host.center))
+    icon.center = host.center
+    return icon
 
 # ---- 配色（直接复用 pixel_ui 的 16 色 + 语义别名）----
 COLORS = dict(PIXEL_COLORS)

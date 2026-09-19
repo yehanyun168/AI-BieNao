@@ -1,7 +1,7 @@
 """test_kv_grid_fit.py - 键值表（KvGrid）左列文案「不省略」回归守卫
 
 背景 bug（本轮修复）：
-    检视卡 / 投放预览的左列是 i18n 键名，右列是值。左列宽 = 面板固定宽的一
+    检视卡的左列是 i18n 键名，右列是值。左列宽 = 面板固定宽的一
     半，英文文案普遍比中文长 30~70% —— 例如 ``doubt_thr``：
         中文 '怀疑度 / 阈值'   108px   ✔
         英文 'Suspicion / threshold' 181px   ✘（列宽仅 153px）
@@ -10,7 +10,7 @@
     所以英文文案必须收进列宽。
 
 本测试的做法：
-    1. 造真面板（InspectorPanel / DropPreview），钉死尺寸，强制布局收敛；
+    1. 造真面板 InspectorPanel，钉死尺寸，强制布局收敛；
     2. 对每个左列标签：临时关掉 shorten 量**自然宽度**，与它的格子宽比较；
     3. 中英两语 × 三档 UI 缩放都必须放得下。
 
@@ -135,26 +135,10 @@ def test_inspector_kv_fits_both_languages():
             _assert_kv_fits(panel.kv, f'检视卡/{lang}/×{scale}')
 
 
-def test_drop_preview_kv_fits_both_languages():
-    for scale in SCALES:
-        for lang in (i18n.LANG_ZH, i18n.LANG_EN):
-            i18n.set_lang(lang)
-            pv = P.DropPreview()
-            pv.size_hint = (None, None)
-            pv.width = P.DropPreview.WIDTH * scale
-            pv.height = 600 * scale
-            pv.pos = (0, 0)
-            _settle(pv)
-            if scale != 1.0:
-                _scale_fonts(pv, scale)
-                _settle(pv)
-            _assert_kv_fits(pv.kv, f'投放预览/{lang}/×{scale}')
-
-
 def test_all_kv_keys_exist_in_both_languages():
     """左列查表失败会回落成键名本身 —— 那也是一种「显示英文代码」。"""
     keys = set()
-    for panel in (P.InspectorPanel(), P.DropPreview()):
+    for panel in (P.InspectorPanel(),):
         keys |= set(panel.kv._labels.keys())
     assert keys, '没收集到任何 KvGrid 键名'
     for key in sorted(keys):
@@ -168,7 +152,6 @@ def main() -> int:
     print('KvGrid 左列文案宽度守卫（中英 × 三档缩放）')
     print('=' * 66)
     check('检视卡 KvGrid 中英双语不省略', test_inspector_kv_fits_both_languages)
-    check('投放预览 KvGrid 中英双语不省略', test_drop_preview_kv_fits_both_languages)
     check('KvGrid 键名中英词典齐备', test_all_kv_keys_exist_in_both_languages)
     print()
     if FAILED:

@@ -247,8 +247,3 @@ def beacon(target: Widget, code: str,
     while len(_beacons) > BEACON_MAX_LIVE:
         _beacon_kill(_beacons.pop(0))
     anim.start(ring)
-
-
-def tick_pulse(cd_bar: Widget) -> None:
-    """周期推进瞬间：倒计时条脉冲一次（提醒"新周期开始了"）。"""
-    pulse(cd_bar, scale_alpha=0.3, duration=0.2)

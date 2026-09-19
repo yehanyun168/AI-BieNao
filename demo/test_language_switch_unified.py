@@ -1,7 +1,6 @@
 """所有语言入口应共享状态，并完整刷新当前页面。"""
 
 import unittest
-from types import SimpleNamespace
 
 import engine
 import i18n
@@ -42,18 +41,10 @@ class UnifiedLanguageSwitchTests(unittest.TestCase):
         self.assertIsInstance(game._page, screens.HelpPage)
         self.assertEqual(game._page.lbl_title.text, i18n.t('help_page_title'))
 
-    def test_clicking_game_language_chip_uses_unified_switch(self):
-        i18n.set_lang(i18n.LANG_ZH)
+    def test_game_topbar_has_no_language_switch(self):
         engine.init_game()
         game = main.GameUI()
-        touch = SimpleNamespace(pos=game.lang_switch.center)
-
-        handled = game.lang_switch.on_touch_down(touch)
-
-        self.assertTrue(handled)
-        self.assertEqual(i18n.get_lang(), i18n.LANG_EN)
-        self.assertIn(i18n.t('stats_compute'), game.stats_compute.text)
-        self.assertEqual(game.lbl_tick_cap.text, i18n.t('stats_tick'))
+        self.assertFalse(hasattr(game, 'lang_switch'))
 
     def test_game_language_switch_translates_command_rail(self):
         i18n.set_lang(i18n.LANG_ZH)
@@ -145,24 +136,18 @@ class UnifiedLanguageSwitchTests(unittest.TestCase):
         self.assertEqual(drawer.btn_read_all.text, i18n.t('log_read_all'))
         self.assertNotEqual(zh_note, drawer.lbl_note.text)
 
-    def test_drop_preview_follows_language_switch(self):
+    def test_drop_steps_follow_language_switch(self):
         i18n.set_lang(i18n.LANG_ZH)
         engine.init_game()
         game = main.GameUI()
-        game.start_drop('push_song', ['CN'])
-        game._show_drop_preview()
-        pv = game._drop_preview
-        zh_est = pv.lbl_est_hd.text
+        game.start_drop('push_song')
+        zh_labels = list(game.steps.labels)
 
         game.toggle_lang()
 
-        self.assertIs(game._drop_preview, pv)
-        self.assertEqual(pv.lbl_est_hd.text, i18n.t('drop_est'))
-        self.assertEqual(pv.btn_cancel.text, i18n.t('drop_cancel'))
-        self.assertEqual(pv.btn_ok.text, i18n.t('drop_confirm'))
-        for k in ('targets', 'cost', 'remain'):
-            self.assertEqual(pv.kv._labels[k].text, i18n.t(k))
-        self.assertNotEqual(zh_est, pv.lbl_est_hd.text)
+        self.assertEqual(game.steps.labels,
+                         [i18n.t('drop_step1'), i18n.t('drop_step2')])
+        self.assertNotEqual(zh_labels, game.steps.labels)
 
     def test_panels_do_not_truncate_text_in_either_language(self):
         """中英两种语言下，自适应高度的标签都必须装得下自己的文本。

@@ -118,7 +118,7 @@ class ShotApp(App):
 
         def drop_mode():
             self.clean()
-            self._g().start_drop('algo_top', ['JP', 'KR'])
+            self._g().start_drop('algo_top')
 
         def page(name):
             def _do():

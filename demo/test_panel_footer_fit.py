@@ -183,10 +183,6 @@ def test_inspector_footer_fits():
     _run_panels(P.InspectorPanel, '检视卡')
 
 
-def test_drop_preview_footer_fits():
-    _run_panels(P.DropPreview, '投放预览')
-
-
 def test_inspector_fit_width_scales_with_panel():
     """自适应测量的基准宽必须跟着面板缩，否则按 292px 量的行数 ≠ 实际行数。"""
     p = P.InspectorPanel()
@@ -200,32 +196,13 @@ def test_inspector_fit_width_scales_with_panel():
         raise AssertionError('回到 ×1.0 时基准宽未复原')
 
 
-def test_footer_refit_on_language_switch():
-    """切语言后按钮文字变宽/变窄，必须重新贴合（否则新语言下又溢出）。"""
-    i18n.set_lang(i18n.LANG_ZH)
-    d = P.DropPreview()
-    _build(d, 1.0)
-    zh_w = d.btn_ok.width
-    d.refresh_lang()          # i18n 已是 zh，先拿基准
-    zh_w = max(zh_w, d.btn_ok.width)
-    i18n.set_lang(i18n.LANG_EN)
-    d.refresh_lang()
-    _settle(d)
-    _assert_footer(d, '投放预览/切语言后/en')
-    if abs(d.btn_ok.width - zh_w) < 1.0:
-        raise AssertionError(
-            f'切语言后按钮宽度没变（{zh_w:.0f}），可能没重新贴合')
-
-
 def main() -> int:
     print('=' * 66)
     print('浮层面板页脚/标题栏宽度守卫（中英 × 五档缩放 0.68~1.45）')
     print('=' * 66)
     check('日志抽屉页脚不溢出、按钮不压字', test_log_drawer_footer_fits)
     check('检视卡页脚不溢出、按钮不压字', test_inspector_footer_fits)
-    check('投放预览页脚不溢出、按钮不压字', test_drop_preview_footer_fits)
     check('检视卡自适应基准宽随面板缩放', test_inspector_fit_width_scales_with_panel)
-    check('切换语言后页脚重新贴合', test_footer_refit_on_language_switch)
     print()
     if FAILED:
         print(f'■ {len(FAILED)} 项未通过：{FAILED}')

@@ -1,7 +1,7 @@
 """
 ui_drop.py - DropMixin（拆分自 main.py）
 
-投放模式状态机（设计稿 S04）：选技能 → 选目标（准星层）→ 确认投放
+投放模式状态机：选技能 → 点击或拖到单个国家后立即投放
 """
 from kivy.uix.floatlayout import FloatLayout
 
@@ -10,7 +10,6 @@ import engine
 import sfx
 import pixel_assets as PA
 from data import SKILLS
-import ui_v4_screens as S
 from ui_v4 import Reticle, TgtLabel
 
 
@@ -22,30 +21,19 @@ class DropMixin:
         if self.drop_mode:
             self._cancel_drop()
         else:
-            self.start_drop(None, None)
+            self.start_drop(None)
 
-    def _primary_drop_action(self) -> None:
-        """底部大按钮的统一行为（文案与行为保持一致）：
-        投放中且有目标 → 确认投放；投放中无目标 → 取消；否则进入投放。"""
-        if self.drop_mode:
-            if self.drop_targets:
-                self._confirm_drop()
-            else:
-                self._cancel_drop()
-        else:
-            self.start_drop(None, None)
-
-    def start_drop(self, skill_id, codes) -> None:
+    def start_drop(self, skill_id) -> None:
         """进入投放模式。
 
         Args:
             skill_id: 已选技能（None = 停在步骤 ①）
-            codes: 初始目标（None = 空）
         """
         self.drop_mode = True
         self.drop_skill = skill_id
-        self.drop_targets = list(codes or [])
-        self.drop_step = 0 if not skill_id else (1 if not self.drop_targets else 2)
+        # 单目标即时投放不保留预选目标，选好技能后等待一次点击/松手。
+        self.drop_targets = []
+        self.drop_step = 0 if not skill_id else 1
         self._close_inspector()
         self.steps_hud.opacity = 1
         self.drop_hud.opacity = 1
@@ -74,14 +62,11 @@ class DropMixin:
         self.rail.set_active('none')
         self.map_widget.set_target_mode(None, None)
         self._clear_reticles()
+        self._hide_skill_drag_ghost()
         # 退出投放：图层HUD 归位到顶右角
         self.layer_hud._base_top_inset = 0
         self.layer_hud._sync()
         self.layer_hud._layout_hud()
-        # 按钮文案必须在这里复位（玩家反馈 #3b）——
-        # refresh_all() 里对按钮的同步受 drop_mode 门控，而此处刚把它置假，
-        # 不显式同步就会残留「确认投放」。
-        self._sync_drop_button()
         self.refresh_all()
 
     def _ensure_reticle_layer(self) -> None:
@@ -101,23 +86,95 @@ class DropMixin:
         self._reticles = []
 
     def toggle_target(self, code: str) -> None:
-        ok, reason, _disc = engine.target_availability(
-            code, self.drop_skill, len(self.drop_targets))
+        """点击国家后立即执行单目标投放（保留旧方法名供地图回调使用）。"""
+        ok, reason, _disc = engine.target_availability(code, self.drop_skill)
         if not ok:
             sfx.play('error')             # 目标不可选（算力不足/该国不适格）—— 与文字原因配对
             self._notify(f"{get_country_name(code)}: {self._reason_text(reason, code)}")
             return
-        if code in self.drop_targets:
-            self.drop_targets.remove(code)
-        else:
-            self.drop_targets.append(code)
-        self.drop_step = 2 if self.drop_targets else 1
-        self._sync_drop_ui()
+        self._cast_target_skill(self.drop_skill, code)
+
+    def _cast_target_skill(self, skill_id: str, code: str) -> bool:
+        """投放一个国家并立即退出投放态；不经过二次确认。"""
+        ok = engine.use_skill(skill_id, [code])
+        sfx.play('deploy' if ok else 'error')
+        if ok:
+            self.stats.mark_skill(skill_id, 0.0)
+            self.selected_skill = skill_id
+            self._notify(f"{self._skill_name(skill_id)} → {code}")
+            self._fx_cast(skill_id, [code])
+        self._cancel_drop()
+        return ok
+
+    def on_skill_drag_start(self, skill_id: str, pos) -> bool:
+        """技能卡拖动开始：复用点击入口的可用性检查并进入投放态。"""
+        if not self._skill_needs_target(skill_id):
+            return False
+        if self.drop_mode:
+            self._cancel_drop()
+        self.on_skill_card_click(skill_id)
+        accepted = bool(self.drop_mode and self.drop_skill == skill_id)
+        if accepted:
+            self._show_skill_drag_ghost(skill_id, pos)
+        return accepted
+
+    def on_skill_drag_move(self, skill_id: str, pos) -> None:
+        """拖动时只高亮指针下的一个有效国家。"""
+        if not self.drop_mode or self.drop_skill != skill_id:
+            return
+        self._move_skill_drag_ghost(pos)
+        code = self.map_widget.hit_country(*pos)
+        targets = []
+        if code:
+            ok, _reason, _discount = engine.target_availability(code, skill_id)
+            if ok:
+                targets = [code]
+        if targets != self.drop_targets:
+            self.drop_targets = targets
+            self.drop_step = 1
+            self._sync_drop_ui()
+
+    def on_skill_drag_end(self, skill_id: str, pos) -> None:
+        """在有效国家上松手立即投放，其他位置取消。"""
+        if not self.drop_mode or self.drop_skill != skill_id:
+            return
+        code = self.map_widget.hit_country(*pos)
+        if code:
+            ok, reason, _discount = engine.target_availability(code, skill_id)
+            if ok:
+                self._cast_target_skill(skill_id, code)
+                return
+            self._notify(f"{get_country_name(code)}: {self._reason_text(reason, code)}")
+            sfx.play('error')
+        self._cancel_drop()
+
+    def _show_skill_drag_ghost(self, skill_id: str, pos) -> None:
+        """显示跟随鼠标/手指的轻量技能图标。"""
+        ghost = getattr(self, '_skill_drag_ghost', None)
+        if ghost is None:
+            ghost = TgtLabel('', tone='ok')
+            ghost.size_hint = (None, None)
+            ghost.size = (150, 34)
+            self._skill_drag_ghost = ghost
+        ghost.set_state(f"{SKILLS[skill_id].icon}  {self._skill_name(skill_id)}", 'ok')
+        if ghost.parent is None:
+            self.add_widget(ghost)
+        self._move_skill_drag_ghost(pos)
+
+    def _move_skill_drag_ghost(self, pos) -> None:
+        ghost = getattr(self, '_skill_drag_ghost', None)
+        if ghost is not None and ghost.parent is not None:
+            ghost.pos = (pos[0] - ghost.width / 2, pos[1] + 18)
+
+    def _hide_skill_drag_ghost(self) -> None:
+        ghost = getattr(self, '_skill_drag_ghost', None)
+        if ghost is not None and ghost.parent is not None:
+            self.remove_widget(ghost)
 
     def _reason_text(self, reason: str, code: str = '') -> str:
         if reason == engine.TARGET_NO_COMPUTE:
             skill = SKILLS.get(self.drop_skill)
-            need = engine.skill_cost_for(self.drop_skill, len(self.drop_targets) + 1)
+            need = engine.skill_cost_for(self.drop_skill)
             return t('reason_no_compute').format(n=f"{need - engine.player.compute:.0f}")
         if reason == engine.TARGET_SATURATED:
             return t('reason_saturated')
@@ -128,7 +185,7 @@ class DropMixin:
         return t('reason_locked')
 
     def _sync_drop_ui(self) -> None:
-        """刷新投放模式的全部 UI（步骤条 / 准星 / 预览 / 原因条）"""
+        """刷新投放模式的全部 UI（步骤条 / 准星 / 原因条）。"""
         self.steps.set_current(self.drop_step)
         p = engine.player
         # 顶栏提示
@@ -139,7 +196,7 @@ class DropMixin:
         # 看得到差在哪，而不是反复点确认却没反应。
         if self.drop_skill:
             n = len(self.drop_targets)
-            cost = engine.skill_cost_for(self.drop_skill, max(n, 1))
+            cost = engine.skill_cost_for(self.drop_skill)
             if p.compute >= cost:
                 self.drop_hint.set_tone('on', t('drop_selected_cost').format(
                     n=n, cost=f"{cost:.0f}", have=f"{p.compute:.0f}"))
@@ -159,8 +216,7 @@ class DropMixin:
         if self.drop_skill:
             for c in engine.player_countries:
                 code = c.config.code
-                ok, reason, _ = engine.target_availability(
-                    code, self.drop_skill, len(self.drop_targets))
+                ok, reason, _ = engine.target_availability(code, self.drop_skill)
                 if code in self.drop_targets:
                     targets.append(code)
                 elif ok and code not in targets:
@@ -188,87 +244,6 @@ class DropMixin:
         else:
             self.reason_chips[1].opacity = 0
 
-        # 右下预览
-        if self.drop_skill and self.drop_targets:
-            self._show_drop_preview()
-        else:
-            self._hide_drop_preview()
-
-        # 底部按钮
-        #
-        # ⚠️ 修复（玩家反馈 #3b）：旧写法只在 drop_mode 为真时调用本函数，
-        #    投放成功后 _cancel_drop() 立刻把 drop_mode 置假，导致
-        #    refresh_all() 再也不会同步按钮文案 —— 按钮上残留的
-        #    「✔ 确认投放」要等玩家再手点一次才消失。
-        #    现在文案完全由状态推导（_sync_drop_button），并由
-        #    _cancel_drop / refresh_all 无条件调用，杜绝残留。
-        self._sync_drop_button()
-
-    def _sync_drop_button(self) -> None:
-        """底部主按钮文案的唯一来源（与 drop_mode / drop_targets 严格同源）。
-
-        玩家反馈 #3b：投放结束后按钮仍显示「确认投放」需再点一次才复位；
-        且全局技能点击后也被显示成「确认投放」—— 根因都是按钮文案由
-        瞬时路径分别赋值、而非由状态统一推导。这里收敛成一处。
-        """
-        btn = getattr(self, 'btn_drop', None)
-        if btn is None:
-            return
-        actionable = bool(getattr(self, 'drop_mode', False)
-                          and self.drop_skill and self.drop_targets)
-        btn.text = (f"■ {t('drop_confirm')}" if actionable
-                    else f"⊕ {t('quick_drop')}")
-        btn.disabled = False
-
-    def _show_drop_preview(self) -> None:
-        if not hasattr(self, '_drop_preview'):
-            self._drop_preview = S.DropPreview(
-                on_confirm=self._confirm_drop, on_cancel=self._cancel_drop)
-            self._drop_preview.pos_hint = {'right': 1, 'y': 0}
-            self.map_stage.add_widget(self._drop_preview)
-        skill = SKILLS[self.drop_skill]
-        p = engine.player
-        #
-        # P1-2：预估改走 engine.preview_skill —— 与 tick_one_round 结算
-        # **同源同式**，不再用「现值 × 倍率」那套假估算（假估算会让玩家
-        # 以为点了就能拿 +50%，实际 downloads_mult 只作用于本周期增量）。
-        pv = engine.preview_skill(self.drop_skill, list(self.drop_targets))
-        effects = []
-        if skill.downloads_mult > 1.0:
-            effects.append((f"{t('stats_downloads')} ×{skill.downloads_mult:.2f}"
-                            f" ×{len(self.drop_targets)}", 'up'))
-        if skill.suspicion_delta > 0:
-            effects.append((f"{t('stats_suspicion')} +{skill.suspicion_delta:.0f}%"
-                            f" ×{len(self.drop_targets)}", 'dn'))
-        if skill.compute_mult > 1.0:
-            effects.append((f"steal ×{skill.compute_mult:.1f}", 'sys'))
-        effects.append((f"{t('sk_sort_cd')} {skill.cooldown}", 'cost'))
-        # 口径说明：预览只含确定性部分，随机事件/反制不计入（不假装精确）
-        effects.append((t(pv['caveat']), 'lock'))
-        # 各国预估用 preview_skill 的真实增量（阶段1，与结算同源）
-        gmap = pv.get('growth_by_country', {})
-        ests = []
-        for code in self.drop_targets[:3]:
-            cs = self._country_state(code)
-            if cs:
-                before = cs.downloads_m
-                ests.append((code, before, before + gmap.get(code, 0.0)))
-        warn = ''
-        if not pv['ok']:
-            warn = f"! {self._preview_reason_text(pv)}"
-        elif pv['suspicion_delta'] > 0.05:
-            warn = (f"! {t('stats_suspicion')} {pv['suspicion_before']:.0f}%"
-                    f" → {pv['suspicion_after']:.0f}%")
-            warn += (f" · {t('sk_pv_over')}" if pv['crisis_crossed']
-                     else f" · {t('sk_pv_to_crisis').format(n=f'{pv['suspicion_to_crisis']:.0f}')}")
-        self._drop_preview.update(
-            self.drop_skill, self._skill_name(self.drop_skill),
-            self.drop_targets, skill.cost, p.compute, effects, ests, warn)
-
-    def _hide_drop_preview(self) -> None:
-        if hasattr(self, '_drop_preview') and self._drop_preview.parent is not None:
-            self.map_stage.remove_widget(self._drop_preview)
-
     def _update_reticles(self) -> None:
         """在可投国家上画准星 + 预估标签"""
         self._clear_reticles()
@@ -277,8 +252,7 @@ class DropMixin:
         skill = SKILLS[self.drop_skill]
         for c in engine.player_countries:
             code = c.config.code
-            ok, reason, _d = engine.target_availability(
-                code, self.drop_skill, len(self.drop_targets))
+            ok, reason, _d = engine.target_availability(code, self.drop_skill)
             if not ok:
                 continue
             x, y = self._country_screen_pos(code)
@@ -343,26 +317,6 @@ class DropMixin:
         except Exception:
             return None
 
-    def _confirm_drop(self) -> None:
-        if not (self.drop_skill and self.drop_targets):
-            return
-        skill_id = self.drop_skill
-        targets = list(self.drop_targets)
-        try:
-            ok = engine.use_skill(skill_id, targets)
-            # 「确认投放」用 deploy，与全局技能的 cast 区分开 —— 之前两者共用
-            # cast，玩家从声音上分不出「我刚才是确认了投放还是直接放了个技能」。
-            # ⚠️ 成功与失败只响一声：失败时才补 error，避免 deploy+error 叠响。
-            sfx.play('deploy' if ok else 'error')
-            if ok:
-                self.stats.mark_skill(skill_id, 0.0)
-                self.selected_skill = skill_id
-                self._notify(f"{self._skill_name(skill_id)} → {'+'.join(targets)}")
-                self._fx_cast(skill_id, targets)
-        finally:
-            # 无论投放成功与否，都回到正常游戏内（不退出会话）
-            self._cancel_drop()
-
     def _cast_skill_direct(self, sid: str) -> None:
         """全局技能（偷算力类）直接释放"""
         if engine.use_skill(sid, None):
@@ -408,4 +362,3 @@ class DropMixin:
                 ui_fx.shake(card)
         except Exception:
             pass  # 动效失败安全（同 _fx_cast）：反馈动效不能成为新崩溃点
-

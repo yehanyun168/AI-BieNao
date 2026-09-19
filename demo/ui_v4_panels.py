@@ -4,13 +4,12 @@ ui_v4_panels.py - 浮层/抽屉类面板
 2026-09-13 从 ui_v4_screens.py 拆出。收的是「叠在对局画面之上」的面板：
 
     InspectorPanel —— S03 国家检视卡（左侧滑出，宽 328px）
-    DropPreview    —— S04 投放预览面板（右下角，宽 322px）
     LogDrawer      —— S14 事件日志抽屉（右侧，宽 340px）
 
 共同点：都有 WIDTH 常量 + refresh_scale()（跟随 UI 缩放档位）。
 """
 from collections import deque
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, Optional, Sequence
 
 from kivy.graphics import Color, Line, Rectangle
 from kivy.uix.anchorlayout import AnchorLayout
@@ -55,7 +54,7 @@ def fit_footer(scale: float, box: BoxLayout,
     2. 按钮宽度 = **真实字形宽 + 内边距**（不是均分、也不是
        ``len(text)*14+20`` 估算 —— 该估算对英文高估 ~60%，中文反而低估）；
     3. 页脚 padding / spacing / 按钮内边距也按 scale 走 —— 这些是「固定开销」，
-       若只有文字在缩，挡位越小学得越吃亏（实测 DropPreview 在 ×0.68 溢出 7px）。
+       若只有文字在缩，缩放挡位越小，页脚越容易溢出。
 
     ``scale=1.0`` 即设计基准，所以构造时也应调用一次。
 
@@ -511,155 +510,8 @@ class InspectorPanel(StrokePanel):
 
 
 # ============================================================
-# S04 投放预览面板
+# S14 事件日志抽屉
 # ============================================================
-
-class DropPreview(StrokePanel):
-    """右下角投放预览（设计稿 S04，宽 322px）。
-
-    实时汇总：目标 / 算力消耗 / 剩余算力 / 效果 chips / 各国下载量预估 / 副作用。
-    """
-
-    WIDTH = 322
-
-    def __init__(self, on_confirm: Callable = None, on_cancel: Callable = None,
-                 **kwargs):
-        kwargs.setdefault('size_hint', (None, None))
-        kwargs.setdefault('width', self.WIDTH)
-        super().__init__(bg=COLORS['panel'], border=COLORS['border_2'],
-                         spacing=0, padding=0, **kwargs)
-        self._on_confirm = on_confirm
-        self._on_cancel = on_cancel
-
-        hd = FloatLayout(size_hint_y=None, height=28)
-        self.lbl_hd = mk_label('', font_size=FS_SM, color=COLORS['cyan'])
-        self.lbl_hd.pos_hint = {'x': 0, 'center_y': 0.5}
-        self.lbl_hd.size_hint = (1, 1)
-        self.lbl_hd.padding = [8, 0, 0, 0]      # 四元组！padding_x 会左右同时生效
-        x = PxChip(U.SYM['close'], tone='plain', height=20, on_press=lambda *_: self._cancel())
-        x.pos_hint = {'right': 1, 'center_y': 0.5}
-        hd.add_widget(self.lbl_hd)
-        hd.add_widget(x)
-        self.add_widget(hd)
-
-        body = BoxLayout(orientation='vertical', spacing=7, padding=(8, 8),
-                         size_hint_y=None)
-        body.bind(minimum_height=body.setter('height'))
-        self._body = body
-        scroll = ScrollView(bar_width=4)
-        scroll.add_widget(body)
-        self.add_widget(scroll)
-
-        # row_h 用 KvGrid 默认值（按 FS_CAP 的实际行高算）。以前写死 17px，
-        # 而 FS_CAP=18.4 的一行字要 24px → 每行文字上下都被裁。
-        self.kv = KvGrid(['targets', 'cost', 'remain'])
-        body.add_widget(self.kv)
-        self.chips = ChipRow([], height=40)
-        body.add_widget(self.chips)
-
-        self.lbl_est_hd = mk_label(i18n.t('drop_est'), font_size=FS_CAP,
-                                   color=COLORS['text_mute'],
-                                   size_hint_y=None, height=15)
-        body.add_widget(self.lbl_est_hd)
-        self.segbar = SegBar(segments=12, filled=0.0, size_hint_y=None, height=10)
-        body.add_widget(self.segbar)
-        self.lbl_est = mk_label('', font_size=FS_TINY, color=COLORS['text_mute'],
-                                size_hint_y=None, height=16)
-        body.add_widget(self.lbl_est)
-
-        self.warn_box = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border_2'],
-                                    spacing=0, padding=(6, 5),
-                                    size_hint_y=None, height=30)
-        self.lbl_warn = mk_label('', font_size=FS_TINY, color=COLORS['orange'])
-        self.warn_box.add_widget(self.lbl_warn)
-        body.add_widget(self.warn_box)
-
-        ft = BoxLayout(orientation='horizontal', spacing=6, size_hint_y=None,
-                       height=36, padding=(8, 6))
-        self._ft = ft
-        ft.add_widget(Widget())
-        self.btn_cancel = InspectorPanel._small_btn(i18n.t('drop_cancel'), 'plain',
-                                                    self._cancel)
-        ft.add_widget(self.btn_cancel)
-        self.btn_ok = InspectorPanel._small_btn(i18n.t('drop_confirm'), 'primary',
-                                                self._confirm)
-        ft.add_widget(self.btn_ok)
-        self.add_widget(ft)
-        fit_footer(1.0, ft, (self.btn_cancel, self.btn_ok))
-
-    def _cancel(self) -> None:
-        if self._on_cancel:
-            self._on_cancel()
-
-    def _confirm(self) -> None:
-        if self._on_confirm:
-            self._on_confirm()
-
-    def update(self, skill_id: str, skill_name: str, codes: Sequence[str],
-               cost_each: float, compute: float, effects: Sequence[Tuple[str, str]],
-               ests: Sequence[Tuple[str, float, float]],
-               warn: str = '') -> None:
-        """刷新预览。
-
-        Args:
-            skill_id: 技能 id。
-            skill_name: 技能显示名。
-            codes: 已选目标国家代码。
-            cost_each: 单目标算力消耗。
-            compute: 当前算力。
-            effects: 效果 chips ``[(文本, 语气), …]``。
-            ests: 各国预估 ``[(code, 现值, 预估值), …]``。
-            warn: 副作用提示文案。
-        """
-        self.lbl_hd.text = f"{i18n.t('drop_title')} · {skill_name}"
-        n = len(codes)
-        total = cost_each * max(n, 1)
-        self.kv.set_value('targets', " · ".join(codes) if codes else '--')
-        self.kv.set_value('cost', f"[color={U.MK['yellow']}]{cost_each:.0f} ×{max(n,1)} = {total:.0f}[/color]")
-        remain = compute - total
-        rc = U.MK['red'] if remain < 0 else U.MK['text']
-        self.kv.set_value('remain', f"[color={rc}]{compute:.0f} → {remain:.0f}[/color]")
-        self.chips.set_chips(list(effects))
-
-        # 预估：用「已选国家占全球比例」推进分段条，给玩家一个直观的推进感
-        filled = min(n * 2, 12)
-        self.segbar.set_value(filled, highlight={0} if n else set())
-        if ests:
-            parts = []
-            for code, before, after in ests[:3]:
-                parts.append(f"{code} {before:.1f}M → "
-                             f"[color={U.MK['susp_low']}]{after:.1f}M[/color]")
-            self.lbl_est.text = "   ".join(parts)
-        else:
-            self.lbl_est.text = '--'
-
-        if warn:
-            self.lbl_warn.text = warn
-            self.warn_box.opacity = 1
-            self.warn_box.height = 30
-        else:
-            self.warn_box.opacity = 0
-            self.warn_box.height = 0
-        self.btn_ok.disabled = (n == 0 or remain < 0)
-
-    def refresh_lang(self) -> None:
-        """语言切换后重查静态文案（本面板缓存在 ``_drop_preview`` 上）。
-
-        ``lbl_hd`` 的动态部分（标题 + 技能名）由 ``update()`` 重写，此处只管
-        静态小标题与按钮；KvGrid 左列键名交给它自己的 ``refresh_lang()``。
-        """
-        self.lbl_est_hd.text = i18n.t('drop_est')
-        self.btn_cancel.text = i18n.t('drop_cancel')
-        self.btn_ok.text = i18n.t('drop_confirm')
-        self.kv.refresh_lang()
-        fit_footer(getattr(self, '_scale', 1.0), self._ft,
-                   (self.btn_cancel, self.btn_ok))
-
-    def refresh_scale(self, scale: float) -> None:
-        self._scale = scale
-        self.width = self.WIDTH * scale
-        fit_footer(scale, self._ft, (self.btn_cancel, self.btn_ok))
-
 class LogDrawer(StrokePanel):
     """右侧事件日志抽屉（设计稿 S14，宽 340px）。"""
 

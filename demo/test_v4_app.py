@@ -78,11 +78,11 @@ def main() -> int:
 
     # ---------- 4. S04 技能精准投放 ----------
     print("\n[4] S04 技能精准投放")
-    check('进入投放模式', lambda: g.start_drop('push_song', ['CN', 'JP']))
+    check('进入投放模式', lambda: g.start_drop('push_song'))
     check('投放模式已开', lambda: need(g.drop_mode, 'off'))
-    check('目标 2 个', lambda: need(len(g.drop_targets) == 2, f'{len(g.drop_targets)}'))
-    check('切换目标', lambda: g.toggle_target('KR'))
-    check('取消投放', g._cancel_drop)
+    check('等待单目标', lambda: need(g.drop_targets == [], f'{g.drop_targets}'))
+    check('单击国家立即投放', lambda: g.toggle_target('CN'))
+    check('投放后退出模式', lambda: need(not g.drop_mode, 'still active'))
 
     # ---------- 5. 五个全屏页 ----------
     print("\n[5] 全屏页（S05/S06/S10/S11/S12）")

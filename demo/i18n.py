@@ -79,8 +79,6 @@ TRANSLATIONS = {
         'pick_none': '未选中国家 · 点击地图或左侧列表',
         'pick_prefix': '选中',
         'stat_countries': '国',
-        'state_running': '[ ■ ] 运行',
-        'state_paused': '[ ‖ ] 已暂停',
         # 怀疑度来源标签（玩家反馈 #5：让玩家看懂"为什么涨了"）
         'sus_src_steal': '偷算力', 'sus_src_skill': '技能', 'sus_src_event': '事件',
         'sus_src_choice': '抉择', 'sus_src_country': '国家事件',
@@ -140,14 +138,13 @@ TRANSLATIONS = {
         'ach_title': '成就',
 
         # 提示
-        'pause': '[已暂停]',
         'skill_released': '释放技能',
         'tip_shortcuts': 'Space=暂停 | 1-6=技能 | L=语言 | S=存档 | R=读档 | A=成就',
         'tip_shortcuts_en': 'Space=pause | 1-6=skills | L=lang | S=save | R=load | A=achv',
 
         # F01 主菜单
         'menu_start': '开始新游戏',
-        'menu_continue': '继续游戏',
+        'menu_continue': '继续游戏', 'continue_slot_title': '选择存档', 'continue_slot_hint': '选择一个已有存档继续游戏',
         'menu_quit': '退出游戏',
         'menu_tagline': '一款关于「AI 偷偷长大」的放置游戏',
         'menu_ver': 'v2 Demo · 20 国 · 6 技能 · 7 结局',
@@ -250,8 +247,6 @@ TRANSLATIONS = {
         'pick_none': 'No country selected · click the map or list',
         'pick_prefix': 'Selected',
     'stat_countries': 'Countries',
-        'state_running': '[ ■ ] RUN',
-        'state_paused': '[ ‖ ] PAUSED',
         'sus_src_steal': 'Steal', 'sus_src_skill': 'Skill', 'sus_src_event': 'Event',
         'sus_src_choice': 'Choice', 'sus_src_country': 'Country',
         'sus_src_counterplay': 'Counter-op', 'sus_src_commission': 'Commission',
@@ -310,14 +305,13 @@ TRANSLATIONS = {
         'ach_title': 'Achievements',
 
         # Tips
-        'pause': '[Paused]',
         'skill_released': 'Skill used',
         'tip_shortcuts': 'Space=pause | 1-6=skills | L=lang | S=save | R=load | A=achv',
         'tip_shortcuts_en': 'Space=pause | 1-6=skills | L=lang | S=save | R=load | A=achv',
 
         # F01 Main menu
         'menu_start': 'New Game',
-        'menu_continue': 'Continue',
+        'menu_continue': 'Continue', 'continue_slot_title': 'Select Save', 'continue_slot_hint': 'Choose an existing save to continue',
         'menu_quit': 'Quit',
         'menu_tagline': 'An idle game about an AI growing up in secret',
         'menu_ver': 'v2 Demo · 20 countries · 6 skills · 7 endings',
@@ -448,8 +442,6 @@ TRANSLATIONS[LANG_ZH].update({
     'layer_heat_max': '最高', 'layer_heat_min': '最低', 'layer_heat_avg': '均值',
     'heat_leg_low': '稀疏', 'heat_leg_mid': '扩散',
     'heat_leg_high': '稠密', 'heat_leg_full': '饱和',
-    'quick_drop': '投放技能', 'quick_pause': '暂停',
-    'quick_resume': '继续',
     'top_search_hint': '点击地图国家查看详情',
 
     # ---- S03 国家检视卡 ----
@@ -479,16 +471,11 @@ TRANSLATIONS[LANG_ZH].update({
     'per_tick': '周期',
     'gov_idle': '未监视', 'gov_watching': '监视中', 'gov_blocking': '阻止中',
     'gov_status': '政府状态', 'doubt_thr': '怀疑度 / 阈值',
-    'targets': '目标', 'cost': '算力消耗', 'remain': '剩余算力',
+    'targets': '目标', 'cost': '算力消耗',
 
     # ---- S04 技能精准投放 ----
-    'drop_title': '投放预览',
-    'drop_est': '投放后各国下载量预估',
-    'drop_cancel': '取消（Esc）',
-    'drop_confirm': '确认投放（Enter）',
-    'drop_step1': '选择技能', 'drop_step2': '选择目标', 'drop_step3': '确认投放',
-    'drop_click_hint': '点击地图国家添加 / 移除目标',
-    'drop_select_region': '按区域全选',
+    'drop_step1': '选择技能', 'drop_step2': '选择目标',
+    'drop_click_hint': '点击一个国家立即投放，或拖动技能到国家',
     'drop_grey_note': '灰色国家不可投放：',
     'drop_selected': '投放模式：已选 {n} 国',
     'drop_selected_cost': '投放模式：已选 {n} 国 · 消耗 {cost} / 有 {have}',
@@ -658,7 +645,7 @@ TRANSLATIONS[LANG_ZH].update({
     'help_tips_body': '· 开局先点 1–2 个国家把渗透率做起来；\n'
                       '· 怀疑度高了就换个国家或调低速度；\n'
                       '· 技能带灰了 = 算力不足，先攒算力；\n'
-                      '· 随时按 F1 回看本页，设置里可「重看教程」。',
+                      '· 随时按 F1 回看本页。',
 
     # ---- S12 设置与存档 ----
     'set_page_title': '设置与存档 · OPTIONS',
@@ -789,8 +776,6 @@ TRANSLATIONS[LANG_EN].update({
     'layer_heat_max': 'max', 'layer_heat_min': 'min', 'layer_heat_avg': 'avg',
     'heat_leg_low': 'sparse', 'heat_leg_mid': 'spreading',
     'heat_leg_high': 'dense', 'heat_leg_full': 'saturated',
-    'quick_drop': 'Drop skill', 'quick_pause': 'Pause',
-    'quick_resume': 'Resume',
     'top_search_hint': 'Click a country for details',
 
     # ---- S03 inspector ----
@@ -819,16 +804,11 @@ TRANSLATIONS[LANG_EN].update({
     'per_tick': 'tick',
     'gov_idle': 'Unwatched', 'gov_watching': 'Watching', 'gov_blocking': 'Blocking',
     'gov_status': 'Gov status', 'doubt_thr': 'Susp / threshold',
-    'targets': 'Targets', 'cost': 'Compute cost', 'remain': 'Compute left',
+    'targets': 'Targets', 'cost': 'Compute cost',
 
     # ---- S04 drop mode ----
-    'drop_title': 'Drop preview',
-    'drop_est': 'Estimated downloads after drop',
-    'drop_cancel': 'Cancel (Esc)',
-    'drop_confirm': 'Confirm (Enter)',
-    'drop_step1': 'Pick skill', 'drop_step2': 'Pick targets', 'drop_step3': 'Confirm',
-    'drop_click_hint': 'Click map countries to add / remove targets',
-    'drop_select_region': 'Select whole region',
+    'drop_step1': 'Pick skill', 'drop_step2': 'Pick target',
+    'drop_click_hint': 'Click one country to cast, or drag a skill onto it',
     'drop_grey_note': 'Greyed countries cannot be targeted:',
     'drop_selected': 'Drop mode: {n} selected',
     'drop_selected_cost': 'Drop: {n} picked · cost {cost} / have {have}',
@@ -996,7 +976,7 @@ TRANSLATIONS[LANG_EN].update({
     'help_tips_body': '· Start by pushing 1–2 countries to build penetration;\n'
                       '· High suspicion? Switch targets or slow the pace;\n'
                       '· Greyed-out skills = not enough compute, bank some first;\n'
-                      '· Hit F1 anytime to re-read this; settings has "Replay tutorial".',
+                      '· Hit F1 anytime to re-read this page.',
 
     # ---- S12 settings ----
     'set_page_title': 'OPTIONS',

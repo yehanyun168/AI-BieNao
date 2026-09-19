@@ -1,37 +1,30 @@
 """
 ui_hud.py - HUD 层（拆分自 main.py）
 
-组件：CountdownBar / WorldMapWidget / HudBox / RailBar / LegendBar / LayerHud
-常量：REGIONS / LAYER_* / 色阶表 / STATE_SHAPE / LANG_CHIP_TAG
+组件：CountdownPanel / WorldMapWidget / HudBox / RailBar / LegendBar / LayerHud
+常量：REGIONS / LAYER_* / 色阶表 / STATE_SHAPE
 混入：HudMixin —— GameUI 的布局（顶栏/地图舞台/技能带）、区域高亮、图层切换
 """
 from kivy.clock import Clock
 from kivy.graphics import Color, Line, Rectangle
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.widget import Widget
 import sfx
 from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
-from pixel_ui import add_pixel_border   # P2-5：hex_rgba 已随 '#0d1117' 收口移除
-import i18n
-from i18n import (t, get_lang, LANG_ZH, LANG_EN)
+from i18n import t
 import engine
 from data import SKILLS, SKILL_ORDER
 import ui_v4 as U
 import ui_shared as ST
-from ui_shared import COLORS, Panel
+from ui_shared import COLORS, Panel, PAUSE_ICON, attach_centered_icon
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
                    SkillBarCard, Steps, StrokePanel, Spark, mk_label, ST_FILL,
                    ST_EDGE, MIN_TOUCH, fit_width)
 from world_map import WorldMap
 
-
-# ============================================================
-# 色盲辅助四态形状（设计稿 ○●▲✖）：四态不单靠颜色区分
-# ============================================================
 # 色盲辅助形状符号（设计稿 ○●▲✖）：四态不单靠颜色区分
 STATE_SHAPE = {'on': U.SYM['a11y_on'], 'sel': U.SYM['a11y_sel'],
                'blk': U.SYM['a11y_blk'], 'lk': U.SYM['a11y_lk']}
@@ -49,33 +42,29 @@ SCALE_SHAPE = ('○', '◇', '◆', '●')
 _SPARK_HEX = {'yellow': '#dcdcaa', 'pink': '#f97583', 'red': '#ff7b72',
               'text': '#4ec9b0', 'cyan': '#4ec9b0'}
 
-# ============================================================
-# 倒计时进度条（P0-4：顶部状态条「下个周期倒计时」细进度条）
-# ============================================================
-class CountdownBar(Widget):
-    """1px 边框细进度条，前景用青色表示本周期剩余时间。"""
+class CountdownPanel(StrokePanel):
+    """以暗色背景填充显示本周期剩余时间。"""
 
     def __init__(self, **kwargs):
+        self._countdown_value = 1.0
+        self._countdown_rect = None
         super().__init__(**kwargs)
-        self._value = 1.0
-        self.bind(pos=self._draw, size=self._draw)
 
-    def _draw(self, *args):
-        self.canvas.clear()
-        x, y = self.x, self.y
-        w, h = self.width, self.height
-        with self.canvas:
-            Color(*COLORS['border_2'])
-            Line(points=[x, y, x + w, y, x + w, y + h, x, y + h],
-                 close=True, width=1)
-            Color(*COLORS['cyan'])
-            fw = w * max(0.0, min(1.0, self._value))
-            if fw >= 1:
-                Rectangle(pos=(x, y), size=(fw, h))
+    def _redraw_border(self, *_args) -> None:
+        super()._redraw_border(*_args)
+        x, y, w, h = self.x + 2, self.y + 2, self.width - 4, self.height - 4
+        with self.canvas.before:
+            Color(0.12, 0.31, 0.28, 0.45)
+            self._countdown_rect = Rectangle(
+                pos=(x, y), size=(max(w, 0) * self._countdown_value, max(h, 0)))
 
-    def set_value(self, v: float) -> None:
-        self._value = v
-        self._draw()
+    def set_countdown(self, value: float) -> None:
+        self._countdown_value = max(0.0, min(1.0, value))
+        if self._countdown_rect is not None:
+            self._countdown_rect.size = (
+                max(self.width - 4, 0) * self._countdown_value,
+                max(self.height - 4, 0),
+            )
 
 
 # ============================================================
@@ -92,8 +81,6 @@ REGION_LABEL_KEY = {
     'asia': 'region_asia', 'europe': 'region_europe', 'americas': 'region_americas',
     'africa': 'region_africa', 'oceania': 'region_oceania',
 }
-LANG_CHIP_TAG = {LANG_ZH: '[ EN ]', LANG_EN: '[ 中 ]'}
-
 # S13 四个图层
 LAYER_KEYS = ['unlock', 'heat', 'block', 'compute']
 LAYER_LABEL_KEY = {'unlock': 'layer_unlock', 'heat': 'layer_heat',
@@ -454,33 +441,14 @@ class HudMixin:
         bar.add_widget(self.tick_box)
         bar.add_widget(self._sep())
 
-        # ---- 右组：下周期倒计时（P0-4：剩余秒数 + 细进度条）----
-        # ⚠️ markup=True 必须：文本含 [color=...]，否则字面量标签会被算进宽度
-        self.cd_label = mk_label("--s", font_size=U.FS_SM,
-                                 color=COLORS['cyan'], size_hint_x=None,
-                                 markup=True)
-        fit_width(self.cd_label, pad=8, min_w=48)
-        self._register(self.cd_label, font=U.FS_SM)
-        bar.add_widget(self.cd_label)
-        self.cd_bar = CountdownBar(size_hint_x=None, width=96)
-        bar.add_widget(self.cd_bar)
-        bar.add_widget(self._sep())
-
-        self.lang_switch = PxChip(LANG_CHIP_TAG[get_lang()], tone='plain',
-                                  on_press=lambda *_: self.toggle_lang())
-        self.pause_chip = PxChip(t('state_running'), tone='up',
-                                 on_press=lambda *_: self.toggle_pause())
-        for c in (self.lang_switch, self.pause_chip):
-            bar.add_widget(c)
         return holder
 
     def _make_tick_box(self) -> Widget:
-        """顶栏调速减键、游戏年月、周期数和调速加键。"""
-        box = StrokePanel(bg=tuple(COLORS['panel_2']),
-                          border=tuple(COLORS['cyan']),
-                          spacing=0, padding=(10, 2),
-                          orientation='horizontal',
-                          size_hint=(None, None), height=MIN_TOUCH)
+        """顶栏暂停键、游戏年月、周期数和右侧调速键。"""
+        box = CountdownPanel(bg=tuple(COLORS['panel_2']),
+                             border=tuple(COLORS['cyan']), spacing=0,
+                             padding=(10, 2), orientation='horizontal',
+                             size_hint=(None, None), height=MIN_TOUCH)
         self._speed_bar_states = [False] * len(ST.SPEED_STEPS)
         self._speed_bar_colors = []
         self._speed_bar_rects = []
@@ -488,11 +456,16 @@ class HudMixin:
             for _ in ST.SPEED_STEPS:
                 self._speed_bar_colors.append(Color(*COLORS['border_2']))
                 self._speed_bar_rects.append(Rectangle(pos=(0, 0), size=(1, 1)))
+        self.pause_chip = PxChip('', tone='up',
+                                 on_press=lambda *_: self.toggle_pause(),
+                                 pos_hint={'center_y': 0.5}, height=40,
+                                 square=True)
+        self.pause_chip_icon = attach_centered_icon(self.pause_chip, PAUSE_ICON, 28)
+        box.add_widget(self.pause_chip)
         self.btn_speed_down = PxChip(
             U.SYM['minus'], tone='plain',
             on_press=lambda *_: self.set_speed_idx(self.speed_idx - 1),
             pos_hint={'center_y': 0.5})
-        box.add_widget(self.btn_speed_down)
         self.lbl_game_date = mk_label('0000-00', font_size=U.FS_SM,
                                       color=COLORS['cyan'], size_hint_x=None,
                                       pos_hint={'center_y': 0.5})
@@ -506,7 +479,6 @@ class HudMixin:
         fit_width(self.lbl_tick_cap, pad=6)
         self._register(self.lbl_tick_cap, font=U.FS_CAP)
         box.add_widget(self.lbl_tick_cap)
-
         self.lbl_tick_val = mk_label('0', font_size=U.FS_H2,
                                      color=COLORS['cyan'], halign='right',
                                      size_hint_x=None,
@@ -514,6 +486,7 @@ class HudMixin:
         fit_width(self.lbl_tick_val, pad=4, min_w=44)
         self._register(self.lbl_tick_val, font=U.FS_H2)
         box.add_widget(self.lbl_tick_val)
+        box.add_widget(self.btn_speed_down)
         self.btn_speed_up = PxChip(
             U.SYM['plus'], tone='plain',
             on_press=lambda *_: self.set_speed_idx(self.speed_idx + 1),
@@ -523,10 +496,12 @@ class HudMixin:
         # 宽度随内容自适应（数字变多位数时自动变宽）
         def _sync(*_a) -> None:
             gap = 5
-            w = (self.btn_speed_down.width + self.lbl_game_date.width
+            w = (self.pause_chip.width + self.lbl_game_date.width
                  + self.lbl_tick_cap.width + self.lbl_tick_val.width
-                 + self.btn_speed_up.width + gap * 4 + 20)
+                 + self.btn_speed_down.width + self.btn_speed_up.width
+                 + gap * 5 + 20)
             box.width = w
+        self.pause_chip.bind(width=lambda *_: _sync())
         self.btn_speed_down.bind(width=lambda *_: _sync())
         self.lbl_game_date.bind(width=lambda *_: _sync())
         self.lbl_tick_cap.bind(width=lambda *_: _sync())
@@ -692,7 +667,7 @@ class HudMixin:
 
         # 投放模式 HUD：步骤条（左上覆盖区域页签位置）
         self.steps_hud = HudBox(anchor='tl')
-        self.steps = Steps([t('drop_step1'), t('drop_step2'), t('drop_step3')], 0)
+        self.steps = Steps([t('drop_step1'), t('drop_step2')], 0)
         self.steps.size_hint = (None, None)
         self.steps.width = 420
         self.steps.height = 24
@@ -759,41 +734,16 @@ class HudMixin:
             card = SkillBarCard(
                 sid, key_hint=self._key_hint(sid),
                 name=self._skill_name(sid), effect=self._skill_desc(sid),
-                cost=skill.cost, on_click=self.on_skill_card_click)
+                cost=skill.cost, on_click=self.on_skill_card_click,
+                on_drag_start=self.on_skill_drag_start,
+                on_drag_move=self.on_skill_drag_move,
+                on_drag_end=self.on_skill_drag_end)
             self._register(card)
             self.skill_cards[sid] = card
             row.add_widget(card)
 
-        # 右侧两个快捷动作：加宽到 168 并撑满技能带高度（原来 132×40 太窄，
-        # 文字被挤成一行放不下）
-        go = BoxLayout(orientation='vertical', spacing=6, size_hint_x=None,
-                       width=168)
-        from pixel_ui import add_pixel_border
-        self.btn_drop = Button(text=f"{U.SYM['drop']} {t('quick_drop')}",
-                               font_size=U.FS_BODY,
-                               background_normal='', markup=False,
-                               halign='center', valign='middle')
-        self.btn_drop.background_color = (0.078, 0.188, 0.173, 1)
-        self.btn_drop.color = COLORS['cyan']
-        add_pixel_border(self.btn_drop, color=COLORS['cyan'])
-        self.btn_drop.bind(size=lambda i, v: setattr(
-            i, 'text_size', (max(v[0] - 16, 10), v[1])))
-        self.btn_drop.bind(on_release=lambda *_: self._primary_drop_action())
-        self.btn_pause = Button(text=f"{U.SYM['pause']} {t('quick_pause')}", font_size=U.FS_BODY,
-                                background_normal='')
-        self.btn_pause.background_color = list(COLORS['panel_2'])
-        self.btn_pause.color = COLORS['text']
-        add_pixel_border(self.btn_pause, color=COLORS['border_2'])
-        self.btn_pause.bind(size=lambda i, v: setattr(
-            i, 'text_size', (max(v[0] - 16, 10), v[1])))
-        self.btn_pause.bind(on_release=lambda *_: self.toggle_pause())
-        go.add_widget(self.btn_drop)
-        go.add_widget(self.btn_pause)
-        row.add_widget(go)
         holder.add_widget(row)
         self._skill_row = row
-        self._register(self.btn_drop, font=U.FS_BODY)
-        self._register(self.btn_pause, font=U.FS_BODY)
         return holder
 
     # ========================================================

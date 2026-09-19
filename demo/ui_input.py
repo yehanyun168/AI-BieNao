@@ -130,8 +130,7 @@ class InputMixin:
             hud = getattr(self, 'skill_pv_hud', None)
             if hud is None:
                 return
-            # 投放模式下右下角 DropPreview 已给出更完整的信息，
-            # 两层预览同时出现只会打架 —— 这里让位。
+            # 投放时地图准星已承担目标反馈，隐藏技能悬停预览避免遮挡。
             if getattr(self, 'drop_mode', False):
                 hud.opacity = 0
                 self._skill_pv_sid = None
@@ -226,19 +225,20 @@ class InputMixin:
 
     def on_skill_card_click(self, sid: str) -> None:
         """点技能带卡片：下载类 → 进投放模式；偷算力类 → 直接释放"""
-        if sid not in engine.player.unlocked_skills:
-            sfx.play('error')             # 非法操作音（原为静默，玩家易误以为点击没生效）
-            self._notify(t('sk_state_lock'))
-            return
         if self.drop_mode and self.drop_skill == sid:
             self._cancel_drop()
             return
-        # 技能选中音：点卡片本身即应有反馈（原路径只在真正「投放模式开启」
-        # 或「技能释放」时才有声，而点卡片到那一步之间的手感是空的）。
-        # 放在两处 return 之后，保证只有「确实要执行该技能」时才响。
+        # 先查通用释放条件；国家相关条件仍在选中目标后检查。
+        pv = engine.preview_skill(sid, [])
+        if not pv['ok']:
+            sfx.play('error')
+            self._notify(self._preview_reason_text(pv))
+            self._fx_reject(sid)
+            return
+        # 技能选中音放在失败 return 后，仅在确实要执行技能时播放。
         sfx.play('select')
         if self._skill_needs_target(sid):
-            self.start_drop(sid, None)
+            self.start_drop(sid)
         else:
             self._cast_skill_direct(sid)
             self.refresh_all()
@@ -328,27 +328,23 @@ class InputMixin:
         !️ 本函数**不写 label.text**：文本统一由 _animate_stat 负责，
         避免与滚动动效互相覆盖（两边写同一个 Label 会闪）。
 
-        玩家反馈 #7（确认怀疑度增长时机 + 下周期预测）：在趋势箭头之后，
-        再追加一个「下个周期预测变化量」段（青色 ``+Δ``）。预测由
-        ``engine.preview_next_cycle`` 给出（与 tick 阶段 1/2/5/5.1 同源、
-        确定性部分；随机事件按设计不计入）。单位与 refresh_all 显示同构：
-        算力=原始算力、下载=亿/B（/1000）、怀疑度=百分点。对局已结束则
-        显示「—」（没有下一周期可言）。
+        在趋势箭头之前显示上一周期的真实变化量（青色）。数值直接取
+        最近两次实际采样之差，因此会包含事件、技能和反制等实际结算结果。
+        单位与 refresh_all 显示同构：算力=原始算力、下载=亿/B（/1000）、
+        怀疑度=百分点。不足两条采样或显示精度内没有变化时显示正零。
         """
         p = engine.player
         if p is None:
             return
         if not hasattr(self, '_stat_suffix'):
             self._stat_suffix = {}
-        # 一次性预测下一周期（确定性基线，不含技能效果）
-        pv = engine.preview_next_cycle()
-        # spark_key → (i18n 标签键, 后缀单位, 小数位)
+        # spark_key → (i18n 标签键, 后缀单位, 小数位, 原始采样序列)
         specs = {
-            'compute':   ('stats_compute',   '',  0),
-            'downloads': ('stats_downloads', '',  2),
-            'suspicion': ('stats_suspicion', '%', 0),
+            'compute':   ('stats_compute',   '',  0, self.stats.global_compute),
+            'downloads': ('stats_downloads', '',  2, self.stats.global_downloads),
+            'suspicion': ('stats_suspicion', '%', 0, self.stats.global_suspicion),
         }
-        for sk, (lbl_key, unit, digits) in specs.items():
+        for sk, (lbl_key, unit, digits, samples) in specs.items():
             try:
                 lo, hi = self.stats.stat_spark_range(sk)
             except Exception:
@@ -360,19 +356,23 @@ class InputMixin:
                 arrow, mcol, dtext = '↑', U.MK['green'], f"{delta:.{digits}f}{unit}"
             else:
                 arrow, mcol, dtext = '↓', U.MK['red'], f"{abs(delta):.{digits}f}{unit}"
-            suffix = f"  [color={mcol}]{arrow}{dtext}[/color]"
-            # 玩家反馈 #7：追加「下个周期预测变化量」（青色，与历史趋势箭头区分）
-            if getattr(p, 'game_over', False):
-                suffix += f"  [color={U.MK['dim']}]—[/color]"
+            actual_delta = (float(samples[-1]) - float(samples[-2])
+                            if len(samples) >= 2 else 0.0)
+            if sk == 'downloads':
+                actual_delta /= 1000.0
+                if abs(actual_delta) < 0.005:
+                    actual_delta = 0.0
+                actual_text = f"{actual_delta:+.2f}{t('unit_b')}"
+            elif sk == 'suspicion':
+                if abs(actual_delta) < 0.05:
+                    actual_delta = 0.0
+                actual_text = f"{actual_delta:+.1f}%"
             else:
-                if sk == 'compute':
-                    pdtxt = f"{pv['compute_delta']:.0f}"
-                elif sk == 'downloads':
-                    # pv 给的是百万(M)，显示用亿/B（/1000），与 refresh_all 同构
-                    pdtxt = f"{pv['downloads_delta'] / 1000.0:.2f}{t('unit_b')}"
-                else:  # suspicion：增量很小，保留 1 位小数才看得出增长
-                    pdtxt = f"{pv['suspicion_delta']:.1f}%"
-                suffix += f"  [color={U.MK['cyan']}]+{pdtxt}[/color]"
+                if abs(actual_delta) < 0.5:
+                    actual_delta = 0.0
+                actual_text = f"{actual_delta:+.0f}"
+            suffix = (f"  [color={U.MK['cyan']}]{actual_text}[/color]"
+                      f"  [color={mcol}]{arrow}{dtext}[/color]")
             # 只写缓存：真正的 label.text 由紧随其后的 _animate_stat 写入
             # （它会带上这个后缀）。这样两边永不互相覆盖，滚动动效也不会
             # 把箭头抹掉。
@@ -425,13 +425,11 @@ class InputMixin:
         self.lbl_game_date.text = f"{game_year:04d}-{game_month:02d}"
         self.lbl_tick_val.text = f"{p.tick_count}"
 
-        # 暂停芯片（玩家反馈 #1）：暂停时显示「继续」，运行中显示「运行」，
-        # 让玩家一眼看出「再点一下会发生什么」。
+        # 顶栏与底部回合控制使用同一组 PNG 图标。
         if self.paused:
-            self.pause_chip.set_tone('cost', t('state_paused'))
+            self.pause_chip.set_tone('cost', '')
         else:
-            self.pause_chip.set_tone('up', t('state_running'))
-        # 底部暂停按钮文案（暂停↔继续）由状态统一推导，防止两处不同步
+            self.pause_chip.set_tone('up', '')
         self._sync_pause_button()
 
         # --- 地图四态 ---
@@ -482,11 +480,6 @@ class InputMixin:
             self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
         if self.drop_mode:
             self._sync_drop_ui()
-        else:
-            # 非投放态也要让按钮文案归位（玩家反馈 #3b：投放结束后
-            # 按钮残留「确认投放」，需再点一次才复位）。文案由状态推导，
-            # 这里无条件同步，杜绝任何残留路径。
-            self._sync_drop_button()
 
         # --- 打开中的页面也要跟着刷新 ---
         if self._page is not None:
@@ -670,14 +663,6 @@ class InputMixin:
         # BGM 已切到 tense，声画同步。
         bgm.update(bgm.state_for_suspicion(engine.player.suspicion,
                                            data.SUSPICION_CRISIS))
-        # 周期推进的视觉提示（玩家反馈 5）：倒计时条脉冲一次，
-        # 让「新周期开始了」这件事有存在感。动效失败不影响逻辑。
-        try:
-            import ui_fx
-            ui_fx.tick_pulse(getattr(self, 'cd_bar', None))
-        except Exception:
-            pass
-
         if report.get("crisis"):
             self.show_crisis_popup()
         if report.get("choice_event") is not None:
@@ -775,10 +760,6 @@ class InputMixin:
             return True
         if key == 'r':
             self.do_load()
-            return True
-        if key == 'enter':
-            if self.drop_mode and self.drop_targets:
-                self._confirm_drop()
             return True
         if key == 'escape':
             # Esc 逐层退出：投放模式 → 全屏页 → 浮层 → 暂停 + 设置页

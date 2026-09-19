@@ -3,7 +3,7 @@ ui_v4_screens.py - AI 别闹 v0.4 对局内全屏页 + 家族统一入口
 
 2026-09-13 拆分（2327 行 → 6 个模块）：
     ui_v4_common.py  —— UiStats / small_btn（公共底座）
-    ui_v4_panels.py  —— InspectorPanel / DropPreview / LogDrawer
+    ui_v4_panels.py  —— InspectorPanel / LogDrawer
     ui_v4_cards.py   —— SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     ui_v4_canvas.py  —— TechNode / TechCanvas
     ui_v4_syspages.py—— HelpPage / SettingsPage / OriginPage
@@ -67,7 +67,7 @@ from ui_v4 import (
 # 兼容性转发：拆分前的符号全部可继续从本模块取（外部调用点零改动）
 # ============================================================
 from ui_v4_common import UiStats, small_btn, _section_band      # noqa: F401
-from ui_v4_panels import InspectorPanel, DropPreview, LogDrawer  # noqa: F401
+from ui_v4_panels import InspectorPanel, LogDrawer  # noqa: F401
 from ui_v4_cards import (SkillPageCard, SlotRow, LinkBar,        # noqa: F401
                          LvRow, BranchCard)
 from ui_v4_canvas import TechNode, TechCanvas                    # noqa: F401

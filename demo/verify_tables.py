@@ -370,6 +370,7 @@ LAYERS = {
     # L1 基础层
     'pixel_assets.py':    1,   # P1-8：自动生成素材（零 import），仅提供游程数据
     'pixel_ui.py':        1,
+    'ui_gestures.py':     1,   # 鼠标/触摸统一的点击与拖放识别；零项目依赖
     'sfx.py':             1,   # P1-8：音频服务（仅 kivy、失败安全），被
                                #       ui_drop/ui_pages/ui_popups/ui_session/main 使用
     'bgm.py':             1,   # T09：背景音乐服务（两态循环 + 交叉淡出），
@@ -405,7 +406,7 @@ LAYERS = {
     # 全部同层 L5（依赖完全相同：ui_v4/pixel_ui/i18n/sfx/origins/flag_draw），
     # 互相之间只有 screens → 其余 5 个的转发引用，同层允许。
     'ui_v4_common.py':    5,   # 公共底座：UiStats + small_btn（零 ui_v4_* 依赖）
-    'ui_v4_panels.py':    5,   # 浮层/抽屉：InspectorPanel / DropPreview / LogDrawer
+    'ui_v4_panels.py':    5,   # 浮层/抽屉：InspectorPanel / LogDrawer
     'ui_v4_cards.py':     5,   # 页面内重复单元：SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     'ui_v4_canvas.py':    5,   # S06 科技树自绘节点网络图：TechNode / TechCanvas
     'ui_v4_syspages.py':  5,   # 非对局全屏页：HelpPage / SettingsPage / OriginPage

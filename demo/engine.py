@@ -62,8 +62,7 @@ class PlayerState:
     events_history: List[str] = field(default_factory=list)
     skill_cooldowns: Dict[str, float] = field(default_factory=dict)
     selected_country: Optional[str] = None
-    # v0.4 精准投放：技能目标国家代码列表（空 = 全局投放，旧行为）
-    # 设计稿 S04 支持「地图上多选目标」，所以这里由单值升级为列表。
+    # 精准投放目标：空 = 全局技能；指向性技能只允许保留一个国家代码。
     pending_skill_targets: List[str] = field(default_factory=list)
     # ⚠️ 大修（玩家反馈 #6 连带发现）：上次成功施放、待本周期生效的技能 id。
     # 旧版把技能 id 存在调用方手里（UI 传 tick_one_round(skill_in_use=...)），
@@ -307,7 +306,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         skill_stealth_bonus += s.stealth_ratio_bonus
         skill_stealth_mult *= s.stealth_ratio_mult
 
-    # 精准投放：若指定目标国家（可多选），技能效果只作用于这些国家；否则全局生效
+    # 精准投放：指定单个目标时只作用于该国；否则作为全局技能生效。
     skill_targets = list(player.pending_skill_targets or ())
     player.pending_skill_targets = []
     targeted = bool(skill_targets)
@@ -1084,19 +1083,18 @@ def _apply_country_event(evt: ce.CountryEvent):
 # 玩家操作 API
 # ============================================================
 def use_skill(skill_id: str, target_codes=None) -> bool:
-    """释放技能（v0.4：支持地图上多选目标投放）。
+    """释放技能（指向性技能最多接受一个国家目标）。
 
     Args:
         skill_id: 技能 id，须在 data.SKILLS 中。
-        target_codes: 投放目标。``None`` 或空 => 全局投放（v0.3 旧行为）；
-            单个 code（str）或 code 列表 => 精准投放。
+        target_codes: 投放目标。``None`` 或空 => 全局投放；单个 code（str）
+            或仅含一个 code 的列表 => 精准投放。多目标列表会被拒绝。
 
     Returns:
         bool: 是否成功释放。算力不足 / 冷却中 / 技能不存在时返回 False。
 
     Note:
-        算力按目标数量线性叠加 —— 设计稿 S04 的「算力消耗 50 ×3 = 150」。
-        全局投放按 1 份计。
+        所有技能每次只扣一份基础成本。
         效果契约（大修）：本函数只负责验证 / 扣费 / 冷却 / 登记目标与技能 id，
         实际效果在**下一个** ``tick_one_round`` 落地 —— 无需调用方再传
         ``skill_in_use``（引擎读 ``player.pending_skill``，用完即清）。
@@ -1120,8 +1118,10 @@ def use_skill(skill_id: str, target_codes=None) -> bool:
     else:
         targets = [c for c in target_codes if c]
 
-    n = max(len(targets), 1)                    # 全局投放也算 1 份成本
-    total_cost = skill.cost * n
+    if len(targets) > 1:
+        return False
+
+    total_cost = skill.cost
     if player.compute < total_cost:
         return False
 
@@ -1134,20 +1134,18 @@ def use_skill(skill_id: str, target_codes=None) -> bool:
     return True
 
 
-def skill_cost_for(skill_id: str, n_targets: int = 1) -> float:
-    """技能投放的算力成本（供 UI 实时预览用）。
+def skill_cost_for(skill_id: str) -> float:
+    """技能单次投放的固定算力成本（供 UI 实时预览用）。
 
     Args:
         skill_id: 技能 id。
-        n_targets: 目标国家数量；<= 1 视为 1 份。
-
     Returns:
         float: 总算力消耗；技能不存在时返回 0.0。
     """
     s = SKILLS.get(skill_id)
     if s is None:
         return 0.0
-    return float(s.cost) * max(int(n_targets), 1)
+    return float(s.cost)
 
 
 # 目标可选性判定的原因码（UI 据此取 i18n 文案，不硬编码中文）
@@ -1158,15 +1156,12 @@ TARGET_SATURATED = 'saturated'      # 渗透饱和
 TARGET_BLOCKED = 'blocked'          # 正被阻止（仍可投，但收益打折）
 
 
-def target_availability(code: str, skill_id: str,
-                        n_selected: int = 0) -> tuple:
+def target_availability(code: str, skill_id: str) -> tuple:
     """判定某国能否作为技能投放目标（设计稿 S04 §4.2）。
 
     Args:
         code: 国家代码。
         skill_id: 当前选中的技能 id。
-        n_selected: 已选目标数量（用于按份数估算算力是否够）。
-
     Returns:
         tuple[bool, str, float]: ``(是否可投, 原因码, 收益折扣)``。
         收益折扣 = 1 - 当前阻止强度（设计稿「效果 ×(1−强度)」）。
@@ -1182,14 +1177,7 @@ def target_availability(code: str, skill_id: str,
     skill = SKILLS.get(skill_id)
     if skill is None:
         return False, TARGET_LOCKED, 0.0
-    # 按「再多选一国」后的总份数估算：够不够再多投一个。
-    # ⚠️ 修复（玩家反馈 #7 / 算法霸榜无法选目标）：
-    #   旧写法 ``skill_cost_for(skill_id, max(n_selected, 1) + 1)`` 在
-    #   n_selected=0 时会算成「2 份」成本 —— 于是 50 算力的技能在玩家
-    #   持有 50~99 算力时，连第一个目标都选不上（提示「算力不足」）。
-    #   正确口径就是当前已选数 + 1 份：``skill_cost_for`` 内部已做
-    #   ``max(n, 1)`` 兜底，这里不应再 +1 叠份。
-    need = skill_cost_for(skill_id, n_selected + 1)
+    need = skill_cost_for(skill_id)
     if player is not None and player.compute < need:
         return False, TARGET_NO_COMPUTE, 0.0
 
@@ -1298,21 +1286,17 @@ def preview_skill(skill_id: str, targets: list = None,
         return out
 
     skill = SKILLS[skill_id]
-    # 与 use_skill 一致：全局投放也按 1 份计
-    cost = skill_cost_for(skill_id, max(len(tgt), 1))
+    if len(tgt) > 1:
+        return out
+
+    # 与 use_skill 一致：单目标与全局技能都只收一份基础成本。
+    cost = skill_cost_for(skill_id)
     out['cost'] = cost
 
     # ---- 目标可用性：直接复用 target_availability，不另写一套校验 ----
     blocked, discounts = [], []
     for code in tgt:
-        ok_i, reason_i, disc_i = target_availability(
-            code, skill_id, max(len(tgt) - 1, 0))
-        if not ok_i and reason_i == TARGET_NO_COMPUTE:
-            # 份数口径差异：target_availability 按「再多选一国」估算，
-            # 而这里是「已选 N 份」的实际总额。N==1 时前者会按 2 份算而
-            # 误判，故按真实总额复核一次（只在它说算力不够时才复核）。
-            if p.compute >= cost:
-                ok_i, reason_i, disc_i = True, TARGET_OK, 1.0
+        ok_i, reason_i, disc_i = target_availability(code, skill_id)
         if not ok_i:
             out['reason'] = reason_i
             return out
@@ -1435,136 +1419,6 @@ def preview_skill(skill_id: str, targets: list = None,
     out['suspicion_delta'] = sus_after - out['suspicion_before']
     out['suspicion_to_crisis'] = float(data.SUSPICION_CRISIS) - sus_after
     out['crisis_crossed'] = sus_after >= data.SUSPICION_CRISIS
-    return out
-
-
-def preview_next_cycle(player=None, countries=None) -> Dict:
-    """预测「不设任何技能、下一个周期」的确定性强度（纯函数，不写状态）。
-
-    与 tick_one_round 的阶段 1 / 2 / 5 / 5.1 **同源同式**（直接复用
-    preview_skill 那套已经过 Δ=0 校验的复刻，只是默认不带技能 = 全局
-    基线），供 HUD 在「算力 / 下载 / 怀疑度」数值右侧展示下个周期的预测值
-    （玩家反馈 #7：确认怀疑度增长时机 + 显示下周期预测）。
-
-    怀疑度增长时机（已确认，供 UI 文案 / 策划对齐）：
-      · 阶段2（偷算力）：每个周期都按「偷到的算力 × 敏感度」增长，
-        这是怀疑度的主增长源；
-      · 阶段5.1（收网压力）：怀疑度越过 ``sus_pressure_threshold`` 后，
-        每个周期再叠加固定 ``sus_pressure_per_tick``（单向阀，确保必收束）。
-
-    明确不计入（与 preview_skill 一致，均为随机项，写进去就是假装精确）：
-    阶段 3 政府阻止、阶段 3.5 政府反制、阶段 4 / 4.5 / 6.5 随机事件。
-    因此预测是「确定性部分的估计」，实际结算会因随机事件略有偏差。
-
-    Returns:
-        dict: 含 downloads_delta / compute_delta / suspicion_delta（本周期
-        将发生的增量）以及 *_before/*_after。对局已结束时增量全 0。
-    """
-    p = player if player is not None else globals().get('player')
-    cslist = (list(countries) if countries is not None
-              else list(globals().get('player_countries') or []))
-    out = {
-        'downloads_before': 0.0, 'downloads_after': 0.0, 'downloads_delta': 0.0,
-        'compute_before': 0.0, 'compute_after': 0.0, 'compute_delta': 0.0,
-        'suspicion_before': 0.0, 'suspicion_after': 0.0, 'suspicion_delta': 0.0,
-    }
-    if p is None:
-        return out
-    dl_before = float(sum(c.downloads_m for c in cslist))
-    out['downloads_before'] = dl_before
-    out['compute_before'] = float(p.compute)
-    out['suspicion_before'] = float(p.suspicion)
-    if getattr(p, 'game_over', False):
-        # 已结束：tick 不再推进，预测无意义 —— 增量全 0（不给假数值）
-        out['downloads_after'] = dl_before
-        out['compute_after'] = float(p.compute)
-        out['suspicion_after'] = float(p.suspicion)
-        return out
-
-    effects = aggregate_effects(p.tech)
-    # 影子副本：解锁 / 增长只写在副本上，真实状态一动不动
-    shadow = [{'cfg': c.config, 'code': c.config.code,
-               'unlocked': c.unlocked, 'dl': c.downloads_m,
-               'growth': 0.0, 'block': c.current_block_intensity}
-              for c in cslist]
-    by = {s['code']: s for s in shadow}
-
-    def _pen(s):
-        pop = s['cfg'].population_m
-        return (s['dl'] / pop) if pop > 0 else 0.0
-
-    total_dl = sum(s['dl'] for s in shadow)
-
-    # === 阶段1: 各国下载量增长（无技能 → 全局乘 1.0）===
-    for s in shadow:
-        cfg = s['cfg']
-        if not s['unlocked']:
-            boost = sum(_pen(by[n]) for n in cfg.neighbors
-                        if n in by and by[n]['unlocked'])
-            if boost >= data.UNLOCK_PENETRATION_THRESHOLD:
-                s['unlocked'] = True
-                s['growth'] = data.UNLOCK_SEED_DOWNLOADS_M - s['dl']
-                s['dl'] = data.UNLOCK_SEED_DOWNLOADS_M
-                total_dl += s['dl']
-                continue
-        age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
-        base_growth = (cfg.population_m * TUNE['growth_base']
-                       * cfg.tech_adoption * age_bonus)
-        network = 1.0 + (total_dl / data.POTENTIAL_USERS_M) * TUNE['growth_network']
-        growth = base_growth * network * (1.0 - s['block'])
-        growth *= effects['global_downloads_mult']   # 无技能 → dl_mult = 1.0
-        for scope, mult in effects['regional_downloads_mult'].items():
-            if scope == 'unlocked':
-                growth *= mult
-            elif '+' in scope:
-                if s['code'] in scope.split('+'):
-                    growth *= mult
-            elif scope.startswith('region:'):
-                if cfg.continent == scope.split(':', 1)[1]:
-                    growth *= mult
-        s['dl'] += growth
-        s['growth'] = growth
-        total_dl += growth
-
-    # === 阶段2: 偷算力 + 怀疑度（无技能 → 无 skill 加成 / 无 delta）===
-    stolen_total = 0.0
-    sus_total = 0.0
-    for s in shadow:
-        if s['dl'] <= 0 or not s['unlocked']:
-            continue
-        cfg = s['cfg']
-        unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
-        active_users_m = s['dl'] * TUNE['active_user_ratio']
-        ratio = min(data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus'],
-                    data.MAX_STEALTH_RATIO)
-        stolen_base = (active_users_m * unit_compute * ratio
-                       * TUNE['compute_scale'])
-        stolen_total += stolen_base
-        sensitivity = (data.SUSPICION_BASE_SENSITIVITY
-                       + (1 - cfg.tech_adoption) * data.SUSPICION_ADOPTION_FACTOR)
-        if cfg.age_structure == 'young':
-            sensitivity *= TUNE['suspicion_young_mult']
-        elif cfg.age_structure == 'aging':
-            sensitivity *= TUNE['suspicion_aging_mult']
-        sus_total += stolen_base * sensitivity * effects['suspicion_mult']
-
-    dl_after = total_dl
-    sus_after = p.suspicion + sus_total
-    sus_after = max(0.0, min(100.0, sus_after))
-    # 阶段5: 危机下载衰减（确定性）
-    if sus_after >= data.SUSPICION_CRISIS:
-        dl_after = sum(s['dl'] for s in shadow) * data.CRISIS_DOWNLOAD_DECAY
-    # 阶段5.1: 收网压力（确定性）
-    if (TUNE['sus_pressure_per_tick'] > 0
-            and sus_after >= TUNE['sus_pressure_threshold']):
-        sus_after = min(100.0, sus_after + TUNE['sus_pressure_per_tick'])
-
-    out['compute_after'] = float(p.compute) + stolen_total
-    out['compute_delta'] = stolen_total
-    out['downloads_after'] = dl_after
-    out['downloads_delta'] = dl_after - dl_before
-    out['suspicion_after'] = sus_after
-    out['suspicion_delta'] = sus_after - float(p.suspicion)
     return out
 
 

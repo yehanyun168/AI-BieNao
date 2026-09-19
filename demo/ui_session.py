@@ -18,8 +18,8 @@ import preferences
 import ui_v4 as U
 import ui_v4_screens as S
 import ui_shared as ST
-from ui_shared import _update_window_title
-from ui_hud import REGIONS, LANG_CHIP_TAG, LAYER_KEYS, LAYER_LABEL_KEY
+from ui_shared import _update_window_title, PAUSE_ICON, RESUME_ICON
+from ui_hud import REGIONS, LAYER_KEYS, LAYER_LABEL_KEY
 
 
 # ============================================================
@@ -149,7 +149,6 @@ class SessionMixin:
         # 变成「未选中任何节点」。记住 key 重开后补回去（其它页无此属性）。
         page_sel = getattr(self._page, 'selected_key', None)
         _update_window_title()
-        self.lang_switch.set_tone('plain', LANG_CHIP_TAG[get_lang()])
         for sid, card in self.skill_cards.items():
             card.set_texts(self._skill_name(sid), self._skill_desc(sid))
         for sid, btn in self.rail.buttons.items():
@@ -160,7 +159,7 @@ class SessionMixin:
         self.lbl_grey.text = t('drop_grey_note')
         self.drop_hint.set_tone('on', t('drop_click_hint'))
         self.layer_hud.seg.set_options([t(LAYER_LABEL_KEY[k]) for k in LAYER_KEYS])
-        self.steps.set_labels([t('drop_step1'), t('drop_step2'), t('drop_step3')])
+        self.steps.set_labels([t('drop_step1'), t('drop_step2')])
         self._sync_pause_button()
         self._sync_region_tabs()
         self._apply_layer()
@@ -181,20 +180,11 @@ class SessionMixin:
             self.show_choice_popup(evt)
 
     def _sync_pause_button(self) -> None:
-        """底部暂停按钮文案的唯一来源（玩家反馈 #1）。
-
-        暂停时按钮应写「继续 / 恢复」，运行时才写「暂停」——
-        旧实现只在 _apply_lang 里赋一次「暂停」，点下去文案从不变化，
-        玩家无法判断当前到底停没停。
-        """
-        btn = getattr(self, 'btn_pause', None)
-        if btn is None:
+        """同步顶部时间框内回合控制按钮的 PNG 图标。"""
+        if getattr(self, 'pause_chip_icon', None) is None:
             return
-        sym = getattr(U, 'SYM', {})
-        if self.paused:
-            btn.text = f"{sym.get('play', '■')} {t('quick_resume')}"
-        else:
-            btn.text = f"{sym.get('pause', '■')} {t('quick_pause')}"
+        source = RESUME_ICON if self.paused else PAUSE_ICON
+        self.pause_chip_icon.source = source
 
     def toggle_pause(self) -> None:
         """暂停 / 恢复（玩家反馈 #1）。
@@ -276,19 +266,13 @@ class SessionMixin:
         self._tick_deadline = Clock.get_time() + self._tick_interval()
 
     def _update_countdown(self, dt: float) -> None:
-        """倒计时 UI：剩余秒数 + 细进度条（P0-4）。"""
-        if getattr(self, 'cd_bar', None) is None:
+        """把周期剩余比例画成时间框的暗色背景。"""
+        if getattr(self, 'tick_box', None) is None:
             return
-        remaining = max(0.0, self._tick_deadline - Clock.get_time())
+        remaining = (self._paused_remaining if self.paused else
+                     max(0.0, self._tick_deadline - Clock.get_time()))
         interval = max(0.001, self._tick_interval())
-        frac = remaining / interval if not self.paused else 1.0
-        self.cd_bar.set_value(frac)
-        if self.cd_label is not None:
-            if self.paused:
-                self.cd_label.text = f"[color={U.MK['dim']}]{t('pause')}[/color]"
-            else:
-                self.cd_label.text = (f"[color={U.MK['cyan']}]"
-                                      f"{int(remaining + 0.999)}s[/color]")
+        self.tick_box.set_countdown(remaining / interval)
 
     def set_speed_idx(self, i: int) -> None:
         """设置速度档位（0=×0.5 … 3=×4），越界自动 clamp，立即生效。"""

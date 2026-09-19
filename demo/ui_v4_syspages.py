@@ -123,7 +123,7 @@ class HelpPage(U.PageScreen):
                                  color=COLORS['text_dim'], markup=True,
                                  valign='middle'))
         right.add_widget(note)
-        # 世界旗林（美术填充，仿设置页；旗子放大让网格吃满卡片宽度/高度）
+        # 世界旗林（美术填充，仿设置页；尺寸略收紧以免在小窗口中过于拥挤）
         fcard = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],
                             spacing=6, padding=(10, 8))
         fcard.add_widget(mk_label(i18n.t('set_flags'), font_size=FS_SM,
@@ -132,7 +132,7 @@ class HelpPage(U.PageScreen):
         # 若不绑定，网格会被弹性卡片拉伸到 1020px（内容仅 446px）→ 574px 大留白。
         fgrid = GridLayout(cols=5, spacing=(10, 10), size_hint=(None, None))
         for code in FLAG_CODES[:20]:
-            fgrid.add_widget(FlagWidget(code=code, size=(190, 124)))
+            fgrid.add_widget(FlagWidget(code=code, size=(160, 104)))
         fgrid.bind(minimum_height=fgrid.setter('height'),
                    minimum_width=fgrid.setter('width'))
         fhold = AnchorLayout(anchor_x='center', anchor_y='center', padding=(0, 10))
@@ -241,20 +241,17 @@ class SettingsPage(U.PageScreen):
         self.sw_music = _seg('set_music', _tf,
                              int(values.get('music_on', True)), on_music)
 
-        # 重看教程（P0-1）：随时重新走一遍新手引导
-        left.add_widget(small_btn('重看教程', 'on',
-                                  lambda: on_tutorial and on_tutorial(),
-                                  width=200, height=44, font_size=FS_BODY))
         # 返回主菜单（仅对局内提供 on_back_to_menu 时渲染）：点按弹确认框，
-        # 确认后自动存档并退回主菜单。按钮与「重看教程」同款 small_btn，保持视觉一致。
+        # 确认后自动存档并退回主菜单。
         if on_back_to_menu:
             left.add_widget(small_btn(i18n.t('back_to_menu'), 'on',
                                       lambda: on_back_to_menu(),
                                       width=200, height=44, font_size=FS_BODY))
         # 快捷键速查（Bug5：填充留白）
-        keys = KeyBox(i18n.t('set_keys'), [('Space', 'k_pause'), ('1 – 6', 'k_skill'),
-                                           ('F1', 'k_help'), ('Esc', 'k_esc'),
-                                           ('L', 'k_lang'), ('S / R', 'k_save')])
+        keys = KeyBox(i18n.t('set_keys'),
+                      [('Space', i18n.t('k_pause')), ('1 – 6', i18n.t('k_skill')),
+                       ('F1', i18n.t('k_help')), ('Esc', i18n.t('k_esc')),
+                       ('L', i18n.t('k_lang')), ('S / R', i18n.t('k_save'))])
         keys.size_hint_y, keys.height = None, 216
         left.add_widget(keys)
         # 关于游戏（Bug5：弹性卡片，吃掉面板剩余空间；奖杯像素画压阵）
