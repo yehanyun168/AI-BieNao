@@ -289,13 +289,15 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     )
     queued_count = len(player.skill_queue)
     new_casts = list(player.skill_queue[:queued_count])
-    del player.skill_queue[:queued_count]
-    player.active_skill_effects.extend(
+    new_effects = [
         ActiveSkill(cast.skill_id, cast.targets, SKILLS[cast.skill_id].duration)
         for cast in new_casts
-    )
-    report['skills_activated'] = [cast.skill_id for cast in new_casts]
+    ]
+    activated_ids = [cast.skill_id for cast in new_casts]
     instant_compute, instant_suspicion = instant_deltas(new_casts)
+    del player.skill_queue[:queued_count]
+    player.active_skill_effects.extend(new_effects)
+    report['skills_activated'] = activated_ids
 
     player.tick_count += 1
     report["tick"] = player.tick_count

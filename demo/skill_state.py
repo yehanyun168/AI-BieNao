@@ -100,6 +100,15 @@ def _finite_positive(value):
 def validate_live_skill_state(queue, active, cooldowns):
     """Reject corrupt persisted skill state before a tick mutates anything."""
     try:
+        if (
+            type(queue) is not list
+            or type(active) is not list
+            or type(cooldowns) is not dict
+            or any(type(cast) is not SkillCast for cast in queue)
+            or any(type(effect) is not ActiveSkill for effect in active)
+        ):
+            raise ValueError('invalid skill state container or item type')
+
         queue_ids = [cast.skill_id for cast in queue]
         active_ids = [effect.skill_id for effect in active]
         all_ids = queue_ids + active_ids

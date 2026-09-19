@@ -489,7 +489,22 @@ class SkillCycleTests(unittest.TestCase):
         self.assertAlmostEqual(report['compute_gain'], expected_compute)
 
     def test_malformed_live_state_is_rejected_atomically(self):
+        class ListSubclass(list):
+            pass
+
+        class DictSubclass(dict):
+            pass
+
         corruptions = {
+            'queue_not_plain_list': lambda p: setattr(
+                p, 'skill_queue', ListSubclass()
+            ),
+            'active_not_plain_list': lambda p: setattr(
+                p, 'active_skill_effects', ListSubclass()
+            ),
+            'cooldowns_not_plain_dict': lambda p: setattr(
+                p, 'skill_cooldowns', DictSubclass()
+            ),
             'duplicate_queue_id': lambda p: p.skill_queue.extend([
                 SkillCast('push_song'), SkillCast('push_song')
             ]),
@@ -540,6 +555,44 @@ class SkillCycleTests(unittest.TestCase):
                         engine.tick_one_round()
 
                 self.assertEqual(self._tick_state(), before)
+
+    def test_stateful_cast_is_rejected_before_queue_is_cleared(self):
+        class StatefulCast:
+            def __init__(self):
+                self.skill_id_reads = 0
+
+            @property
+            def skill_id(self):
+                self.skill_id_reads += 1
+                return ('open_bait' if self.skill_id_reads <= 3
+                        else 'missing')
+
+            @property
+            def targets(self):
+                return ()
+
+            def __eq__(self, other):
+                return (
+                    type(other) is type(self)
+                    and other.skill_id_reads == self.skill_id_reads
+                )
+
+        cast = StatefulCast()
+        self.player.skill_queue.append(cast)
+        self.player.skill_cooldowns['open_bait'] = 9
+        before = self._tick_state()
+        error = None
+
+        with self.assertLogs('skill_state', level='ERROR'):
+            try:
+                engine.tick_one_round()
+            except Exception as exc:
+                error = exc
+            self.assertEqual(self.player.skill_queue, before[0].skill_queue)
+
+        self.assertIs(type(error), ValueError)
+        self.assertEqual(str(error), 'invalid live skill state')
+        self.assertEqual(self._tick_state(), before)
 
     def test_report_always_contains_skills_activated(self):
         report = engine.tick_one_round()
