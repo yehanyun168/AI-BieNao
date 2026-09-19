@@ -385,6 +385,7 @@ LAYERS = {
     'commissions.py':     2,
     'endings.py':         2,
     'achievements.py':    2,
+    'skill_state.py':     2,   # 技能施放/生效状态与时序约束；仅依赖 data(L1)
     # L3 引擎核心
     'engine.py':          3,
     # L4 引擎之上的服务 / v4 组件库
