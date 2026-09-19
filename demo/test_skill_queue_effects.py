@@ -1,13 +1,18 @@
 import copy
+import json
+import os
 import random
 import subprocess
 import sys
+import tempfile
 import unittest
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from unittest.mock import patch
 
 import engine
+import balance
+import save_manager
 import skill_state
 from balance import TUNE, apply_difficulty
 from data import SKILLS
@@ -601,6 +606,257 @@ class SkillCycleTests(unittest.TestCase):
         self.player.game_over = True
         report = engine.tick_one_round()
         self.assertEqual(report['skills_activated'], [])
+
+
+class SkillSaveTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.save_dir = patch.object(save_manager, 'SAVE_DIR', self.tmp.name)
+        self.crash_log = patch.object(
+            save_manager, 'CRASH_LOG', os.path.join(self.tmp.name, 'crash.log')
+        )
+        self.save_dir.start()
+        self.crash_log.start()
+        self.addCleanup(self.save_dir.stop)
+        self.addCleanup(self.crash_log.stop)
+        balance.apply_difficulty('normal')
+        engine.init_game(seed=71)
+        self.addCleanup(balance.apply_difficulty, 'normal')
+
+    def _path(self, name='slot.json'):
+        return os.path.join(self.tmp.name, name)
+
+    def _valid_v6(self):
+        path = self._path()
+        save_manager.save(path)
+        with open(path, encoding='utf-8') as stream:
+            return path, json.load(stream)
+
+    def _write(self, path, data):
+        with open(path, 'w', encoding='utf-8') as stream:
+            json.dump(data, stream, ensure_ascii=False, allow_nan=True)
+        with open(path, 'rb') as stream:
+            return stream.read()
+
+    def _handwritten_v5(self):
+        countries = []
+        for cfg in engine.COUNTRIES:
+            countries.append({
+                'code': cfg.code,
+                'unlocked': cfg.code in {'CN', 'US'},
+                'downloads_m': 1.0 if cfg.code in {'CN', 'US'} else 0.0,
+                'current_block_intensity': 0.0,
+                'block_budget_remaining': cfg.block_budget,
+            })
+        return {
+            'version': 5,
+            'saved_at': '2026-01-01T00:00:00',
+            'player': {
+                'compute': 123.0, 'compute_peak': 123.0,
+                'suspicion': 4.0, 'suspicion_peak': 4.0,
+                'tick_count': 2, 'start_year': 2026, 'start_month': 1,
+                'events_history': [], 'skill_cooldowns': {},
+                'selected_country': 'CN', 'crisis_triggered': False,
+                'game_over': False, 'ending_id': None,
+                'v2_cooldowns': {}, 'v2_seen': [], 'achievements': [],
+                'seen_tutorial': False, 'intro_seen': False,
+                'unlocked_skills': ['push_song', 'stealth'],
+                'commissions': [], 'commissions_done': 0,
+                'commissions_failed': 0, 'last_commission_tick': 0,
+                'compute_earned_total': 0.0, 'skill_uses': {},
+                'seed': None, 'difficulty': 'normal', 'origin': 'garage',
+            },
+            'tech': {
+                't0_unlocked': {}, 'branch_levels': {}, 'chosen_branch': {},
+            },
+            'countries': countries,
+        }
+
+    def _assert_load_bad_unchanged(self, data):
+        path = self._path()
+        original_bytes = self._write(path, data)
+        player_ref = engine.player
+        countries_ref = engine.player_countries
+        player_before = copy.deepcopy(player_ref)
+        countries_before = copy.deepcopy(countries_ref)
+        engine._counterplay_cooldown.clear()
+        engine._counterplay_cooldown['sentinel'] = 17
+        engine._counterplay_pending.clear()
+        engine._counterplay_pending['sentinel'] = 19
+        engine._recent_commission_templates[:] = ['sentinel']
+        cooldown_ref = engine._counterplay_cooldown
+        pending_ref = engine._counterplay_pending
+        recent_ref = engine._recent_commission_templates
+        tune_ref = balance.TUNE
+        tune_before = copy.deepcopy(balance.TUNE)
+        difficulty_before = balance.ACTIVE_DIFFICULTY
+        origin_before = balance.ACTIVE_ORIGIN
+        rng_before = random.getstate()
+
+        self.assertEqual(
+            save_manager.load_ex(path),
+            (False, save_manager.LOAD_BAD_SCHEMA),
+        )
+        self.assertIs(engine.player, player_ref)
+        self.assertEqual(engine.player, player_before)
+        self.assertIs(engine.player_countries, countries_ref)
+        self.assertEqual(engine.player_countries, countries_before)
+        self.assertIs(engine._counterplay_cooldown, cooldown_ref)
+        self.assertEqual(engine._counterplay_cooldown, {'sentinel': 17})
+        self.assertIs(engine._counterplay_pending, pending_ref)
+        self.assertEqual(engine._counterplay_pending, {'sentinel': 19})
+        self.assertIs(engine._recent_commission_templates, recent_ref)
+        self.assertEqual(engine._recent_commission_templates, ['sentinel'])
+        self.assertIs(balance.TUNE, tune_ref)
+        self.assertEqual(balance.TUNE, tune_before)
+        self.assertEqual(balance.ACTIVE_DIFFICULTY, difficulty_before)
+        self.assertEqual(balance.ACTIVE_ORIGIN, origin_before)
+        self.assertEqual(random.getstate(), rng_before)
+        with open(path, 'rb') as stream:
+            self.assertEqual(stream.read(), original_bytes)
+
+    def test_handwritten_v5_migrates_with_empty_skill_state(self):
+        legacy = self._handwritten_v5()
+        self.assertNotIn('skill_queue', legacy['player'])
+        self.assertNotIn('active_skill_effects', legacy['player'])
+        legacy_before = copy.deepcopy(legacy)
+        migrated = save_manager._v5_to_v6(legacy)
+        self.assertEqual(legacy, legacy_before)
+        self.assertIsNot(migrated, legacy)
+        self.assertIsNot(migrated['player'], legacy['player'])
+        self.assertEqual(migrated['version'], 6)
+        self.assertEqual(migrated['player']['skill_queue'], [])
+        self.assertEqual(migrated['player']['active_skill_effects'], [])
+        path = self._path()
+        original_bytes = self._write(path, legacy)
+
+        self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+        self.assertEqual(engine.player.skill_queue, [])
+        self.assertEqual(engine.player.active_skill_effects, [])
+        with open(path, 'rb') as stream:
+            self.assertEqual(stream.read(), original_bytes)
+
+    def test_v6_roundtrip_preserves_fifo_targets_cooldowns_and_uses(self):
+        engine.player.skill_queue = [
+            SkillCast('push_song'), SkillCast('open_bait', ('CN', 'US')),
+        ]
+        engine.player.skill_cooldowns = {'push_song': 3, 'open_bait': 9}
+        engine.player.skill_uses = {'push_song': 4, 'open_bait': 2}
+        path = self._path()
+        save_manager.save(path)
+
+        engine.init_game(seed=72)
+        self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+        self.assertEqual(
+            engine.player.skill_queue,
+            [SkillCast('push_song'), SkillCast('open_bait', ('CN', 'US'))],
+        )
+        self.assertEqual(engine.player.skill_cooldowns,
+                         {'push_song': 3, 'open_bait': 9})
+        self.assertEqual(engine.player.skill_uses,
+                         {'push_song': 4, 'open_bait': 2})
+
+        engine.player.skill_queue = [SkillCast('algo_top'), SkillCast('stealth')]
+        engine.player.skill_cooldowns = {'algo_top': 5, 'stealth': 8}
+        engine.tick_one_round()
+        save_manager.save(path)
+        engine.init_game(seed=73)
+        self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+        self.assertEqual(
+            [(a.skill_id, a.remaining_ticks)
+             for a in engine.player.active_skill_effects],
+            [('stealth', 1)],
+        )
+
+    def test_bad_v6_skill_shapes_are_rejected_without_mutation(self):
+        _, valid = self._valid_v6()
+        variants = {}
+
+        def variant(name, queue=None, active=None, cooldowns=None):
+            bad = copy.deepcopy(valid)
+            if queue is not None:
+                bad['player']['skill_queue'] = queue
+            if active is not None:
+                bad['player']['active_skill_effects'] = active
+            if cooldowns is not None:
+                bad['player']['skill_cooldowns'] = cooldowns
+            variants[name] = bad
+
+        variant('unknown', [{'skill_id': 'missing', 'targets': []}], [],
+                {'missing': 2})
+        variant('item_not_dict', ['stealth'], [], {'stealth': 8})
+        variant('queue_not_list', {}, [], {})
+        variant('active_not_list', [], {}, {})
+        variant('item_extra_field',
+                [{'skill_id': 'stealth', 'targets': [], 'extra': 1}], [],
+                {'stealth': 8})
+        variant('targets_not_list',
+                [{'skill_id': 'stealth', 'targets': 'CN'}], [],
+                {'stealth': 8})
+        variant('duplicate_targets',
+                [{'skill_id': 'stealth', 'targets': ['CN', 'CN']}], [],
+                {'stealth': 8})
+        variant('empty_target',
+                [{'skill_id': 'stealth', 'targets': ['']}], [],
+                {'stealth': 8})
+        variant('unknown_target',
+                [{'skill_id': 'stealth', 'targets': ['XX']}], [],
+                {'stealth': 8})
+        locked = next(c['code'] for c in valid['countries'] if not c['unlocked'])
+        variant('locked_target',
+                [{'skill_id': 'stealth', 'targets': [locked]}], [],
+                {'stealth': 8})
+        variant('duplicate_id', [
+            {'skill_id': 'stealth', 'targets': []},
+            {'skill_id': 'stealth', 'targets': []},
+        ], [], {'stealth': 8})
+        variant('cross_duplicate',
+                [{'skill_id': 'stealth', 'targets': []}],
+                [{'skill_id': 'stealth', 'targets': [], 'remaining_ticks': 1}],
+                {'stealth': 8})
+        for remaining in (True, 1.0, '1', 0, -1, 2, 9):
+            variant(f'remaining_{remaining!r}', [], [{
+                'skill_id': 'stealth', 'targets': [],
+                'remaining_ticks': remaining,
+            }], {'stealth': 8})
+        for cooldown in (None, 0, -1, True, float('nan'), float('inf'), '8'):
+            cooldowns = {} if cooldown is None else {'stealth': cooldown}
+            variant(f'cooldown_{cooldown!r}',
+                    [{'skill_id': 'stealth', 'targets': []}], [], cooldowns)
+        variant('queue_cooldown_short',
+                [{'skill_id': 'stealth', 'targets': []}], [], {'stealth': 1})
+        variant('active_exceeds_cooldown', [], [{
+            'skill_id': 'anon_cdn', 'targets': [], 'remaining_ticks': 2,
+        }], {'anon_cdn': 1})
+        for key in ('skill_queue', 'active_skill_effects'):
+            bad = copy.deepcopy(valid)
+            bad['player'].pop(key, None)
+            variants[f'missing_{key}'] = bad
+
+        # Already-saturated targets are historical state and remain loadable.
+        saturated = copy.deepcopy(valid)
+        saturated['player']['skill_queue'] = [
+            {'skill_id': 'open_bait', 'targets': ['CN']},
+        ]
+        saturated['player']['skill_cooldowns'] = {'open_bait': 9}
+        cn = next(c for c in saturated['countries'] if c['code'] == 'CN')
+        cn['downloads_m'] = 1e12
+        path = self._path('saturated.json')
+        self._write(path, saturated)
+        self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+        self.assertEqual(engine.player.skill_queue,
+                         [SkillCast('open_bait', ('CN',))])
+
+        for name, bad in variants.items():
+            with self.subTest(name=name):
+                engine.init_game(seed=80)
+                self._assert_load_bad_unchanged(bad)
+
+    def test_apply_failure_restores_exact_preload_global_state(self):
+        _, bad = self._valid_v6()
+        bad['player']['commissions'] = [{'not': 'a commission'}]
+        self._assert_load_bad_unchanged(bad)
 
 
 if __name__ == "__main__":
