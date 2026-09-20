@@ -5,7 +5,7 @@ import unittest
 import main  # 注册字体并完成 Kivy 配置
 from i18n import get_lang, set_lang, t
 from ui_v4 import KeyBox, PageScreen, SaveSlotRow
-from ui_v4_syspages import SettingsPage
+from ui_v4_syspages import SavePage, SettingsPage
 
 
 class SettingsTextFitTests(unittest.TestCase):
@@ -87,6 +87,22 @@ class SettingsTextFitTests(unittest.TestCase):
         texts = [getattr(w, 'text', '') for w in page.walk()]
 
         self.assertNotIn('重看教程', texts)
+
+    def test_settings_and_saves_are_separate_pages(self):
+        settings = SettingsPage(on_reset=lambda: None)
+        saves = SavePage()
+
+        self.assertFalse(hasattr(settings, 'slot_box'))
+        self.assertIs(settings.btn_reset.parent.parent, settings.settings_panel)
+        self.assertTrue(hasattr(saves, 'slot_box'))
+        saves.rebuild_slots([('槽位 01', '空', False)])
+        self.assertEqual(len(saves.slot_box.children), 1)
+
+    def test_settings_has_no_back_to_menu_action(self):
+        page = SettingsPage()
+        texts = [getattr(widget, 'text', '') for widget in page.walk()]
+
+        self.assertNotIn(t('back_to_menu'), texts)
 
 
 if __name__ == '__main__':

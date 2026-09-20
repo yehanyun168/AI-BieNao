@@ -38,10 +38,10 @@ class ContinueSlotModalTests(unittest.TestCase):
         self.assertEqual(loaded, [])
         self.assertIsNotNone(menu._continue_modal)
         rows = menu._continue_rows
-        self.assertEqual(len(rows), 3)
-        self.assertEqual([len(row._btns) for row in rows], [0, 1, 0])
+        self.assertEqual(len(rows), 1)
+        self.assertEqual([len(row._btns) for row in rows], [1])
 
-        rows[1]._btns[0].trigger_action(duration=0)
+        rows[0]._btns[0].trigger_action(duration=0)
         self.assertEqual(loaded, [expected])
 
     def test_main_menu_no_longer_embeds_slot_rows(self):

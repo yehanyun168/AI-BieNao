@@ -366,6 +366,7 @@ from kivy.core.window import Window
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.scrollview import ScrollView
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 
@@ -539,11 +540,11 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
         self.tutorial = TutorialController(self)   # P0-1 新手引导
 
-    def _confirm_back_to_menu(self) -> None:
+    def _confirm_back_to_menu(self, on_cancel=None) -> None:
         """对局内「返回主菜单」确认框：确认后自动存档并退回主菜单。
 
         仅由对局内设置页的「返回主菜单」按钮触发（主菜单设置页不传该回调）。
-        OK → 关闭弹窗 → do_save() 写默认槽（下次可继续）→ exit_to_menu() 退回主菜单。
+        OK → 关闭弹窗 → do_autosave() 覆盖自动存档 → exit_to_menu() 退回主菜单。
         弹窗皮肤（modal_header + hline + auto_h_label + make_button）与覆盖确认框一致。
         """
         body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
@@ -553,19 +554,35 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
                                      color=COLORS['text']))
         row = BoxLayout(orientation='horizontal', spacing=12,
                         size_hint_y=None, height=50)
+        decision = {'confirmed': False}
+
         cancel = make_button(t('save_overwrite_cancel'), font_size=U.FS_BODY,
                              height=50, bg=COLORS['panel_light'],
                              on_release=lambda *_: pop.dismiss())
+
+        def _confirm(*_args):
+            decision['confirmed'] = True
+            pop.dismiss()
+            self.do_autosave()
+            self.exit_to_menu()
+
         ok = make_button(t('back_to_menu_ok'), font_size=U.FS_BODY,
                          height=50, bg=COLORS['panel'],
-                         on_release=lambda *_: (pop.dismiss(),
-                                                self.do_save(),
-                                                self.exit_to_menu()))
+                         on_release=_confirm)
         row.add_widget(cancel)
         row.add_widget(ok)
         body.add_widget(row)
         pop = make_modal(body, size_hint=(0.5, 0.62), skin='lose',
                          close_on_outside=True)
+        self._back_to_menu_popup = pop
+
+        def _closed(*_args):
+            if getattr(self, '_back_to_menu_popup', None) is pop:
+                self._back_to_menu_popup = None
+            if not decision['confirmed'] and callable(on_cancel):
+                on_cancel()
+
+        pop.bind(on_dismiss=_closed)
         pop.open()
 
 
@@ -623,13 +640,23 @@ def ach_snapshot(filt: str = 'all'):
             cond_got, len(cond), evt_got, len(evt), nearest[:3])
 
 
-def read_slot_rows(active_idx: int = 0):
-    """读取 3 个存档槽的摘要（不依赖 GameUI 实例）。"""
+def read_slot_rows(active_idx: int = 0, include_empty: bool = False):
+    """读取全部编号存档的摘要；可在末尾附加一个新槽位。"""
     import json as _json
     rows = []
-    for i, name in enumerate(('slot1', 'slot2', 'slot3')):
-        title = t('slot_name_fmt').format(n=f"{i + 1:02d}")
-        path = os.path.join(save_manager.SAVE_DIR, f'{name}.json')
+    names = save_manager.slot_names()
+    auto_path = os.path.join(save_manager.SAVE_DIR, save_manager.AUTOSAVE_SLOT)
+    if os.path.exists(auto_path):
+        names.insert(0, save_manager.AUTOSAVE_SLOT)
+    if include_empty:
+        names.append(save_manager.next_slot_name())
+    for i, filename in enumerate(names):
+        if filename == save_manager.AUTOSAVE_SLOT:
+            title = t('slot_autosave')
+        else:
+            number = int(filename[4:-5])
+            title = t('slot_name_fmt').format(n=f"{number:02d}")
+        path = os.path.join(save_manager.SAVE_DIR, filename)
         summary = t('slot_empty')
         if os.path.exists(path):
             try:
@@ -648,7 +675,7 @@ def read_slot_rows(active_idx: int = 0):
             except Exception as e:
                 # 摘要读不出（多半存档损坏）：不能无声装作"空槽"——玩家会误以
                 # 为可覆盖。留一行控制台痕迹，槽位仍按空槽显示（行为不变）。
-                print(f'[slots] !️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
+                print(f'[slots] !️ {filename} 摘要读取失败（可能损坏）：{e!r}')
                 summary = t('slot_empty')
         rows.append((title, summary, i == active_idx))
     return rows
@@ -657,8 +684,12 @@ def read_slot_rows(active_idx: int = 0):
 def newest_save_path():
     """返回最近修改的存档路径（无存档 → None）。"""
     best, best_t = None, -1.0
-    for name in ('slot1', 'slot2', 'slot3'):
-        path = os.path.join(save_manager.SAVE_DIR, f'{name}.json')
+    names = save_manager.slot_names()
+    auto_path = os.path.join(save_manager.SAVE_DIR, save_manager.AUTOSAVE_SLOT)
+    if os.path.exists(auto_path):
+        names.insert(0, save_manager.AUTOSAVE_SLOT)
+    for name in names:
+        path = os.path.join(save_manager.SAVE_DIR, name)
         if os.path.exists(path):
             mt = os.path.getmtime(path)
             if mt > best_t:
@@ -1162,8 +1193,15 @@ class MainMenu(FloatLayout):
                                      color=COLORS['text_dim']))
 
         self._continue_rows = []
-        for i, (title, summary, _active) in enumerate(read_slot_rows()):
-            path = os.path.join(save_manager.SAVE_DIR, f'slot{i + 1}.json')
+        rows_box = BoxLayout(orientation='vertical', spacing=8,
+                             size_hint_y=None)
+        rows_box.bind(minimum_height=rows_box.setter('height'))
+        names = save_manager.slot_names()
+        auto_path = os.path.join(save_manager.SAVE_DIR, save_manager.AUTOSAVE_SLOT)
+        if os.path.exists(auto_path):
+            names.insert(0, save_manager.AUTOSAVE_SLOT)
+        for filename, (title, summary, _active) in zip(names, read_slot_rows()):
+            path = os.path.join(save_manager.SAVE_DIR, filename)
             actions = ()
             if os.path.exists(path):
                 actions = ((t('menu_continue'), 'primary',
@@ -1172,7 +1210,11 @@ class MainMenu(FloatLayout):
                               active=os.path.normcase(path) == os.path.normcase(newest),
                               height=60)
             self._continue_rows.append(row)
-            body.add_widget(row)
+            rows_box.add_widget(row)
+
+        slot_scroll = ScrollView(do_scroll_x=False, bar_width=8)
+        slot_scroll.add_widget(rows_box)
+        body.add_widget(slot_scroll)
 
         pop = make_modal(body, size_hint=(0.58, 0.60), skin='win',
                          close_on_outside=True)
@@ -1236,61 +1278,9 @@ class MainMenu(FloatLayout):
             on_sound=self._set_sound_idx,
             on_music=self._set_music_idx,
             values=preferences.get(),
-            slot_actions=self._slot_actions,
             on_reset=self._reset_settings)
-        page.rebuild_slots(read_slot_rows(self._sel_slot))
         page.set_back_button(t('k_esc'), self._close_overlay)
         self._open_overlay(page)
-
-    def _slot_actions(self, title: str):
-        """主菜单设置浮层：按槽位生成动作按钮。
-
-        - 空槽：仅「在此槽开新游戏」（无覆盖风险，无需确认）。
-        - 已有档：「读取」+「覆盖并开新游戏」（覆盖需确认弹窗）。
-        """
-        import re as _re
-        m = _re.search(r'(\d+)', title)
-        idx = int(m.group(1)) if m else 1
-        slot = f'slot{idx}.json'
-        path = os.path.join(save_manager.SAVE_DIR, slot)
-        if os.path.exists(path):
-            return [
-                (t('load_button'), 'plain',
-                 lambda p=path: self._load_and_start(p)),
-                (t('slot_overwrite'), 'danger',
-                 lambda p=path: self._confirm_overwrite(p)),
-            ]
-        return [
-            (t('slot_new_game'), 'primary',
-             lambda p=path: self._start_new_on_slot(p)),
-        ]
-
-    def _load_and_start(self, path: str) -> None:
-        if callable(self.on_continue):
-            self.on_continue(path)
-
-    def _confirm_overwrite(self, path: str) -> None:
-        """覆盖确认弹窗：「当前操作会覆盖当前存档，确定继续吗？」。"""
-        body = BoxLayout(orientation='vertical', spacing=12, padding=(16, 14))
-        body.add_widget(modal_header('!', t('save_overwrite_title')))
-        body.add_widget(hline())
-        body.add_widget(auto_h_label(t('save_overwrite_body'), U.FS_BODY,
-                                     color=COLORS['text']))
-        row = BoxLayout(orientation='horizontal', spacing=12,
-                        size_hint_y=None, height=50)
-        cancel = make_button(t('save_overwrite_cancel'), font_size=U.FS_BODY,
-                             height=50, bg=COLORS['panel_light'],
-                             on_release=lambda *_: pop.dismiss())
-        ok = make_button(t('save_overwrite_confirm'), font_size=U.FS_BODY,
-                         height=50, bg=(0.227, 0.118, 0.118, 1),
-                         on_release=lambda *_: (pop.dismiss(),
-                                                self._start_new_on_slot(path)))
-        row.add_widget(cancel)
-        row.add_widget(ok)
-        body.add_widget(row)
-        pop = make_modal(body, size_hint=(0.5, 0.62), skin='lose',
-                         close_on_outside=True)
-        pop.open()
 
     def _reset_settings(self) -> None:
         set_grid(1, self.sil_map)                 # 内部已 preferences.update(grid_mode=1)

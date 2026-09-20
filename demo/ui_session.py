@@ -8,6 +8,7 @@ import os
 
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.uix.boxlayout import BoxLayout
 
 from i18n import (t, get_lang, LANG_ZH)
 import engine
@@ -20,6 +21,7 @@ import ui_v4_screens as S
 import ui_shared as ST
 from ui_shared import _update_window_title, PAUSE_ICON, RESUME_ICON
 from ui_hud import REGIONS, LAYER_KEYS, LAYER_LABEL_KEY
+from ui_modal import make_button, make_modal, modal_header
 
 
 # ============================================================
@@ -96,7 +98,7 @@ class SessionMixin:
         path = os.path.join(save_manager.SAVE_DIR, slot)
         save_manager.save(path)
         self._notify(f"{t('save_button')} → {slot}")
-        if isinstance(self._page, S.SettingsPage):
+        if isinstance(self._page, S.SavePage):
             self._page.rebuild_slots(self._slot_rows())
 
     def _load_slot(self, slot: str) -> None:
@@ -105,6 +107,8 @@ class SessionMixin:
         if ok:
             self._notify(t('load_ok'))
             self.close_page()
+            self._pause_menu = False
+            self._event_pause_owned = False
             self.paused = False
             self.stop_ticking()
             self._reschedule_tick()
@@ -118,13 +122,18 @@ class SessionMixin:
         if os.path.exists(path):
             os.remove(path)
             self._notify(f"{U.SYM['close']} {slot}")
-        if isinstance(self._page, S.SettingsPage):
+        if isinstance(self._page, S.SavePage):
             self._page.rebuild_slots(self._slot_rows())
 
 
 
     def do_save(self) -> None:
         path = save_manager.save()
+        self._notify(f"{t('save_button')} → {os.path.basename(path)}")
+
+    def do_autosave(self) -> None:
+        """自动保存始终覆盖专用槽位，不占用手动槽位编号。"""
+        path = save_manager.save_auto()
         self._notify(f"{t('save_button')} → {os.path.basename(path)}")
 
     def do_load(self) -> None:
@@ -359,7 +368,7 @@ class SessionMixin:
         self._reschedule_tick()
 
     # ========================================================
-    # Esc 兜底：暂停 + 设置页（替代原先的「直接回主菜单」）
+    # Esc 兜底：暂停菜单
     # --------------------------------------------------------
     # 语义：Esc 逐层退出保持不变（投放 → 全屏页 → 日志抽屉 → 检视卡），
     # 只把最外层兜底改成「暂停并打开设置页」，避免误按 Esc 直接弃局。
@@ -367,10 +376,76 @@ class SessionMixin:
     #                       ② game_over 状态下按 Esc（不再暂停，直接 exit）。
     # ========================================================
     def pause_menu(self) -> None:
-        """按 Esc 打开设置页，并复用事件弹窗的暂停所有权规则。"""
-        self._pause_for_event()           # 冻结倒计时；保留玩家原有暂停状态
+        """打开 Esc 暂停菜单；设置可用，存档与退出暂作占位。"""
+        existing = getattr(self, '_pause_menu_popup', None)
+        if existing is not None:
+            return
+        self._pause_for_event()
+
+        body = BoxLayout(orientation='vertical', spacing=14, padding=(14, 16))
+        body.add_widget(modal_header(U.SYM['play'], t('pause_menu_title')))
+        settings = make_button(t('pause_menu_settings'), font_size=20, height=72,
+                               on_release=lambda *_: self._open_pause_settings())
+        save = make_button(t('pause_menu_save'), font_size=20, height=72,
+                           on_release=lambda *_: self._open_pause_saves())
+        leave = make_button(t('pause_menu_exit'), font_size=20, height=72,
+                            on_release=lambda *_: self._open_pause_exit())
+        self._pause_menu_buttons = [settings, save, leave]
+        for button in self._pause_menu_buttons:
+            body.add_widget(button)
+
+        popup = make_modal(body, size_hint=(0.36, 0.72))
+        self._pause_menu_body = body
+        self._pause_menu_panel = popup._modal_panel
+        self._pause_menu_popup = popup
+
+        def _closed(*_args):
+            if getattr(self, '_pause_menu_popup', None) is popup:
+                self._pause_menu_popup = None
+            if getattr(popup, '_pause_handoff', False):
+                return
+            # 进入设置时暂停所有权转交给设置页，不能在弹窗消失时恢复。
+            if not getattr(self, '_pause_menu', False):
+                self._resume_after_event()
+
+        popup.bind(on_dismiss=_closed)
+        popup.open()
+
+    def _open_pause_settings(self) -> None:
+        """从暂停菜单进入设置页，并把暂停所有权交给该页面。"""
+        self._open_pause_page('settings')
+
+    def _open_pause_saves(self) -> None:
+        """从暂停菜单进入独立存档页，并保持暂停。"""
+        self._open_pause_page('saves')
+
+    def _open_pause_exit(self) -> None:
+        """从暂停菜单打开原有返回主菜单确认框。"""
+        popup = getattr(self, '_pause_menu_popup', None)
+        if popup is None:
+            return
+        # 标记为所有权转交，避免暂停菜单消失时先恢复一个回合。
         self._pause_menu = True
-        self.open_page('settings')
+        popup._pause_handoff = True
+        popup.dismiss()
+        self._confirm_back_to_menu(on_cancel=self._return_to_pause_menu)
+
+    def _return_to_pause_menu(self) -> None:
+        """取消返回主菜单后回到暂停菜单，继续保持暂停。"""
+        self._pause_menu = False
+        # ModalView 的 on_dismiss 尚处于 Builder 分发栈中，同步创建另一个
+        # Popup 会触发 rulectx 重入断言；下一帧再开即可，期间仍保持暂停。
+        Clock.schedule_once(lambda *_: self.pause_menu(), 0)
+
+    def _open_pause_page(self, name: str) -> None:
+        """关闭暂停弹窗，把暂停所有权转交给指定全屏页。"""
+        popup = getattr(self, '_pause_menu_popup', None)
+        if popup is None:
+            return
+        self._pause_menu = True
+        popup._pause_handoff = True
+        popup.dismiss()
+        self.open_page(name)
 
     def _leave_pause_menu(self) -> None:
         """离开 Esc 设置页；只恢复由该页面造成的暂停。"""
@@ -380,7 +455,7 @@ class SessionMixin:
         self._resume_after_event()        # 玩家原本手动暂停时不会误恢复
 
     def _esc_fallback(self) -> None:
-        """Esc 最外层兜底：对局进行中 → 暂停 + 设置页；已结束 → 回主菜单。"""
+        """Esc 最外层兜底：对局中打开暂停菜单；结束后回主菜单。"""
         if engine.player is not None and not engine.player.game_over:
             self.pause_menu()
         elif callable(self.on_exit):

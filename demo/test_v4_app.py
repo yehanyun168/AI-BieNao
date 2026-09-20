@@ -50,7 +50,9 @@ def main() -> int:
     rv = M.RootView()
     check('RootView 构建', lambda: need(rv.menu is not None, 'menu is None'))
     check('剪影地图存在', lambda: need(rv.menu.sil_map is not None, 'no sil_map'))
-    check('存档槽 3 行', lambda: need(len(M.read_slot_rows(1)) == 3, 'rows != 3'))
+    check('存档槽动态读取', lambda: need(
+        len(M.read_slot_rows()) == len(M.save_manager.slot_names()),
+        'rows != saved slots'))
     check('菜单有子控件', lambda: need(len(rv.menu.children) > 0, 'empty menu'))
     check('成就快照口径', lambda: need(len(M.ach_snapshot('all')[0]) == 22,
                                        f"cells {len(M.ach_snapshot('all')[0])}"))

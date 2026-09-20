@@ -477,7 +477,7 @@ class TutorialController:
         if engine.player is not None:
             engine.player.seen_tutorial = True
             try:
-                save_manager.save()
+                save_manager.save_auto()
             except Exception as e:
                 # 存档失败 ≠ 引导失败：流程照走，但必须留痕（否则玩家重开后
                 # 引导会重来且无人知道原因）。log_crash 内部自带写盘兜底。

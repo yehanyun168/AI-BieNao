@@ -8,7 +8,7 @@
     ui_v4_panels.py    InspectorPanel / LogConsole
     ui_v4_cards.py     SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     ui_v4_canvas.py    TechNode / TechCanvas
-    ui_v4_syspages.py  HelpPage / SettingsPage / SaveSlotRowSlot / Origin*
+    ui_v4_syspages.py  HelpPage / SettingsPage / SavePage / SaveSlotRowSlot / Origin*
     ui_v4_screens.py   SkillPage / TechPage / AchPage + 家族转发入口
 
 拆分是「纯搬家」，但留下两个真实风险，本测试专门守它们：
@@ -39,11 +39,11 @@ if HERE not in sys.path:
 FAMILY = ('ui_v4_common.py', 'ui_v4_panels.py', 'ui_v4_cards.py',
           'ui_v4_canvas.py', 'ui_v4_syspages.py', 'ui_v4_screens.py')
 
-# 当前需要从统一入口转发的 20 个顶层符号（改名需同步本表）
+# 当前需要从统一入口转发的顶层符号（改名需同步本表）
 LEGACY_NAMES = (
     'UiStats', 'InspectorPanel', 'SkillPageCard', 'SlotRow',
     'LinkBar', 'LvRow', 'BranchCard', 'TechNode', 'TechCanvas', 'small_btn',
-    'SkillPage', 'TechPage', 'AchPage', 'HelpPage', 'SettingsPage',
+    'SkillPage', 'TechPage', 'AchPage', 'HelpPage', 'SettingsPage', 'SavePage',
     'SaveSlotRowSlot', 'LogConsole', '_ORIGIN_DIFF_TONE', 'OriginCard',
     'OriginPage',
 )

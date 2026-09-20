@@ -161,6 +161,8 @@ TUNE: Dict[str, float] = {
     # 一个「周期」对应的真实秒数（改这个会同时影响倒计时与速度档）
     # ×1 档每周期 4 秒；四档实际间隔为 8 / 4 / 2 / 1 秒。
     'base_tick_seconds': 4.0,
+    # 专用自动存档的覆盖间隔（周期）。
+    'autosave_interval_ticks': 12,
 
     # ---------------- 初始状态 ----------------
     'initial_compute': 100.0,
@@ -410,6 +412,7 @@ _REQUIRED = {
     'block_intensity_cap', 'block_intensity_slope', 'block_budget_cost_mult',
     'unlock_penetration_threshold',
     'unlock_seed_downloads', 'penetration_saturated', 'base_tick_seconds',
+    'autosave_interval_ticks',
     'initial_compute', 'potential_users_m', 'start_downloads_primary',
     'start_downloads_secondary',
     # —— T16 觉醒出身 ——
@@ -493,6 +496,8 @@ def validate() -> list:
         errs.append("event_prob_global 必须在 (0, 1)")
     if TUNE['base_tick_seconds'] <= 0:
         errs.append("base_tick_seconds 必须为正")
+    if TUNE['autosave_interval_ticks'] < 1:
+        errs.append("autosave_interval_ticks 必须 ≥ 1")
     for i, o in enumerate(CRISIS_OPTIONS):
         if o.get('idx') != i:
             errs.append(f"CRISIS_OPTIONS[{i}].idx = {o.get('idx')}，应为 {i}")

@@ -6,7 +6,7 @@ ui_v4_screens.py - AI 别闹 v0.4 对局内全屏页 + 家族统一入口
     ui_v4_panels.py  —— InspectorPanel / LogConsole
     ui_v4_cards.py   —— SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     ui_v4_canvas.py  —— TechNode / TechCanvas
-    ui_v4_syspages.py—— HelpPage / SettingsPage / OriginPage
+    ui_v4_syspages.py—— HelpPage / SettingsPage / SavePage / OriginPage
     ui_v4_screens.py —— SkillPage / TechPage / AchPage（本文件保留）
 
 本文件同时**转发**上述全部符号，外部仍可只 `import ui_v4_screens as S`
@@ -62,7 +62,7 @@ from ui_v4_panels import InspectorPanel, LogConsole  # noqa: F401
 from ui_v4_cards import (SkillPageCard, SlotRow, LinkBar,        # noqa: F401
                          LvRow, BranchCard)
 from ui_v4_canvas import TechNode, TechCanvas                    # noqa: F401
-from ui_v4_syspages import (HelpPage, SettingsPage,              # noqa: F401
+from ui_v4_syspages import (HelpPage, SettingsPage, SavePage,    # noqa: F401
                             SaveSlotRowSlot, OriginCard,
                             OriginPage, _ORIGIN_DIFF_TONE)
 from ui_v4 import fit_width                              # noqa: F401

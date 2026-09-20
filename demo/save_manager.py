@@ -27,6 +27,7 @@ P1-9 写入 / 版本迁移约定：
 import json
 import os
 import random
+import re
 from datetime import datetime
 from typing import List, Tuple
 
@@ -54,6 +55,7 @@ from paths import _user_data_dir, migrate_legacy_data
 
 SAVE_DIR = os.path.join(_user_data_dir(), 'saves')
 DEFAULT_SLOT = 'slot1.json'
+AUTOSAVE_SLOT = 'autosave.json'
 CRASH_LOG = os.path.join(_user_data_dir(), 'crash.log')
 
 # —— 读档结果原因码（P0-2）——
@@ -75,6 +77,33 @@ _LOAD_FAIL_KEY = {
 
 def _ensure_dir():
     os.makedirs(SAVE_DIR, exist_ok=True)
+
+
+_SLOT_RE = re.compile(r'^slot(\d+)\.json$', re.IGNORECASE)
+
+
+def slot_names() -> List[str]:
+    """返回全部编号槽位，按槽位号升序排列。"""
+    _ensure_dir()
+    numbered = []
+    for name in os.listdir(SAVE_DIR):
+        match = _SLOT_RE.fullmatch(name)
+        if match:
+            numbered.append((int(match.group(1)), name))
+    numbered.sort(key=lambda item: item[0])
+    return [name for _number, name in numbered]
+
+
+def next_slot_name() -> str:
+    """分配高于当前最大编号的新槽位名，不覆盖任何现存存档。"""
+    numbers = [int(_SLOT_RE.fullmatch(name).group(1))
+               for name in slot_names()]
+    return f'slot{max(numbers, default=0) + 1}.json'
+
+
+def save_auto() -> str:
+    """覆盖专用自动存档；不占用手动槽位编号。"""
+    return save(os.path.join(SAVE_DIR, AUTOSAVE_SLOT))
 
 
 def _append_crash_line(line: str) -> None:

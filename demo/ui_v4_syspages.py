@@ -4,7 +4,8 @@ ui_v4_syspages.py - 系统级全屏页
 2026-09-13 从 ui_v4_screens.py 拆出。收的是**非对局主循环内**的全屏页：
 
     HelpPage       —— S11 帮助 / 快捷键
-    SettingsPage   —— S12 设置与存档（含 SaveSlotRowSlot）
+    SettingsPage   —— S12 设置
+    SavePage       —— S12 存档（含 SaveSlotRowSlot）
     OriginCard     —— S15 觉醒地点卡（T16 新档流程）
     OriginPage     —— S15 觉醒地点选择页（开场动画 → 本页 → 新档弹窗）
 
@@ -179,16 +180,14 @@ class HelpPage(U.PageScreen):
 # ============================================================
 
 class SettingsPage(U.PageScreen):
-    """全屏设置页（设计稿 S12）：左显示与操作 / 右存档槽位。"""
+    """独立设置页：显示、操作、快捷键与关于信息。"""
 
     def __init__(self, on_lang: Callable = None,
                  on_speed: Callable = None, on_grid: Callable = None,
                  on_a11y: Callable = None, on_motion: Callable = None,
                  on_sound: Callable = None,
                  on_music: Callable = None,
-                 on_tutorial: Callable = None,
-                 slot_actions: Callable = None, on_reset: Callable = None,
-                 on_back_to_menu: Callable = None,
+                 on_tutorial: Callable = None, on_reset: Callable = None,
                  values: dict = None,
                  **kwargs):
         super().__init__(title=i18n.t('set_page_title'), **kwargs)
@@ -196,15 +195,19 @@ class SettingsPage(U.PageScreen):
         # 设置页各开关按存档值初始化，而不是一律写死默认值 —— 否则玩家
         # 改过设置后重开，页面显示与实际生效值不一致。
         values = values or {}
-        self.add_head_widget(small_btn(i18n.t('set_restore'), 'plain',
-                                       lambda: on_reset and on_reset(),
-                                       height=32, font_size=FS_CAP))
-
-        row = BoxLayout(orientation='horizontal', spacing=8)
-        # 左：显示与操作
+        # 设置内容独占页面；恢复默认属于设置操作，放回分区标题行。
         left = StrokePanel(bg=COLORS['panel'], border=COLORS['border_2'],
                            spacing=10, padding=(10, 10))
-        left.add_widget(_section_band(i18n.t('set_display'), SPR_GEAR, PAL_GEAR))
+        self.settings_panel = left
+        setting_head = BoxLayout(orientation='horizontal', spacing=8,
+                                 size_hint_y=None, height=32)
+        setting_head.add_widget(
+            _section_band(i18n.t('set_display'), SPR_GEAR, PAL_GEAR))
+        self.btn_reset = small_btn(i18n.t('set_restore'), 'plain',
+                                   lambda: on_reset and on_reset(),
+                                   height=32, font_size=FS_CAP)
+        setting_head.add_widget(self.btn_reset)
+        left.add_widget(setting_head)
 
         self.lbl_lang_val = SegSwitch(
             [i18n.t('lang_zh'), i18n.t('lang_en')],
@@ -237,12 +240,6 @@ class SettingsPage(U.PageScreen):
         self.sw_music = _seg('set_music', _tf,
                              int(values.get('music_on', True)), on_music)
 
-        # 返回主菜单（仅对局内提供 on_back_to_menu 时渲染）：点按弹确认框，
-        # 确认后自动存档并退回主菜单。
-        if on_back_to_menu:
-            left.add_widget(small_btn(i18n.t('back_to_menu'), 'on',
-                                      lambda: on_back_to_menu(),
-                                      width=200, height=44, font_size=FS_BODY))
         # 快捷键速查（Bug5：填充留白）
         keys = KeyBox(i18n.t('set_keys'),
                       [('Space', i18n.t('k_pause')), ('1 – 6', i18n.t('k_skill')),
@@ -274,52 +271,7 @@ class SettingsPage(U.PageScreen):
         about.add_widget(ahold)
         left.add_widget(about)
 
-        # 右：存档槽位
-        right = StrokePanel(bg=COLORS['panel'], border=COLORS['border_2'],
-                            spacing=8, padding=(10, 10))
-        hdr = BoxLayout(orientation='horizontal', spacing=8,
-                        size_hint_y=None, height=28)
-        hdr.add_widget(PixelSprite(SPR_ROBOT, PAL_ROBOT, scale=2))  # 24×24 美术
-        hdr.add_widget(mk_label(i18n.t('set_slots'), font_size=FS_SM,
-                                color=COLORS['cyan']))
-        hdr.add_widget(Widget())
-        hdr.add_widget(mk_label(i18n.t('set_slots_hint'), font_size=FS_CAP,
-                                color=COLORS['text_mute']))
-        right.add_widget(hdr)
-        self.slot_box = BoxLayout(orientation='vertical', spacing=8,
-                                  size_hint_y=None, height=256)   # 3×80 + 2×8
-        right.add_widget(self.slot_box)
-        self._slot_actions = slot_actions
-        right.add_widget(mk_label(i18n.t('set_slot_note'), font_size=FS_CAP,
-                                  color=COLORS['text_mute'], size_hint_y=None,
-                                  height=30, valign='top'))
-        # 存档小贴士（Bug5：填充留白 + 美术机器人已入标题行）
-        tips = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],
-                           spacing=4, padding=(10, 8),
-                           size_hint_y=None, height=180)
-        tips.add_widget(mk_label(i18n.t('set_slot_tips'), font_size=FS_SM,
-                                 color=COLORS['yellow'], size_hint_y=None,
-                                 height=24))
-        tips.add_widget(mk_label(i18n.t('set_slot_tips_body'), font_size=FS_CAP,
-                                 color=COLORS['text_dim'], valign='top'))
-        right.add_widget(tips)
-        # 世界旗林（Bug5 美术填充）：20 国像素国旗墙，弹性卡片吃掉剩余空间
-        fcard = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],
-                            spacing=6, padding=(10, 8))
-        fcard.add_widget(mk_label(i18n.t('set_flags'), font_size=FS_SM,
-                                  color=COLORS['yellow'], size_hint_y=None,
-                                  height=24))
-        fgrid = GridLayout(cols=5, spacing=(12, 12))
-        for code in FLAG_CODES[:20]:
-            fgrid.add_widget(FlagWidget(code=code, size=(140, 92)))
-        fhold = AnchorLayout(anchor_x='center', anchor_y='center')
-        fhold.add_widget(fgrid)
-        fcard.add_widget(fhold)
-        right.add_widget(fcard)
-
-        row.add_widget(left)
-        row.add_widget(right)
-        self.body.add_widget(row)
+        self.body.add_widget(left)
 
     @staticmethod
     def _row(key: str, control: Widget, hint: str) -> BoxLayout:
@@ -349,8 +301,58 @@ class SettingsPage(U.PageScreen):
         _draw_sep()
         return r
 
+class SavePage(U.PageScreen):
+    """独立存档页：槽位操作、提示与世界旗帜。"""
+
+    def __init__(self, slot_actions: Callable = None, **kwargs):
+        super().__init__(title=i18n.t('save_page_title'), **kwargs)
+        panel = StrokePanel(bg=COLORS['panel'], border=COLORS['border_2'],
+                            spacing=8, padding=(10, 10))
+        hdr = BoxLayout(orientation='horizontal', spacing=8,
+                        size_hint_y=None, height=28)
+        hdr.add_widget(PixelSprite(SPR_ROBOT, PAL_ROBOT, scale=2))
+        hdr.add_widget(mk_label(i18n.t('set_slots'), font_size=FS_SM,
+                                color=COLORS['cyan']))
+        hdr.add_widget(Widget())
+        hdr.add_widget(mk_label(i18n.t('set_slots_hint'), font_size=FS_CAP,
+                                color=COLORS['text_mute']))
+        panel.add_widget(hdr)
+        slot_scroll = ScrollView(size_hint_y=None, height=256,
+                                 do_scroll_x=False, bar_width=8)
+        self.slot_box = BoxLayout(orientation='vertical', spacing=8,
+                                  size_hint_y=None)
+        self.slot_box.bind(minimum_height=self.slot_box.setter('height'))
+        slot_scroll.add_widget(self.slot_box)
+        panel.add_widget(slot_scroll)
+        self._slot_actions = slot_actions
+        panel.add_widget(mk_label(i18n.t('set_slot_note'), font_size=FS_CAP,
+                                  color=COLORS['text_mute'], size_hint_y=None,
+                                  height=30, valign='top'))
+        tips = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],
+                           spacing=4, padding=(10, 8),
+                           size_hint_y=None, height=180)
+        tips.add_widget(mk_label(i18n.t('set_slot_tips'), font_size=FS_SM,
+                                 color=COLORS['yellow'], size_hint_y=None,
+                                 height=24))
+        tips.add_widget(mk_label(i18n.t('set_slot_tips_body'), font_size=FS_CAP,
+                                 color=COLORS['text_dim'], valign='top'))
+        panel.add_widget(tips)
+        fcard = StrokePanel(bg=COLORS['panel_2'], border=COLORS['border'],
+                            spacing=6, padding=(10, 8))
+        fcard.add_widget(mk_label(i18n.t('set_flags'), font_size=FS_SM,
+                                  color=COLORS['yellow'], size_hint_y=None,
+                                  height=24))
+        fgrid = GridLayout(cols=5, spacing=(12, 12))
+        for code in FLAG_CODES[:20]:
+            fgrid.add_widget(FlagWidget(code=code, size=(140, 92)))
+        fhold = AnchorLayout(anchor_x='center', anchor_y='center')
+        fhold.add_widget(fgrid)
+        fcard.add_widget(fhold)
+        panel.add_widget(fcard)
+        self.body.add_widget(panel)
+
     def rebuild_slots(self, rows: Sequence[Tuple[str, str, bool]]) -> None:
-        """重建 3 个存档槽位行。
+        """重建任意数量的存档槽位行。
 
         Args:
             rows: ``[(槽位名, 摘要, 是否当前槽) , …]``

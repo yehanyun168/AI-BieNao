@@ -148,6 +148,18 @@ def make_modal(content: Widget, size_hint=(0.6, 0.7), auto_dismiss: bool = True,
                     total += float(getattr(ch, 'height', 0) or 0)
             else:                                   # 弹性子（ScrollView）
                 total += _scroll_intrinsic_h(ch)
+        # BoxLayout 的 minimum_height 语义还包含控件间距和上下内边距。
+        # 此前这里只累加子控件高度，暂停菜单等纯按钮弹窗会被低估几十像素，
+        # 最上方标题因此被挤到面板边框上。
+        count = len(content.children)
+        total += float(getattr(content, 'spacing', 0) or 0) * max(count - 1, 0)
+        padding = list(getattr(content, 'padding', ()) or ())
+        if len(padding) >= 4:
+            total += float(padding[1]) + float(padding[3])
+        elif len(padding) == 2:
+            total += float(padding[1]) * 2
+        elif len(padding) == 1:
+            total += float(padding[0]) * 2
         return total
 
     def _apply_height() -> None:
@@ -172,6 +184,7 @@ def make_modal(content: Widget, size_hint=(0.6, 0.7), auto_dismiss: bool = True,
     popup = Popup(title="", content=root, size_hint=(1, 1),
                   auto_dismiss=auto_dismiss, background='',
                   background_color=(0, 0, 0, 0), separator_height=0, padding=0)
+    popup._modal_panel = panel
 
     # 关闭按钮接线：modal_header 把 set_close 挂在自己身上，这里在 content 子树里
     # 找到它并注入 popup.dismiss（缺省 = 直接关弹窗，避免各调用点重复接线）。
@@ -231,6 +244,7 @@ def make_modal(content: Widget, size_hint=(0.6, 0.7), auto_dismiss: bool = True,
             return False                        # 超帧上限兜底，避免永不停摆
         return True
 
+    _recompute()                              # 首帧即有足够高度，不让标题越界
     Clock.schedule_once(lambda *_: _recompute(), 0)
     Clock.schedule_interval(_watchdog, 1 / 60.0)
     return popup

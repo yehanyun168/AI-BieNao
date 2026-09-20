@@ -553,6 +553,16 @@ class InputMixin:
     # 弹窗
     # ========================================================
 
+    def _autosave_if_due(self) -> None:
+        """每隔固定周期覆盖专用自动存档；失败不打断回合结算。"""
+        interval = int(TUNE['autosave_interval_ticks'])
+        if engine.player.tick_count <= 0 or engine.player.tick_count % interval:
+            return
+        try:
+            save_manager.save_auto()
+        except Exception as e:
+            print(f'[save] !️ 周期自动存档失败（不影响游戏）：{e!r}')
+
     def game_tick(self, dt) -> None:
         # Clock 回调可能在玩家点击暂停前已经进入待执行队列。取消调度只能
         # 阻止后续触发，不能撤回这次已入队调用，因此回合入口必须再次核查
@@ -573,6 +583,7 @@ class InputMixin:
         self.selected_skill = None
         self._last_growth = report.get("download_growth", 0.0)
         self.stats.sample(engine.player_countries, engine.player, self._last_growth)
+        self._autosave_if_due()
 
         # 把引擎报告里的关键事件写进日志（设计稿 S14 的四种分类）
         for name in report.get("unlocked", []) or []:
@@ -675,7 +686,7 @@ class InputMixin:
             # 这里必须吞掉异常：玩家打了一局最想看的就是结局画面，
             # 不能因为磁盘满/权限问题让 game_tick 抛错、结局永远不出现。
             try:
-                save_manager.save()
+                save_manager.save_auto()
             except Exception as e:
                 # 存档失败绝不能挡结算（见上注释），但必须留痕便于排查：
                 print(f'[save] !️ 结局自动存档失败（不影响结局弹窗）：{e!r}')
@@ -697,6 +708,9 @@ class InputMixin:
         # 否则会穿透到后方页面，造成“后面的界面退出、弹窗仍在”的错觉。
         if key == 'escape' and self._ending_popup is not None:
             self._ending_popup.dismiss()
+            return True
+        if key == 'escape' and getattr(self, '_pause_menu_popup', None) is not None:
+            self._pause_menu_popup.dismiss()
             return True
 
         # ── 科技树全屏页打开时，方向键/回车改作节点导航（优先于全局速度档）──
@@ -767,7 +781,7 @@ class InputMixin:
             self.toggle_console()
             return True
         if key == 'escape':
-            # Esc 逐层退出：控制台 → 投放模式 → 全屏页 → 浮层 → 暂停 + 设置页
+            # Esc 逐层退出：控制台 → 投放模式 → 全屏页 → 浮层 → 暂停菜单
             if self._console is not None:
                 self._close_console()
                 return True
@@ -775,11 +789,11 @@ class InputMixin:
                 self._cancel_drop()
                 return True
             if self._page is not None:
-                self.close_page()
+                self._close_page_user()
                 return True
             if self._inspector is not None:
                 self._close_inspector()
                 return True
-            self._esc_fallback()      # 兜底：暂停 + 设置页（已结束则回主菜单）
+            self._esc_fallback()      # 兜底：暂停菜单（已结束则回主菜单）
             return True
         return False

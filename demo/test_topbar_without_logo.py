@@ -11,10 +11,11 @@ class TopbarWithoutLogoTests(unittest.TestCase):
         engine.init_game()
         game = main.GameUI()
         bar = game._root_box.children[-1].children[0]
-        first = list(reversed(bar.children))[0]
+        children = list(reversed(bar.children))
 
         self.assertFalse(hasattr(game, 'lbl_logo'))
-        self.assertIn(game.stats_compute, first.children)
+        self.assertIs(children[0], game.menu_chip)
+        self.assertIn(game.stats_compute, children[1].children)
         game.toggle_lang()
 
 

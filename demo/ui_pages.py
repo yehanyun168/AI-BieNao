@@ -6,6 +6,7 @@ ui_pages.py - PagesMixin（拆分自 main.py）
 """
 import os
 
+from kivy.clock import Clock
 from kivy.uix.boxlayout import BoxLayout
 
 from i18n import (t, set_lang, get_lang, get_country_name, LANG_ZH, LANG_EN)
@@ -61,19 +62,12 @@ class PagesMixin:
         self._refresh_page(name, page)
 
     def close_page(self) -> None:
-        # 「暂停态设置页」被关闭 = 离开暂停面 → 顺带恢复对局。
-        # 放这里（而非 _close_page_user）可覆盖三条关页路径：返回按钮 /
-        # Esc 关页 / open_page 切页；其它页与普通设置页不受影响。
-        was_pause_menu = (isinstance(self._page, S.SettingsPage)
-                          and getattr(self, '_pause_menu', False))
         was_auto_pause_page = (
             getattr(self._page, 'page_name', '') in AUTO_PAUSE_PAGES)
         if self._page is not None:
             self.remove_widget(self._page)
             self._page = None
         self.rail.set_active('none')
-        if was_pause_menu:
-            self._leave_pause_menu()
         if was_auto_pause_page:
             self._resume_after_event()
 
@@ -85,6 +79,20 @@ class PagesMixin:
         因此只在真正的用户退出路径（返回按钮）上挂这个包装。
         """
         sfx.play('page')
+        if (isinstance(self._page, (S.SettingsPage, S.SavePage))
+                and getattr(self, '_pause_menu', False)):
+            # 设置/存档是暂停弹窗的下一层；返回时退回上一层弹窗，暂停
+            # 所有权仍由整条菜单流程持有，不能在中途恢复回合。
+            self.close_page()
+
+            def _reopen_pause_menu(*_args) -> None:
+                # 旧弹窗的 on_dismiss 需要先看到所有权仍在转交状态，
+                # 否则它会短暂恢复游戏；到下一帧再完成页面→弹窗交接。
+                self._pause_menu = False
+                self.pause_menu()
+
+            Clock.schedule_once(_reopen_pause_menu, 0)
+            return
         self.close_page()
 
     def _build_page(self, name: str):
@@ -119,9 +127,12 @@ class PagesMixin:
                 on_music=self._set_music_idx,
                 values=preferences.get(),
                 on_tutorial=self.tutorial.replay,
-                slot_actions=self._slot_actions,
-                on_reset=lambda: self._notify(t('set_restore')),
-                on_back_to_menu=self._confirm_back_to_menu)
+                on_reset=lambda: self._notify(t('set_restore')))
+            p.set_back_button(t('k_esc'), self._close_page_user)
+            return p
+        if name == 'saves':
+            p = S.SavePage(slot_actions=self._slot_actions)
+            p.rebuild_slots(self._slot_rows())
             p.set_back_button(t('k_esc'), self._close_page_user)
             return p
         return None
@@ -134,8 +145,6 @@ class PagesMixin:
             self._refresh_tech_page(page, None, False)
         elif name == 'ach':
             self._refresh_ach_page(None, page)
-        elif name == 'settings':
-            page.rebuild_slots(self._slot_rows())
 
     # ---- S05 技能页 ----
     def _skill_page_action(self, sid: str, kind: str) -> None:
@@ -470,9 +479,16 @@ class PagesMixin:
     # ---- S12 设置：存档槽位 ----
     def _slot_rows(self):
         rows = []
-        for i, name in enumerate(('slot1', 'slot2', 'slot3')):
-            title = t('slot_name_fmt').format(n=f"{i+1:02d}")
-            path = os.path.join(save_manager.SAVE_DIR, f'{name}.json')
+        names = save_manager.slot_names()
+        names.insert(0, save_manager.AUTOSAVE_SLOT)
+        names.append(save_manager.next_slot_name())
+        for name in names:
+            if name == save_manager.AUTOSAVE_SLOT:
+                title = t('slot_autosave')
+            else:
+                number = int(name[4:-5])
+                title = t('slot_name_fmt').format(n=f"{number:02d}")
+            path = os.path.join(save_manager.SAVE_DIR, name)
             if os.path.exists(path):
                 try:
                     import json
@@ -491,11 +507,11 @@ class PagesMixin:
                 except Exception as e:
                     # 摘要读不出（多半存档损坏）：不能无声装作"空槽"——玩家会
                     # 误以为可覆盖。留痕，槽位仍按空槽显示（行为不变）。
-                    print(f'[slots] !️ {name}.json 摘要读取失败（可能损坏）：{e!r}')
+                    print(f'[slots] !️ {name} 摘要读取失败（可能损坏）：{e!r}')
                     summary = t('slot_empty')
             else:
                 summary = t('slot_empty')
-            rows.append((title, summary, name == 'slot1'))
+            rows.append((title, summary, False))
         return rows
 
     def _slot_actions(self, title):
@@ -505,6 +521,12 @@ class PagesMixin:
         空槽直接保存。删除按钮用 i18n 的「删除」文案（不再用 × 符号）。
         """
         import re
+        if title == t('slot_autosave'):
+            slot = save_manager.AUTOSAVE_SLOT
+            return [
+                (t('load_button'), 'plain', lambda s=slot: self._load_slot(s)),
+                (t('delete_button'), 'danger', lambda s=slot: self._delete_slot(s)),
+            ]
         m = re.search(r'(\d+)', title)
         idx = int(m.group(1)) if m else 1
         slot = f'slot{idx}.json'

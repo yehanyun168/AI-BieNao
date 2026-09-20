@@ -22,7 +22,7 @@ import ui_shared as ST
 from ui_shared import COLORS, Panel, PAUSE_ICON, attach_centered_icon
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
                    SkillBarCard, Steps, StrokePanel, Spark, mk_label, ST_FILL,
-                   ST_EDGE, fit_width)
+                   ST_EDGE, fit_width, PixelSprite, SPR_GEAR, PAL_GEAR)
 from world_map import WorldMap
 
 # 色盲辅助形状符号（设计稿 ○●▲✖）：四态不单靠颜色区分
@@ -433,6 +433,18 @@ class HudMixin:
         # ---- 左组：统计（设计稿 .stat；下方各挂一根 12 周期趋势火花线）----
         self._stat_sparks: dict = {}
         self._stat_labels: dict = {}
+        self.menu_chip = PxChip('', tone='plain', height=40, square=True,
+                                pos_hint={'center_y': 0.5},
+                                on_press=lambda *_: self._esc_fallback())
+        self.menu_chip_icon = PixelSprite(SPR_GEAR, PAL_GEAR, scale=2)
+        self.menu_chip.add_widget(self.menu_chip_icon)
+
+        def _center_menu_icon(*_args) -> None:
+            self.menu_chip_icon.center = self.menu_chip.center
+
+        self.menu_chip.bind(pos=_center_menu_icon, size=_center_menu_icon)
+        _center_menu_icon()
+        bar.add_widget(self.menu_chip)
         self.stats_compute = self._stat(bar, 'stats_compute', 'yellow',
                                         spark_key='compute')
         self.stats_downloads = self._stat(bar, 'stats_downloads', 'pink',

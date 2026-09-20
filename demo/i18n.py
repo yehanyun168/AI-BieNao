@@ -649,7 +649,8 @@ TRANSLATIONS[LANG_ZH].update({
                       '· 随时按 F1 回看本页。',
 
     # ---- S12 设置与存档 ----
-    'set_page_title': '设置与存档 · OPTIONS',
+    'set_page_title': '设置 · OPTIONS',
+    'save_page_title': '存档 · SAVES',
     'set_restore': '恢复默认',
     'set_display': '显示与操作',
     'set_lang': '界面语言', 'set_lang_hint': 'L 键随时切换',
@@ -670,7 +671,8 @@ TRANSLATIONS[LANG_ZH].update({
                        '快捷键：L 切换语言 · F1 帮助 · Esc 菜单 · ↑/↓ 调速'),
     'set_slot_tips': '存档小贴士',
     'set_slot_tips_body': ('· S 快速存档，R 快速读档\n'
-                           '· 3 个槽位独立保存，互不影响\n'
+                           '· 槽位数量不限，列表可滚动\n'
+                           '· 自动存档每 12 周期覆盖专用槽位\n'
                            '· 存档为明文 JSON，可自行备份'),
     'lang_zh': '中文', 'lang_en': 'English',
 
@@ -691,6 +693,7 @@ TRANSLATIONS[LANG_ZH].update({
     'slot_empty': '新档 · 空',
     'slot_dead': '已关停',
     'slot_name_fmt': '槽位 {n}',
+    'slot_autosave': '自动存档',
     'slot_summary': '周期 {tick} · 渗透 {pen}% · {n}/20 国',
     'slot_new_game': '开始',
     'slot_overwrite': '覆盖',
@@ -981,6 +984,7 @@ TRANSLATIONS[LANG_EN].update({
 
     # ---- S12 settings ----
     'set_page_title': 'OPTIONS',
+    'save_page_title': 'SAVES',
     'set_restore': 'Restore defaults',
     'set_display': 'Display & controls',
     'set_lang': 'Language', 'set_lang_hint': 'Press L anytime',
@@ -1002,7 +1006,8 @@ TRANSLATIONS[LANG_EN].update({
                        'Hotkeys: L language · F1 help · Esc menu · ↑/↓ speed'),
     'set_slot_tips': 'Save tips',
     'set_slot_tips_body': ('· S quick-save, R quick-load\n'
-                           '· 3 independent slots, no interference\n'
+                           '· Unlimited slots in a scrollable list\n'
+                           '· Auto-save overwrites its slot every 12 ticks\n'
                            '· Plain JSON files — back them up freely'),
     'lang_zh': '中文', 'lang_en': 'English',
 
@@ -1023,6 +1028,7 @@ TRANSLATIONS[LANG_EN].update({
     'slot_empty': 'New · empty',
     'slot_dead': 'Shut down',
     'slot_name_fmt': 'Slot {n}',
+    'slot_autosave': 'Auto-save',
     'slot_summary': 'Tick {tick} · pen {pen}% · {n}/20 countries',
     'slot_new_game': 'Start',
     'slot_overwrite': 'Overwrite',
@@ -1127,6 +1133,10 @@ TRANSLATIONS[LANG_ZH].update({
     'com_sus_short': '怀疑',
     'com_task_title': '任务委托',
     'com_task_empty': '当前没有委托',
+    'pause_menu_title': '暂停菜单',
+    'pause_menu_settings': '设置',
+    'pause_menu_save': '存档',
+    'pause_menu_exit': '退出',
     'cp_warn_toast': '监管预警 · {name}',
     'cp_warn_log': '{name} 政府正在筹备反制（下周期结算）',
     'cp_strike_toast': '反制结算 · {name}',
@@ -1159,6 +1169,10 @@ TRANSLATIONS[LANG_EN].update({
     'com_sus_short': 'SUS',
     'com_task_title': 'Tasks',
     'com_task_empty': 'No active jobs',
+    'pause_menu_title': 'Paused',
+    'pause_menu_settings': 'Settings',
+    'pause_menu_save': 'Save',
+    'pause_menu_exit': 'Exit',
     'cp_warn_toast': 'REG WARN · {name}',
     'cp_warn_log': '{name} is preparing a counter-move (resolves next tick)',
     'cp_strike_toast': 'COUNTER · {name}',
