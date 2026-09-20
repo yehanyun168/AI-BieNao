@@ -5,7 +5,7 @@
 白名单。按职责拆成 6 个模块：
 
     ui_v4_common.py    UiStats / small_btn（公共底座，零 ui_v4_* 依赖）
-    ui_v4_panels.py    InspectorPanel / LogDrawer
+    ui_v4_panels.py    InspectorPanel / LogConsole
     ui_v4_cards.py     SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     ui_v4_canvas.py    TechNode / TechCanvas
     ui_v4_syspages.py  HelpPage / SettingsPage / SaveSlotRowSlot / Origin*
@@ -44,7 +44,7 @@ LEGACY_NAMES = (
     'UiStats', 'InspectorPanel', 'SkillPageCard', 'SlotRow',
     'LinkBar', 'LvRow', 'BranchCard', 'TechNode', 'TechCanvas', 'small_btn',
     'SkillPage', 'TechPage', 'AchPage', 'HelpPage', 'SettingsPage',
-    'SaveSlotRowSlot', 'LogDrawer', '_ORIGIN_DIFF_TONE', 'OriginCard',
+    'SaveSlotRowSlot', 'LogConsole', '_ORIGIN_DIFF_TONE', 'OriginCard',
     'OriginPage',
 )
 

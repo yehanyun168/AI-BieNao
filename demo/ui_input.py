@@ -383,9 +383,6 @@ class InputMixin:
         if p is None:
             return
 
-        # --- 委托芯片条（P0-3；无委托时自动隐藏）---
-        self.refresh_commissions()
-
         # --- 顶栏（设计稿 .bar）---
         unlocked = sum(1 for c in engine.player_countries if c.unlocked)
         total = len(engine.player_countries)
@@ -434,8 +431,13 @@ class InputMixin:
 
         # --- 地图四态 ---
         states = {c.config.code: self._state_of(c) for c in engine.player_countries}
-        self.map_widget.set_country_states(states)
-        self.map_widget.set_selected(p.selected_country)
+        state_signature = tuple(sorted(states.items()))
+        if getattr(self, '_country_state_signature', None) != state_signature:
+            self._country_state_signature = state_signature
+            self.map_widget.set_country_states(states)
+        if getattr(self, '_map_selected_country', object()) != p.selected_country:
+            self._map_selected_country = p.selected_country
+            self.map_widget.set_selected(p.selected_country)
         self._sync_region_tabs()
         self._apply_layer()
 
@@ -466,18 +468,15 @@ class InputMixin:
         if getattr(self, '_skill_pv_sid', None) and not self.drop_mode:
             self._render_skill_preview(self._skill_pv_sid)
 
-        # --- 日志未读角标 ---
-        self.rail.buttons['log'].set_badge(self.stats.unread)
-
-        # --- 检视卡 / 日志抽屉 / 投放预览 ---
+        # --- 检视卡 / 日志控制台 / 投放预览 ---
         if self._inspector is not None and self.focus_country:
             cs = self._country_state(self.focus_country)
             if cs is not None:
                 self._inspector.update(cs, self.stats, p.total_downloads_m,
                                        p.suspicion,
                                        TUNE['unlock_penetration_threshold'])
-        if self._log_drawer is not None:
-            self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
+        if self._console is not None:
+            self._console.rebuild(self.stats.logs, self.stats.unread)
         if self.drop_mode:
             self._sync_drop_ui()
 
@@ -493,9 +492,8 @@ class InputMixin:
         p.events_history.insert(0, f"[{p.tick_count}] {text}")
         p.events_history = p.events_history[:20]
         self.stats.push_log(p.tick_count, text, 'i')
-        if self._log_drawer is not None:
-            self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
-        self.rail.buttons['log'].set_badge(self.stats.unread)
+        if self._console is not None:
+            self._console.rebuild(self.stats.logs, self.stats.unread)
 
     # 怀疑度来源的中文/英文标签（观测用，不参与判定）
     _SUS_TAG_KEY = {
@@ -548,15 +546,19 @@ class InputMixin:
             f"{t('sus_breakdown_head').format(n=f'{total:+.0f}')} "
             + " · ".join(parts),
             tone)
-        if self._log_drawer is not None:
-            self._log_drawer.rebuild(self.stats.logs, self.stats.unread)
-        self.rail.buttons['log'].set_badge(self.stats.unread)
+        if self._console is not None:
+            self._console.rebuild(self.stats.logs, self.stats.unread)
 
     # ========================================================
     # 弹窗
     # ========================================================
 
     def game_tick(self, dt) -> None:
+        # Clock 回调可能在玩家点击暂停前已经进入待执行队列。取消调度只能
+        # 阻止后续触发，不能撤回这次已入队调用，因此回合入口必须再次核查
+        # 暂停状态，保证任何路径都不能绕过暂停结算。
+        if self.paused:
+            return
         # 引导进行中：冻结回合推进（即使误触空格取消暂停也不推进）
         if self.tutorial is not None and self.tutorial.overlay is not None:
             self._tick_deadline = Clock.get_time() + self._tick_interval()
@@ -761,16 +763,19 @@ class InputMixin:
         if key == 'r':
             self.do_load()
             return True
+        if key in ('`', 'grave', 'backquote', '~') or text in ('`', '~', '·'):
+            self.toggle_console()
+            return True
         if key == 'escape':
-            # Esc 逐层退出：投放模式 → 全屏页 → 浮层 → 暂停 + 设置页
+            # Esc 逐层退出：控制台 → 投放模式 → 全屏页 → 浮层 → 暂停 + 设置页
+            if self._console is not None:
+                self._close_console()
+                return True
             if self.drop_mode:
                 self._cancel_drop()
                 return True
             if self._page is not None:
                 self.close_page()
-                return True
-            if self._log_drawer is not None:
-                self._close_log()
                 return True
             if self._inspector is not None:
                 self._close_inspector()

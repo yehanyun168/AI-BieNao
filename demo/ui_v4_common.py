@@ -14,34 +14,16 @@ ui_v4_common.py - UI 侧运行统计与小按钮工厂
     - 颜色/尺寸全部来自 ui_v4 令牌，不在此硬编码新色值。
 """
 from collections import deque
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Optional
 
-from kivy.graphics import Color, Line, Rectangle
-from kivy.uix.anchorlayout import AnchorLayout
+from kivy.graphics import Color, Line
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
-from flag_draw import FlagWidget
-from pixel_assets import OWNER_CODES as FLAG_CODES
-
-from pixel_ui import COLORS, PixelLabel, add_pixel_border
-from ui_v4 import hline
-
-import i18n
-import origins
-import sfx
+from pixel_ui import COLORS, add_pixel_border
 import ui_v4 as U
-from ui_v4 import (
-    AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
-    KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, ST_FILL,
-    PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
-    SPR_ROBOT, PAL_ROBOT,
-)
+from ui_v4 import FS_SM, mk_label, PixelSprite
 class UiStats:
     """UI 层统计缓存 —— 供检视卡趋势柱 / 技能页使用。
 
@@ -288,8 +270,12 @@ def _section_band(title: str, sprite: str, pal: dict) -> Widget:
     row = BoxLayout(orientation='horizontal', spacing=8,
                     size_hint_y=None, height=28)
     row.add_widget(PixelSprite(sprite, pal, scale=2))      # 24×24 美术
-    row.add_widget(mk_label(title, font_size=FS_SM,
-                           color=COLORS['cyan'], size_hint_x=None))
+    title_lbl = mk_label(title, font_size=FS_SM,
+                         color=COLORS['cyan'], size_hint_x=None)
+    # 英文分区名通常比中文长；按真实纹理宽度扩展标签，避免固定的默认
+    # 100px 宽把 “Display & controls” 挤成两行并裁掉下半行。
+    U.fit_width(title_lbl, pad=10, min_w=120)
+    row.add_widget(title_lbl)
     band.add_widget(row)
     line = Widget(size_hint_y=None, height=2, size_hint_x=1)
     band.add_widget(line)

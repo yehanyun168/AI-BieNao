@@ -406,7 +406,7 @@ LAYERS = {
     # 全部同层 L5（依赖完全相同：ui_v4/pixel_ui/i18n/sfx/origins/flag_draw），
     # 互相之间只有 screens → 其余 5 个的转发引用，同层允许。
     'ui_v4_common.py':    5,   # 公共底座：UiStats + small_btn（零 ui_v4_* 依赖）
-    'ui_v4_panels.py':    5,   # 浮层/抽屉：InspectorPanel / LogDrawer
+    'ui_v4_panels.py':    5,   # 浮层：InspectorPanel / LogConsole
     'ui_v4_cards.py':     5,   # 页面内重复单元：SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     'ui_v4_canvas.py':    5,   # S06 科技树自绘节点网络图：TechNode / TechCanvas
     'ui_v4_syspages.py':  5,   # 非对局全屏页：HelpPage / SettingsPage / OriginPage

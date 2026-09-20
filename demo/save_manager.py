@@ -27,7 +27,6 @@ P1-9 写入 / 版本迁移约定：
 import json
 import os
 import random
-import sys
 from datetime import datetime
 from typing import List, Tuple
 

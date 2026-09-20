@@ -165,8 +165,8 @@ def _phase_stress(_dt):
         except Exception as e:
             _log(f'!️ set_speed_idx(3) 失败（C 段非 ×4 速）：{e!r}')
         try:
-            if g._log_drawer is None:
-                g.toggle_log()            # 日志抽屉打开
+            if g._console is None:
+                g.toggle_console()         # 日志控制台打开
         except Exception as e:
             _log(f'!️ 打开日志抽屉失败（抽屉热点未构造）：{e!r}')
         try:

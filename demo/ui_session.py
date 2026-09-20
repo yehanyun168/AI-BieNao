@@ -9,7 +9,7 @@ import os
 from kivy.clock import Clock
 from kivy.core.window import Window
 
-from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
+from i18n import (t, get_lang, LANG_ZH)
 import engine
 import save_manager
 import sfx
@@ -198,6 +198,10 @@ class SessionMixin:
         """
         sfx.play('pause')                 # 点击暂停/继续的个性化音效
         if self.paused:
+            # 继续游戏意味着离开定点投放选择态，避免回合已经推进而旧技能
+            # 仍保持高亮、准星和拖动提示。
+            if getattr(self, 'drop_mode', False):
+                self._cancel_drop()
             self.paused = False
             self._event_pause_owned = False
             self._resume_from_pause()
@@ -266,13 +270,13 @@ class SessionMixin:
         self._tick_deadline = Clock.get_time() + self._tick_interval()
 
     def _update_countdown(self, dt: float) -> None:
-        """把周期剩余比例画成时间框的暗色背景。"""
+        """把周期已用比例画成从左向右增长的时间背景。"""
         if getattr(self, 'tick_box', None) is None:
             return
         remaining = (self._paused_remaining if self.paused else
                      max(0.0, self._tick_deadline - Clock.get_time()))
         interval = max(0.001, self._tick_interval())
-        self.tick_box.set_countdown(remaining / interval)
+        self.tick_box.set_countdown(1.0 - remaining / interval)
 
     def set_speed_idx(self, i: int) -> None:
         """设置速度档位（0=×0.5 … 3=×4），越界自动 clamp，立即生效。"""
@@ -291,8 +295,8 @@ class SessionMixin:
         self._reschedule_countdown()
 
     def _cd_interval(self) -> float:
-        """倒计时刷新间隔：动效减弱时降到 1.0s（减少每帧重绘 = 缓解卡顿）。"""
-        return 1.0 if ST.REDUCE_MOTION else 0.25
+        """计时背景固定以 30 FPS 刷新，避免短周期中出现阶梯跳动。"""
+        return 1.0 / 30.0
 
     def _reschedule_countdown(self) -> None:
         """按当前动效偏好重建倒计时刷新时钟。"""
@@ -345,7 +349,7 @@ class SessionMixin:
         self.focus_country = None
         self._cancel_drop()
         self._close_inspector()
-        self._close_log()
+        self._close_console()
         self.close_page()
         self.refresh_all()
         # BGM：重开一局怀疑度归零，从 tense 池切回 calm。

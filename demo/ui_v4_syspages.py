@@ -11,13 +11,11 @@ ui_v4_syspages.py - 系统级全屏页
 与对局页（SkillPage / TechPage / AchPage，留在 ui_v4_screens）的区别：
 这些页在对局之外也能打开，不消费对局状态。
 """
-from collections import deque
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Sequence, Tuple
 
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Line
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
@@ -26,21 +24,19 @@ from kivy.uix.widget import Widget
 from flag_draw import FlagWidget
 from pixel_assets import OWNER_CODES as FLAG_CODES
 
-from pixel_ui import COLORS, PixelLabel, add_pixel_border
-from ui_v4 import hline
+from pixel_ui import COLORS
 
 import i18n
 import origins
 import sfx
 import ui_v4 as U
 from ui_v4 import (
-    AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
-    KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, ST_FILL,
+    FS_CAP, FS_H3, FS_SM, FS_BODY, FS_TINY, KeyBox, PxChip, SaveSlotRow,
+    SegSwitch, StrokePanel, mk_label,
     PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
     SPR_ROBOT, PAL_ROBOT,
 )
-from ui_v4_common import UiStats, small_btn, _section_band  # noqa: F401
+from ui_v4_common import small_btn, _section_band
 
 
 class HelpPage(U.PageScreen):

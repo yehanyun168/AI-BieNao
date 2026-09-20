@@ -11,36 +11,23 @@ ui_v4_cards.py - 技能页 / 科技树的行与卡
 
 这些单元被 SkillPage / TechPage 组合使用，自身不含页面级布局。
 """
-from collections import deque
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, List, Sequence, Tuple
 
 from kivy.graphics import Color, Line, Rectangle
-from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
-from flag_draw import FlagWidget
-from pixel_assets import OWNER_CODES as FLAG_CODES
-
-from pixel_ui import COLORS, PixelLabel, add_pixel_border
-from ui_v4 import hline
+from pixel_ui import COLORS, add_pixel_border
 
 import i18n
-import origins
 import sfx
 import ui_v4 as U
 from ui_v4 import (
-    AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
-    KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, ST_FILL,
-    PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
-    SPR_ROBOT, PAL_ROBOT,
+    ChipRow, FS_CAP, FS_SM, FS_BODY, FS_TINY, PxChip, Spark, StrokePanel,
+    mk_label, ST_FILL,
 )
-from ui_v4_common import UiStats, small_btn  # noqa: F401
 class SkillPageCard(StrokePanel):
     """技能页大卡（设计稿 .skcard）：图标/名字/键位/状态 + 效果 chips +
     3 个统计数字 + 12 周期使用柱 + 底部动作。

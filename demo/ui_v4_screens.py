@@ -3,7 +3,7 @@ ui_v4_screens.py - AI 别闹 v0.4 对局内全屏页 + 家族统一入口
 
 2026-09-13 拆分（2327 行 → 6 个模块）：
     ui_v4_common.py  —— UiStats / small_btn（公共底座）
-    ui_v4_panels.py  —— InspectorPanel / LogDrawer
+    ui_v4_panels.py  —— InspectorPanel / LogConsole
     ui_v4_cards.py   —— SkillPageCard / SlotRow / LinkBar / LvRow / BranchCard
     ui_v4_canvas.py  —— TechNode / TechCanvas
     ui_v4_syspages.py—— HelpPage / SettingsPage / OriginPage
@@ -21,13 +21,11 @@ ui_v4_screens.py - AI 别闹 v0.4 对局内全屏页 + 家族统一入口
     - 组件只负责「画」，数据由 main.py 通过 update()/refresh() 喂进来；
     - 颜色/尺寸全部来自 ui_v4 的令牌，不在此硬编码新色值。
 """
-from collections import deque
 import os
 import sys
-from typing import Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Callable, Dict, List, Sequence, Tuple
 
-from kivy.graphics import Color, Line, Rectangle
-from kivy.uix.anchorlayout import AnchorLayout
+from kivy.graphics import Color, Rectangle
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
@@ -36,14 +34,10 @@ from kivy.uix.image import Image
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
-from flag_draw import FlagWidget
-from pixel_assets import OWNER_CODES as FLAG_CODES
-
 from pixel_ui import COLORS, PixelLabel, add_pixel_border
 from ui_v4 import hline
 
 import i18n
-import origins
 import sfx
 import ui_v4 as U
 
@@ -56,18 +50,15 @@ def _asset_file(*parts: str) -> str:
         root = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(root, 'assets', *parts)
 from ui_v4 import (
-    AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
-    KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, line_h, ST_FILL,
-    PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
-    SPR_ROBOT, PAL_ROBOT,
+    AchCell, FS_CAP, FS_H3, FS_SM, FS_BODY, PxChip, SegBar, StrokePanel,
+    mk_label, line_h, PixelSprite, SPR_TROPHY, PAL_TROPHY,
 )
 
 # ============================================================
 # 兼容性转发：拆分前的符号全部可继续从本模块取（外部调用点零改动）
 # ============================================================
 from ui_v4_common import UiStats, small_btn, _section_band      # noqa: F401
-from ui_v4_panels import InspectorPanel, LogDrawer  # noqa: F401
+from ui_v4_panels import InspectorPanel, LogConsole  # noqa: F401
 from ui_v4_cards import (SkillPageCard, SlotRow, LinkBar,        # noqa: F401
                          LvRow, BranchCard)
 from ui_v4_canvas import TechNode, TechCanvas                    # noqa: F401
@@ -158,22 +149,6 @@ class SkillPreviewPanel(StrokePanel):
         self.lbl_full.text = _safe_t(f'sk_full_{sid}',
                                      _safe_t(f'sk_detail_{sid}',
                                              i18n.t('sk_preview_missing')))
-
-    def clear_if(self, sid: str) -> None:
-        """鼠标离开该卡时——若仍是这张则清空。
-
-        留 0.05s 缓冲让用户能把鼠标从卡移到面板上而不被清空
-        （on_leave 在卡边缘触发，面板在右边有一定距离）。
-        """
-        from kivy.clock import Clock
-        def _do(_dt):
-            if self._sid == sid:
-                self._sid = None
-                self.lbl_title.text = i18n.t('sk_preview_empty')
-                self.lbl_state.set_tone('plain', '')
-                self.lbl_full.text = ''
-        Clock.schedule_once(_do, 0.05)
-
 
 def _safe_t(key: str, default: str) -> str:
     """i18n.t 缺键会抛 KeyError；本函数吞掉异常并返回 default，避免面板白屏。"""

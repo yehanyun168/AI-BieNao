@@ -334,8 +334,8 @@ for _tpl in commissions_mod.COMMISSION_TEMPLATES:
     for _f in ('id', 'icon', 'name_zh', 'name_en', 'goal', 'window',
                'reward_mult'):
         assert _f in _tpl, f"模板 {_tpl.get('id')} 缺字段 {_f}"
-assert hasattr(main_module.GameUI, 'refresh_commissions'), \
-    "GameUI 应装配 CommissionMixin（委托芯片条）"
+assert hasattr(main_module.GameUI, 'show_commission_list'), \
+    "GameUI 应装配 CommissionMixin（任务委托弹窗）"
 assert hasattr(main_module.GameUI, 'show_top_toast'), \
     "GameUI 应具备顶部弹条（反制预警）"
 print(f"   ■ 16) 委托/反制 UI 接线（i18n zh+en ×{len(_needed)} 键 / "
@@ -437,9 +437,9 @@ for _cur, _sus, _want in ((None, 0.0, 'calm'), (None, 34.9, 'calm'),
         f"怀疑度 {_sus}(当前 {_cur}) 应映射到 {_want}"
 _bgm._current = None
 # 节奏守卫：base_tick_seconds 是真实 tick 间隔唯一来源（main.py 直接消费），
-# 被误改会静默破坏 16s/周期设计节奏。
-assert abs(_bal.TUNE['base_tick_seconds'] - 16.0) < 1e-9, \
-    f"base_tick_seconds 应为 16.0，实际 {_bal.TUNE['base_tick_seconds']}"
+# 被误改会静默破坏 4s/周期设计节奏。
+assert abs(_bal.TUNE['base_tick_seconds'] - 4.0) < 1e-9, \
+    f"base_tick_seconds 应为 4.0，实际 {_bal.TUNE['base_tick_seconds']}"
 assert _bal.SPEED_STEPS == (0.5, 1.0, 2.0, 4.0), "速度档定义被改动，需同步复核"
 # 主菜单覆盖接线：show_menu 切 menu 池、_enter_game 切回对局池、
 # exit_to_menu 不得 stop()（否则菜单曲起播前有一拍静音断点）
@@ -640,7 +640,7 @@ assert main_module._parse_seed_input(_bad)[2] == 'ch_bad_code', \
 assert main_module._parse_seed_input('') == (None, None, None)
 assert main_module._parse_seed_input('hello')[1] is None
 _main_src = open(os.path.join(_HERE, 'main.py'), encoding='utf-8').read()
-for _needle in ('import challenge', 'def _parse_seed_input', 'def _diff_index',
+for _needle in ('import challenge', 'def _parse_seed_input',
                 "t('ch_import_hint')", 'ti.bind(text=_on_seed_text)'):
     assert _needle in _main_src, f"main.py 缺挑战码接线: {_needle}"
 

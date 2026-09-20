@@ -92,8 +92,8 @@ def main() -> int:
 
     # ---------- 6. S14 日志抽屉 ----------
     print("\n[6] S14 日志抽屉")
-    check('打开日志', g.toggle_log)
-    check('关闭日志', g._close_log)
+    check('打开控制台', g.toggle_console)
+    check('关闭控制台', g._close_console)
 
     # ---------- 7. S13 图层切换 ----------
     print("\n[7] S13 地图图层")

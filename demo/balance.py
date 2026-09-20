@@ -159,9 +159,8 @@ TUNE: Dict[str, float] = {
 
     # ---------------- 节奏 ----------------
     # 一个「周期」对应的真实秒数（改这个会同时影响倒计时与速度档）
-    # 2026-09-13：PR#1 协作者曾误改为 4.0（仅加速 UI 手感），但破坏真实节奏
-    # ×1 档每周期 16 秒；四档实际间隔为 32 / 16 / 8 / 4 秒。
-    'base_tick_seconds': 16.0,
+    # ×1 档每周期 4 秒；四档实际间隔为 8 / 4 / 2 / 1 秒。
+    'base_tick_seconds': 4.0,
 
     # ---------------- 初始状态 ----------------
     'initial_compute': 100.0,
@@ -326,9 +325,6 @@ def current_difficulty() -> str:
 
 
 # —— T16 觉醒模式（Origin）——
-ACTIVE_ORIGIN = 'garage'    # 当前生效出身（apply_origin 维护）
-
-
 def apply_origin(oid: str) -> str:
     """应用觉醒出身（origins.py 声明式表），返回生效出身 id。
 
@@ -341,14 +337,12 @@ def apply_origin(oid: str) -> str:
     :func:`apply_origin_tune_mult`，不要用本函数（会按出身重置难度，
     破坏老档 / 手改档的难度语义）。
     """
-    global ACTIVE_ORIGIN
     import origins   # L0 同层单向依赖（origins 纯数据，不回引 balance）
     origin = origins.ORIGINS.get(oid)
     if origin is None:
         raise ValueError(f'unknown origin: {oid!r}')
     apply_difficulty(origin['difficulty'])
     _apply_origin_tune_mult(oid)
-    ACTIVE_ORIGIN = oid
     return oid
 
 
@@ -366,15 +360,8 @@ def _apply_origin_tune_mult(oid: str) -> None:
 
 def apply_origin_tune_mult(oid: str) -> str:
     """读档路径专用：保留当前难度档，只叠加出身 ``oid`` 的 TUNE 乘区。"""
-    global ACTIVE_ORIGIN
     _apply_origin_tune_mult(oid)
-    ACTIVE_ORIGIN = oid
     return oid
-
-
-def current_origin() -> str:
-    """当前生效的出身 id（从未应用过出身时即 origins.DEFAULT_ORIGIN）。"""
-    return ACTIVE_ORIGIN
 
 
 # ============================================================

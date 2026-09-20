@@ -1,6 +1,7 @@
 """指向性技能统一为单目标，并支持点击国家立即投放。"""
 
 import unittest
+import os
 from unittest.mock import patch
 
 import engine
@@ -53,7 +54,8 @@ class SingleTargetDropTests(unittest.TestCase):
         self.assertEqual(engine.player.pending_skill_targets, ['CN'])
 
     def test_drag_release_casts_on_country_without_confirmation(self):
-        with patch('ui_input.sfx.play'), patch('ui_drop.sfx.play'):
+        with patch('ui_input.sfx.play'), patch('ui_drop.sfx.play'), \
+                patch('ui_drop.ui_fx.drag_icon_impact') as impact:
             self.assertTrue(self.game.on_skill_drag_start('push_song', (10, 10)))
             with patch.object(self.game.map_widget, 'hit_country', return_value='CN'):
                 self.game.on_skill_drag_move('push_song', (200, 200))
@@ -62,6 +64,28 @@ class SingleTargetDropTests(unittest.TestCase):
         self.assertFalse(self.game.drop_mode)
         self.assertEqual(engine.player.pending_skill, 'push_song')
         self.assertEqual(engine.player.pending_skill_targets, ['CN'])
+        impact.assert_called_once()
+        ghost, host = impact.call_args.args
+        self.assertIs(host, self.game)
+        self.assertEqual(tuple(ghost.pos), (176, 218))
+        self.assertIsNone(self.game._skill_drag_ghost)
+
+    def test_drag_uses_matching_pixel_icon_and_cleans_it_up(self):
+        expected = {
+            'push_song': 'push_song.png',
+            'algo_top': 'algo_top.png',
+            'hit_maker': 'hit_maker.png',
+            'bot_farm': 'bot_farm.png',
+        }
+        with patch('ui_input.sfx.play'), patch('ui_drop.sfx.play'):
+            for sid, filename in expected.items():
+                self.game._show_skill_drag_ghost(sid, (100, 100))
+                ghost = self.game._skill_drag_ghost
+                self.assertEqual(os.path.basename(ghost.source), filename)
+                self.assertEqual(tuple(ghost.size), (48, 48))
+                self.assertIs(ghost.parent, self.game)
+                self.game._hide_skill_drag_ghost()
+                self.assertIsNone(ghost.parent)
 
 
 class SkillCardGestureTests(unittest.TestCase):

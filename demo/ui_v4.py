@@ -30,8 +30,7 @@ from kivy.uix.widget import Widget
 import i18n
 import sfx
 
-from pixel_ui import (COLORS, PixelLabel, add_pixel_border, hex_rgba,
-                      snap, snap_pt)
+from pixel_ui import (COLORS, PixelLabel, add_pixel_border, hex_rgba, snap)
 from ui_gestures import DragReleaseGesture
 
 
@@ -97,9 +96,9 @@ MIN_TOUCH = 44
 SYM: Dict[str, str] = {
     'play': '■',          # 运行/继续（■ 缺失）→ 实心方块
     'drop': '⊕',          # 投放
+    'tasks': '≡',         # 任务列表
     'tech': '◆',          # 科技（◆ 缺失）→ 菱形
     'skills': '◇',        # 技能（▦ 缺失）→ 空心菱形
-    'log': '≡',           # 日志
     'ach': '★',           # 成就（★ emoji 在 kivy 里也不稳）
     'help': '?',          # 帮助
     'close': '×',         # 关闭（× 缺失）→ 乘号
@@ -940,11 +939,6 @@ class RailButton(Button):
             Line(points=[x, y, x + w, y, x + w, y + h, x, y + h],
                  close=True, width=2)
 
-    def set_badge(self, n: int) -> None:
-        if n != self._badge:
-            self._badge = n
-            self._sync_text()
-
     def set_active(self, active: bool) -> None:
         """选中态（设计稿 .rail button.on）"""
         self._active = active
@@ -1306,18 +1300,18 @@ class SkillBarCard(DragReleaseGesture, Widget):
         self.lbl_cost = mk_label(str(int(cost)) if cost else '0',
                                  font_size=FS_CAP, color=COLORS['text_dim'],
                                  halign='right', size_hint=(None, None))
-        # 效果说明 / 状态行用 FS_TINY，避免小区域内换行后裁字。
         self.lbl_fx = mk_label(effect, font_size=FS_TINY, color=COLORS['text_mute'])
         self.lbl_state = mk_label('', font_size=FS_TINY, color=COLORS['text_dim'], halign='right', size_hint=(None, None))
         for w in (self.lbl_key, self.lbl_name, self.lbl_cost, self.lbl_fx, self.lbl_state):
             self.add_widget(w)
-
         self.bind(pos=self._layout, size=self._layout)
         self._layout()
 
-    # ---- 状态 ----
     def set_state(self, state: str, cd_left: int = 0, cd_ratio: float = 0.0,
                   state_text: str = '') -> None:
+        signature = (state, cd_left, cd_ratio, state_text)
+        if getattr(self, '_state_signature', None) == signature: return
+        self._state_signature = signature
         self.state = state
         self.cd_left = cd_left
         self.cd_ratio = cd_ratio
@@ -1327,6 +1321,8 @@ class SkillBarCard(DragReleaseGesture, Widget):
         self._layout()
 
     def set_selected(self, sel: bool) -> None:
+        sel = bool(sel)
+        if self.selected == sel: return
         self.selected = sel
         self._layout()
 

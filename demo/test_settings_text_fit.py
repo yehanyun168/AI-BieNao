@@ -24,6 +24,22 @@ class SettingsTextFitTests(unittest.TestCase):
         self.assertGreaterEqual(page.btn_back.width,
                                 page.btn_back.texture_size[0] + 28)
 
+    def test_back_button_text_has_no_main_menu_suffix(self):
+        set_lang('zh')
+        self.assertEqual(t('k_esc'), '返回')
+        set_lang('en')
+        self.assertEqual(t('k_esc'), 'Back')
+
+    def test_settings_section_title_fits_one_line_in_english(self):
+        set_lang('en')
+        page = SettingsPage()
+        title = next(w for w in page.walk()
+                     if getattr(w, 'text', '') == t('set_display'))
+        title.texture_update()
+
+        self.assertGreaterEqual(title.width, title.texture_size[0])
+        self.assertLessEqual(title.texture_size[1], title.height)
+
     def test_save_action_labels_are_short(self):
         set_lang('zh')
         self.assertEqual(t('slot_overwrite'), '覆盖')

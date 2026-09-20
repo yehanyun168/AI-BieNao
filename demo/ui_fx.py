@@ -21,7 +21,6 @@ from typing import Callable, Optional
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.graphics import Color, Rectangle
-from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 
@@ -36,11 +35,38 @@ from pixel_ui import hex_rgba
 DUR_PULSE = 0.22
 DUR_COUNT = 0.45
 DUR_SHAKE = 0.22
+DUR_ICON_IMPACT = 0.35
 
 
 def motion_on() -> bool:
     """动效是否启用（读全局开关，不缓存 —— 设置页可随时切换）。"""
     return not ST.REDUCE_MOTION
+
+
+def drag_icon_impact(icon: Widget, host: Widget) -> None:
+    """成功拖放：图标在松手处放大到 80px，同时淡出并自动移除。"""
+    if icon is None:
+        return
+    parent = icon.parent or host
+    if icon.parent is None:
+        parent.add_widget(icon)
+
+    def _clean(*_args):
+        try:
+            if icon.parent is not None:
+                icon.parent.remove_widget(icon)
+        except Exception:
+            pass
+
+    if not motion_on():
+        _clean()
+        return
+    center = icon.center
+    anim = Animation(size=(80, 80),
+                     pos=(center[0] - 40, center[1] - 40),
+                     opacity=0.0, duration=DUR_ICON_IMPACT, t='out_quad')
+    anim.bind(on_complete=_clean)
+    anim.start(icon)
 
 
 def _cancel(widget: Widget, *props: str) -> None:

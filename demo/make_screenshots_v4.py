@@ -90,7 +90,7 @@ class ShotApp(App):
         g = self._g()
         if g is None:
             return
-        for fn in ('_close_log', '_close_inspector'):
+        for fn in ('_close_console', '_close_inspector'):
             try:
                 getattr(g, fn)()
             except Exception:
@@ -132,7 +132,7 @@ class ShotApp(App):
 
         def log_drawer():
             self.clean()
-            self._g().toggle_log()
+            self._g().toggle_console()
 
         def choice_popup():
             self.clean()

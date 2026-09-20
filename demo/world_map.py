@@ -344,15 +344,16 @@ class WorldMap(FloatLayout):
     # 布局
     # --------------------------------------------------------
     def _map_rect(self):
-        """面板内保持 2:1 的内接矩形 (abs_x, abs_y, w, h) —— 绝对坐标"""
+        """横向铺满、顶边固定的 2:1 地图矩形（绝对坐标）。
+
+        宽度变化时高度只向下扩展；当舞台高度不足时允许地图矩形向舞台
+        下方延伸。绘制、标签、点击命中和投放准星均使用本方法，避免错位。
+        """
         W, H = self.width, self.height
         if W <= 1 or H <= 1:
             return self.x, self.y, max(W, 1.0), max(H, 1.0)
-        w = W
-        h = W / self.MAP_ASPECT
-        if h > H:
-            w, h = H * self.MAP_ASPECT, H
-        return self.x + (W - w) / 2.0, self.y + (H - h) / 2.0, w, h
+        w, h = W, W / self.MAP_ASPECT
+        return self.x, self.top - h, w, h
 
     def _layout(self, *args):
         # P2-2：海面矩形与 1px 经纬线落笔前吸附到整数像素 —— 内接矩形在

@@ -10,9 +10,28 @@ import ui_shared as ST
 
 
 class TickSpeedControlsTests(unittest.TestCase):
-    def test_base_tick_is_sixteen_seconds(self):
-        self.assertEqual(balance.TUNE['base_tick_seconds'], 16.0)
-        self.assertEqual(ST.BASE_TICK_SECONDS, 16.0)
+    def test_base_tick_is_four_seconds(self):
+        self.assertEqual(balance.TUNE['base_tick_seconds'], 4.0)
+        self.assertEqual(ST.BASE_TICK_SECONDS, 4.0)
+
+    def test_countdown_refreshes_at_thirty_fps(self):
+        engine.init_game()
+        view = main.GameUI()
+        with patch.object(ST, 'REDUCE_MOTION', False):
+            self.assertAlmostEqual(view._cd_interval(), 1 / 30)
+        with patch.object(ST, 'REDUCE_MOTION', True):
+            self.assertAlmostEqual(view._cd_interval(), 1 / 30)
+
+    def test_in_flight_tick_callback_cannot_advance_while_paused(self):
+        """取消前已入队的 Clock 回调也必须服从暂停状态。"""
+        engine.init_game(seed=1)
+        view = main.GameUI()
+        view.toggle_pause()
+        before = engine.player.tick_count
+
+        view.game_tick(0.0)
+
+        self.assertEqual(engine.player.tick_count, before)
 
     def test_tick_buttons_call_set_speed_idx(self):
         engine.init_game()
@@ -50,6 +69,34 @@ class TickSpeedControlsTests(unittest.TestCase):
         self.assertEqual(view.pause_chip_icon.size, [28, 28])
         self.assertFalse(hasattr(view, 'lang_switch'))
 
+    def test_tick_box_fills_topbar_and_is_flush_right(self):
+        engine.init_game()
+        view = main.GameUI()
+        bar = view.tick_box.parent
+        bar.pos = (0, 0)
+        bar.size = (1200, view.TOP_H)
+        bar.do_layout()
+
+        visible_children = list(reversed(bar.children))
+        self.assertIs(visible_children[-1], view.tick_box)
+        self.assertAlmostEqual(view.tick_box.y, bar.y)
+        self.assertAlmostEqual(view.tick_box.top, bar.top)
+        self.assertAlmostEqual(view.tick_box.right, bar.right)
+
+    def test_topbar_bottom_border_sits_below_tick_box(self):
+        engine.init_game()
+        view = main.GameUI()
+        bar = view.tick_box.parent
+        holder = bar.parent
+        holder.pos = (0, 0)
+        holder.size = (1200, (view.TOP_H + 4) * view.scale)
+        holder.do_layout()
+        bar.do_layout()
+
+        self.assertAlmostEqual(bar.top, holder.top)
+        self.assertAlmostEqual(bar.y - holder.y, 4 * view.scale)
+        self.assertAlmostEqual(view.tick_box.y, bar.y)
+
     def test_settings_speed_uses_same_entry_point(self):
         engine.init_game()
         view = main.GameUI()
@@ -83,11 +130,11 @@ class TickSpeedControlsTests(unittest.TestCase):
                                view.tick_box.right, delta=0.01)
         self.assertTrue(all(abs(rect.size[0] - rects[0].size[0]) < 1e-6
                             for rect in rects))
-        self.assertAlmostEqual(rects[0].pos[1],
-                               view.tick_box.top + 3 * view.scale,
-                               delta=0.01)
+        self.assertGreaterEqual(rects[0].pos[1], view.tick_box.y)
+        self.assertLessEqual(rects[0].pos[1] + rects[0].size[1],
+                             view.tick_box.top)
 
-    def test_countdown_is_a_dim_background_inside_tick_box(self):
+    def test_countup_fills_forward_without_outer_border(self):
         engine.init_game()
         view = main.GameUI()
         self.assertFalse(hasattr(view, 'cd_label'))
@@ -96,21 +143,22 @@ class TickSpeedControlsTests(unittest.TestCase):
         view.speed_mult = 1.0
         view.tick_box.pos = (100, 50)
         view.tick_box.size = (300, 44)
-        view._tick_deadline = 108.0
+        view._tick_deadline = 104.0
 
         with patch('ui_session.Clock.get_time', return_value=100.0):
             view._update_countdown(0.0)
 
         rect = view.tick_box._countdown_rect
-        self.assertEqual(rect.pos, (102, 52))
-        self.assertEqual(rect.size, (148, 40))
+        self.assertIsNone(view.tick_box._bd_line)
+        self.assertEqual(rect.pos, (100, 50))
+        self.assertEqual(rect.size, (0, 44))
 
-        view._tick_deadline = 104.0
+        view._tick_deadline = 101.0
         with patch('ui_session.Clock.get_time', return_value=100.0):
             view._update_countdown(0.0)
 
         self.assertIs(view.tick_box._countdown_rect, rect)
-        self.assertEqual(rect.size, (74, 40))
+        self.assertEqual(rect.size, (225, 44))
 
 
 if __name__ == '__main__':

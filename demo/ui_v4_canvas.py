@@ -9,36 +9,13 @@ scale + 偏移，从而「等比缩放铺满可用区、节点不变形」。
     TechNode   —— 纯数据节点（不继承 Widget，带命中矩形）
     TechCanvas —— FloatLayout 自绘画布（节点/连线/等级点/选中框）
 """
-from collections import deque
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
 
 from kivy.graphics import Color, Line, Rectangle
-from kivy.uix.anchorlayout import AnchorLayout
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
-from kivy.uix.scrollview import ScrollView
-from kivy.uix.widget import Widget
 
-from flag_draw import FlagWidget
-from pixel_assets import OWNER_CODES as FLAG_CODES
-
-from pixel_ui import COLORS, PixelLabel, add_pixel_border
-from ui_v4 import hline
-
-import i18n
-import origins
-import sfx
-import ui_v4 as U
-from ui_v4 import (
-    AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
-    KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, ST_FILL,
-    PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
-    SPR_ROBOT, PAL_ROBOT,
-)
-from ui_v4_common import UiStats, small_btn  # noqa: F401
+from pixel_ui import COLORS
+from ui_v4 import FS_CAP, FS_SM, mk_label
 class TechNode:
     """网络图里的一个节点（纯数据 + 命中矩形，不继承 Widget）。
 

@@ -3,14 +3,25 @@ ui_drop.py - DropMixin（拆分自 main.py）
 
 投放模式状态机：选技能 → 点击或拖到单个国家后立即投放
 """
+import os
+
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.image import Image
 
 from i18n import t, get_country_name
 import engine
 import sfx
+import ui_fx
 import pixel_assets as PA
 from data import SKILLS
 from ui_v4 import Reticle, TgtLabel
+
+
+_SKILL_ICON_DIR = os.path.join(os.path.dirname(__file__), 'assets', 'icons', 'skills')
+SKILL_DRAG_ICONS = {
+    sid: os.path.join(_SKILL_ICON_DIR, f'{sid}.png')
+    for sid in ('push_song', 'algo_top', 'hit_maker', 'bot_farm')
+}
 
 
 # ============================================================
@@ -29,6 +40,10 @@ class DropMixin:
         Args:
             skill_id: 已选技能（None = 停在步骤 ①）
         """
+        # 定点投放需要玩家在地图上选择目标。复用手动暂停入口，确保回合
+        # 计时、按钮图标与 BGM 同步冻结；原本已暂停时保持暂停。
+        if not self.paused:
+            self.toggle_pause()
         self.drop_mode = True
         self.drop_skill = skill_id
         # 单目标即时投放不保留预选目标，选好技能后等待一次点击/松手。
@@ -142,24 +157,42 @@ class DropMixin:
         if code:
             ok, reason, _discount = engine.target_availability(code, skill_id)
             if ok:
-                self._cast_target_skill(skill_id, code)
+                # 成功拖放时把图标所有权交给动效层；_cancel_drop 随后清理
+                # 投放态，但不会提前删掉正在原地放大淡出的图标。
+                ghost = self._take_skill_drag_ghost()
+                cast_ok = self._cast_target_skill(skill_id, code)
+                if cast_ok:
+                    ui_fx.drag_icon_impact(ghost, self)
+                elif ghost is not None and ghost.parent is not None:
+                    ghost.parent.remove_widget(ghost)
                 return
             self._notify(f"{get_country_name(code)}: {self._reason_text(reason, code)}")
             sfx.play('error')
         self._cancel_drop()
 
     def _show_skill_drag_ghost(self, skill_id: str, pos) -> None:
-        """显示跟随鼠标/手指的轻量技能图标。"""
+        """用原始 PNG 显示跟随鼠标/手指的像素技能图标。"""
+        source = SKILL_DRAG_ICONS.get(skill_id)
+        if source is None:
+            return
         ghost = getattr(self, '_skill_drag_ghost', None)
         if ghost is None:
-            ghost = TgtLabel('', tone='ok')
-            ghost.size_hint = (None, None)
-            ghost.size = (150, 34)
+            ghost = Image(size_hint=(None, None), size=(48, 48),
+                          fit_mode='contain', mipmap=False)
+            ghost.bind(texture=self._set_drag_icon_filter)
             self._skill_drag_ghost = ghost
-        ghost.set_state(f"{SKILLS[skill_id].icon}  {self._skill_name(skill_id)}", 'ok')
+        ghost.source = source
+        ghost.reload()
         if ghost.parent is None:
             self.add_widget(ghost)
         self._move_skill_drag_ghost(pos)
+
+    @staticmethod
+    def _set_drag_icon_filter(image, texture) -> None:
+        """最近邻放大 32px 原图，避免拖动图标出现模糊边缘。"""
+        if texture is not None:
+            texture.mag_filter = 'nearest'
+            texture.min_filter = 'nearest'
 
     def _move_skill_drag_ghost(self, pos) -> None:
         ghost = getattr(self, '_skill_drag_ghost', None)
@@ -170,6 +203,12 @@ class DropMixin:
         ghost = getattr(self, '_skill_drag_ghost', None)
         if ghost is not None and ghost.parent is not None:
             self.remove_widget(ghost)
+
+    def _take_skill_drag_ghost(self):
+        """移交当前拖动图标，让成功动效接管其生命周期。"""
+        ghost = getattr(self, '_skill_drag_ghost', None)
+        self._skill_drag_ghost = None
+        return ghost
 
     def _reason_text(self, reason: str, code: str = '') -> str:
         if reason == engine.TARGET_NO_COMPUTE:

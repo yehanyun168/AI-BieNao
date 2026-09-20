@@ -4,40 +4,30 @@ ui_v4_panels.py - 浮层/抽屉类面板
 2026-09-13 从 ui_v4_screens.py 拆出。收的是「叠在对局画面之上」的面板：
 
     InspectorPanel —— S03 国家检视卡（左侧滑出，宽 328px）
-    LogDrawer      —— S14 事件日志抽屉（右侧，宽 340px）
+    LogConsole     —— S14 日志控制台（底部横向面板）
 
-共同点：都有 WIDTH 常量 + refresh_scale()（跟随 UI 缩放档位）。
+共同点：都是覆盖式信息面板，并通过 refresh_scale() 跟随 UI 缩放档位。
 """
-from collections import deque
 from typing import Callable, Dict, Optional, Sequence
 
-from kivy.graphics import Color, Line, Rectangle
-from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.floatlayout import FloatLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.widget import Widget
 
 from flag_draw import FlagWidget
-from pixel_assets import OWNER_CODES as FLAG_CODES
 
 from pixel_ui import COLORS, PixelLabel, add_pixel_border
 from ui_v4 import hline
 
 import i18n
-import origins
-import sfx
 import ui_v4 as U
 from ui_v4 import (
-    AchCell, BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_BODY, FS_TINY,
-    KeyBox, KvGrid, LogRow, PxChip, SaveSlotRow, SegBar, SegSwitch, Spark,
-    StrokePanel, mk_label, line_h, ST_FILL,
-    PixelSprite, SPR_TROPHY, PAL_TROPHY, SPR_GEAR, PAL_GEAR,
-    SPR_ROBOT, PAL_ROBOT,
+    BlockBar, ChipRow, FS_CAP, FS_H2, FS_H3, FS_SM, FS_TINY, KvGrid,
+    LogRow, PxChip, SegBar, Spark, StrokePanel, mk_label, line_h,
 )
-from ui_v4_common import UiStats, small_btn  # noqa: F401
+from ui_v4_common import UiStats, small_btn
 
 
 # ============================================================
@@ -512,15 +502,15 @@ class InspectorPanel(StrokePanel):
 # ============================================================
 # S14 事件日志抽屉
 # ============================================================
-class LogDrawer(StrokePanel):
-    """右侧事件日志抽屉（设计稿 S14，宽 340px）。"""
+class LogConsole(StrokePanel):
+    """底部日志控制台，通过 ` / ~ / · 键开关。"""
 
-    WIDTH = 340
+    BASE_HEIGHT = 300
 
     def __init__(self, on_close: Callable = None, on_clear: Callable = None,
                  on_export: Callable = None, **kwargs):
-        kwargs.setdefault('size_hint', (None, 1))
-        kwargs.setdefault('width', self.WIDTH)
+        kwargs.setdefault('size_hint', (1, None))
+        kwargs.setdefault('height', self.BASE_HEIGHT)
         super().__init__(bg=COLORS['panel'], border=COLORS['border_2'],
                          spacing=0, padding=0, **kwargs)
         # 标题栏两行：第一行「标题 | 未读芯片 | 关闭」，第二行「只保留最近 N 条」。
@@ -577,7 +567,7 @@ class LogDrawer(StrokePanel):
     def refresh_lang(self) -> None:
         """语言切换后重查静态文案。
 
-        抽屉被缓存在 ``_log_drawer`` 上并挂在 map_stage，语言切换只重建
+        控制台被缓存在 ``_console`` 上并覆盖在游戏画面底部，语言切换只重建
         带页码的页面 → 不显式重查，标题/页脚会停在旧语种。
         """
         self.lbl_hd.text = i18n.t('log_title')
@@ -589,7 +579,7 @@ class LogDrawer(StrokePanel):
 
     def refresh_scale(self, scale: float) -> None:
         self._scale = scale
-        self.width = self.WIDTH * scale
+        self.height = max(220, self.BASE_HEIGHT * scale)
         # 标题栏两行跟着缩：说明文字是「整行宽度」约束，面板缩而字不缩会在窄挡折行，
         # 折出来的第二行塞不进 line_h(FS_TINY) 的盒高 → 被裁（实测 ×0.68 英文差 1px）。
         s_sm, s_tiny = FS_SM * scale, FS_TINY * scale

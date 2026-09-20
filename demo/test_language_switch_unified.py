@@ -53,7 +53,7 @@ class UnifiedLanguageSwitchTests(unittest.TestCase):
 
         game.toggle_lang()
 
-        for key in ('drop', 'tech', 'skills', 'log', 'ach', 'help'):
+        for key in ('drop', 'tech', 'skills', 'ach', 'help'):
             self.assertEqual(game.rail.buttons[key]._caption, i18n.t(f'rail_{key}'))
 
     def test_menu_settings_switch_keeps_translated_settings_open(self):
@@ -118,23 +118,23 @@ class UnifiedLanguageSwitchTests(unittest.TestCase):
             self.assertEqual(kv._labels[k].text, i18n.t(k))
             self.assertNotEqual(zh[k], kv._labels[k].text)
 
-    def test_log_drawer_follows_language_switch(self):
+    def test_log_console_follows_language_switch(self):
         i18n.set_lang(i18n.LANG_ZH)
         engine.init_game()
         game = main.GameUI()
-        game.toggle_log()
-        drawer = game._log_drawer
-        self.assertIsNotNone(drawer)
-        zh_note = drawer.lbl_note.text
+        game.toggle_console()
+        console = game._console
+        self.assertIsNotNone(console)
+        zh_note = console.lbl_note.text
 
         game.toggle_lang()
 
-        self.assertIs(game._log_drawer, drawer)
-        self.assertEqual(drawer.lbl_hd.text, i18n.t('log_title'))
-        self.assertEqual(drawer.lbl_note.text, i18n.t('log_limit'))
-        self.assertEqual(drawer.btn_export.text, i18n.t('log_export'))
-        self.assertEqual(drawer.btn_read_all.text, i18n.t('log_read_all'))
-        self.assertNotEqual(zh_note, drawer.lbl_note.text)
+        self.assertIs(game._console, console)
+        self.assertEqual(console.lbl_hd.text, i18n.t('log_title'))
+        self.assertEqual(console.lbl_note.text, i18n.t('log_limit'))
+        self.assertEqual(console.btn_export.text, i18n.t('log_export'))
+        self.assertEqual(console.btn_read_all.text, i18n.t('log_read_all'))
+        self.assertNotEqual(zh_note, console.lbl_note.text)
 
     def test_drop_steps_follow_language_switch(self):
         i18n.set_lang(i18n.LANG_ZH)

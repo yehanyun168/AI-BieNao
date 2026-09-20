@@ -23,7 +23,7 @@ import ui_v4_screens as S
 from ui_shared import COLORS
 from ui_modal import make_modal, modal_header, auto_h_label
 from ui_v4 import hline
-from ui_v4 import PxChip, ChipRow, StatsGrid, StrokePanel, mk_label, ST_FILL
+from ui_v4 import ChipRow, StatsGrid, StrokePanel, mk_label, ST_FILL
 
 
 # ============================================================
@@ -57,7 +57,7 @@ class PopupsMixin:
                 chips.append((f"{t('stats_compute')} {sign}{val}",
                               'cost' if raw >= 0 else 'dn'))
             elif et == 'trigger_ending':
-                chips.append((t('end_compare'), 'sys'))
+                chips.append((t('effect_ending'), 'sys'))
             else:
                 chips.append((f"{et} {val}", 'plain'))
         return chips
@@ -294,7 +294,7 @@ class PopupsMixin:
         return box
 
     def show_ending_popup(self, ending) -> None:
-        """S09 结局弹窗（三色皮肤 + 8 格数据回顾 + 7 结局对照）
+        """S09 结局弹窗（三色皮肤 + 8 格数据回顾）。
 
         Args:
             ending: ``endings.Ending`` 对象，或结局 id 字符串（自动解析）。
@@ -358,43 +358,29 @@ class PopupsMixin:
                 markup=True))
             body.add_widget(hint)
 
-        body.add_widget(mk_label(t('end_compare'), font_size=U.FS_SM,
-                                 color=COLORS['cyan'], size_hint_y=None, height=18))
-        for e in endings_mod.ENDINGS:
-            got = (e.id == getattr(ending, 'id', None))
-            row = StrokePanel(bg=COLORS['panel_2'],
-                              border=COLORS['green'] if got else COLORS['border'],
-                              spacing=0, padding=(6, 4), size_hint_y=None, height=30)
-            col = U.MK['susp_low'] if got else U.MK['dim']
-            mark = (f"[color={U.MK['susp_low']}]{t('end_achieved')}[/color]"
-                    if got else f"[color={U.MK['mute']}]{e.kind}[/color]")
-            row.add_widget(mk_label(
-                f"[color={col}]{e.icon} {e.title(lang)}[/color]  {mark}  "
-                f"[size={U.FS_TINY}][color={U.MK['mute']}]"
-                f"{e.hint_zh if lang == 'zh' else e.hint_en}[/color][/size]",
-                font_size=U.FS_CAP, markup=True, valign='middle'))
-            body.add_widget(row)
-
         scroll = ScrollView(bar_width=6)
         scroll.add_widget(body)
         content.add_widget(scroll)
 
-        ft = BoxLayout(orientation='horizontal', spacing=8, size_hint_y=None,
-                       height=54, padding=(12, 8))
+        ft = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None,
+                       height=62, padding=(12, 9))
         ft.add_widget(mk_label(t('end_saved'), font_size=U.FS_CAP,
                                color=COLORS['text_mute']))
         ft.add_widget(Widget())
-        ft.add_widget(S.small_btn(t('end_gallery'), 'plain',
-                                  lambda: self.open_page('ach'),
-                                  height=38, font_size=U.FS_BODY))
-        ft.add_widget(S.small_btn(t('end_again'), 'plain',
-                                  lambda: (popup.dismiss(), self.restart_game()),
-                                  height=38, font_size=U.FS_BODY))
-        ft.add_widget(S.small_btn(t('end_menu'), 'primary',
-                                  lambda: (popup.dismiss(), self.exit_to_menu()),
-                                  height=38, font_size=U.FS_BODY))
+        actions = (
+            (t('end_gallery'), 'plain', lambda: self.open_page('ach')),
+            (t('end_again'), 'plain',
+             lambda: (popup.dismiss(), self.restart_game())),
+            (t('end_menu'), 'primary',
+             lambda: (popup.dismiss(), self.exit_to_menu())),
+        )
+        for text, tone, callback in actions:
+            button = S.small_btn(text, tone, callback,
+                                 height=44, font_size=U.FS_BODY)
+            U.fit_width(button, pad=28, min_w=112)
+            ft.add_widget(button)
         content.add_widget(ft)
-        popup = make_modal(content, size_hint=(0.62, 0.82), auto_dismiss=False,
+        popup = make_modal(content, size_hint=(0.62, 0.72), auto_dismiss=False,
                            skin=skin)
         self._ending_popup = popup
 

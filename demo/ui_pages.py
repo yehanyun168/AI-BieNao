@@ -8,7 +8,6 @@ import os
 
 from kivy.uix.boxlayout import BoxLayout
 
-import i18n
 from i18n import (t, set_lang, get_lang, get_country_name, LANG_ZH, LANG_EN)
 import engine
 import sfx
@@ -36,8 +35,8 @@ class PagesMixin:
     def _on_rail(self, key: str) -> None:
         if key == 'drop':
             self.toggle_drop_mode()
-        elif key == 'log':
-            self.toggle_log()
+        elif key == 'tasks':
+            self.show_commission_list()
         else:
             self.open_page(key)
 
@@ -601,7 +600,7 @@ class PagesMixin:
         —— 不显式重查，中英切换后这三块会继续显示旧语种（实测：EN 下左列仍是
         「政府状态」「邻国」）。面板自带 ``refresh_lang()``，这里只负责派发。
         """
-        for attr in ('_inspector', '_log_drawer'):
+        for attr in ('_inspector', '_console'):
             panel = getattr(self, attr, None)
             fn = getattr(panel, 'refresh_lang', None)
             if callable(fn):
@@ -620,35 +619,31 @@ class PagesMixin:
                      if c.config.code == code), None)
 
     # ========================================================
-    # 事件日志抽屉（S14）
+    # 日志控制台（S14）
     # ========================================================
-    def toggle_log(self) -> None:
-        if self._log_drawer is not None:
-            self._close_log()
+    def toggle_console(self) -> None:
+        if self._console is not None:
+            self._close_console()
             return
-        self._log_drawer = S.LogDrawer(
-            on_close=self._close_log,
+        self._console = S.LogConsole(
+            on_close=self._close_console,
             on_clear=self._mark_logs_read,
             on_export=self._export_log)
-        self._log_drawer.pos_hint = {'right': 1, 'y': 0}
-        self.map_stage.add_widget(self._log_drawer)
+        self._console.pos_hint = {'x': 0, 'y': 0}
+        self.add_widget(self._console)
         self.stats.begin_reading_logs()
-        self.rail.buttons['log'].set_badge(0)
-        self._log_drawer.rebuild(self.stats.logs, 0)
-        self.rail.set_active('log')
+        self._console.rebuild(self.stats.logs, 0)
 
-    def _close_log(self) -> None:
-        if self._log_drawer is not None:
-            self.map_stage.remove_widget(self._log_drawer)
-            self._log_drawer = None
+    def _close_console(self) -> None:
+        if self._console is not None:
+            self.remove_widget(self._console)
+            self._console = None
             self.stats.end_reading_logs()
-        self.rail.set_active('none')
 
     def _mark_logs_read(self) -> None:
         self.stats.clear_unread()
-        self.rail.buttons['log'].set_badge(0)
-        if self._log_drawer is not None:
-            self._log_drawer.rebuild(self.stats.logs, 0)
+        if self._console is not None:
+            self._console.rebuild(self.stats.logs, 0)
 
     def _export_log(self) -> None:
         # 落到持久化目录（冻结态下 __file__ 指向 _MEIPASS，退出即删，必须用

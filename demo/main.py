@@ -14,7 +14,7 @@ v0.4 结构（对齐 design/ui_design_v0.4.html 的 14 屏）：
               │    ├─ 指令栏 Rail（右侧居中，44px 达标）
               │    ├─ InspectorPanel S03 检视卡（点击国家左滑出）
               │    ├─ 投放准星       S04 单目标点击/拖放反馈
-              │    ├─ LogDrawer      S14 事件日志（右侧滑出）
+              │    ├─ LogConsole     S14 控制台（底部弹出）
               │    └─ 准星层         S04 可投目标准星 + 标签
               ├─ SkillBar            底部技能带 92px
               └─ 覆盖页（按需 add/remove）
@@ -369,9 +369,6 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 
-from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
-
-
 # ============================================================
 # 字体注册（中文 + emoji 兼容）
 # ============================================================
@@ -418,15 +415,12 @@ def _register_fonts() -> None:
 
 _register_fonts()
 
-import i18n
-from i18n import (t, set_lang, get_lang, LANG_ZH, LANG_EN)
-import world_map
+from i18n import (t, get_lang, LANG_ZH, LANG_EN)
 from world_map import WorldMap
 from pixel_ui import add_pixel_border   # P2-5：hex_rgba 已随 '#0d1117' 收口移除
 
 import engine
 import save_manager
-import balance          # P2-3 难度档（DIFFICULTY_ORDER / DIFFICULTY_PRESETS）
 import challenge        # T13 挑战码（种子分享）：新档弹窗可粘贴挑战码
 import achievements as achievements_mod
 import pixel_assets as PA
@@ -439,7 +433,7 @@ import sfx  # 音效管理器（失败安全；tools/gen_sfx.py 合成的 CC0 WA
 import bgm  # 背景音乐管理器（两态 calm/tense 随怀疑度切换；T09）
 import preferences
 import ui_preferences
-from ui_v4 import (LegendChip, SaveSlotRow, SegSwitch, mk_label, fit_width)
+from ui_v4 import (SaveSlotRow, mk_label, fit_width)
 from tutorial import TutorialController   # P0-1 新手引导步骤机
 
 
@@ -523,7 +517,7 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self._pause_menu = False              # 当前设置页是否由「Esc 暂停」打开
         self._ending_popup = None              # 结局弹窗（Esc 优先关闭，禁止穿透）
         self._inspector = None
-        self._log_drawer = None
+        self._console = None
         self._reticles = []
 
         self._build_ui()
@@ -692,14 +686,6 @@ def _difficulty_label(pid: str) -> str:
     return t(f"diff_{pid}")
 
 
-def _diff_index(pid: str, default: int = 1) -> int:
-    """难度档 id → DIFFICULTY_ORDER 下标；未知档回退默认（标准）。"""
-    try:
-        return balance.DIFFICULTY_ORDER.index(pid)
-    except ValueError:
-        return default
-
-
 def _parse_seed_input(text: str):
     """T13：解析新档弹窗的种子输入框（同时接受挑战码）。
 
@@ -737,7 +723,7 @@ class MainMenu(FloatLayout):
     """
 
     DESIGN_W, DESIGN_H = 1280.0, 720.0
-    LEFT_W = 760.0 / 1280.0          # 59.375%
+    LEFT_W = 0.5
     BTN_H = 44                        # 触控下限（设计稿 §1.1）
     LOGO_FS, SUB_FS, VER_FS = 34, 15, 11
     BTN_FS, HINT_FS = 13, 11
@@ -890,8 +876,7 @@ class MainMenu(FloatLayout):
         right = Panel(bg=COLORS['bg'], border_color=COLORS['border_2'])
         right.size_hint_x = 1.0 - self.LEFT_W
         self.sil_map = WorldMap()
-        self.sil_map.size_hint = (1, 1)
-        self.sil_map.pos_hint = {'x': 0, 'y': 0}
+        self.sil_map.size_hint = (None, None)
         states = {c: 'lk' for c in PA.OWNER_CODES}
         for c in self.SIL_ON:
             if c in states:
@@ -902,40 +887,15 @@ class MainMenu(FloatLayout):
         self.sil_map.set_selected('CN')
         self.sil_map._on_select = None            # 只读，不可点
         right.add_widget(self.sil_map)
-
-        legend = Panel(bg=(0.051, 0.067, 0.090, 0.92),
-                       border_color=COLORS['border_2'])
-        legend.size_hint = (1, None)
-        legend.height = 26
-        lrow = BoxLayout(orientation='horizontal', spacing=10, padding=(8, 3))
-        lrow.pos_hint = {'x': 0, 'y': 0}
-        lrow.size_hint = (1, 1)
-        counts = self._legend_counts(states)
-        for key in ('on', 'sel', 'blk', 'lk'):
-            chip = LegendChip(world_map.STATE_FILL[key], world_map.STATE_EDGE[key],
-                              f"{t('legend_' + key)} {counts[key]}")
-            chip.size_hint = (1, 1)
-            lrow.add_widget(chip)
-        legend.add_widget(lrow)
-        right.add_widget(legend)
         root.add_widget(right)
 
-        # 图例条贴底（right 是 FloatLayout，用绝对坐标定位）
-        def _sync_legend(*_a):
-            legend.height = int(26 * self.scale)
-            legend.y = right.y + int(8 * self.scale)
-            legend.x = right.x + int(8 * self.scale)
-            legend.width = max(right.width - int(16 * self.scale), 10)
-        right.bind(pos=_sync_legend, size=_sync_legend)
-        self._sync_legend = _sync_legend
-        Clock.schedule_once(_sync_legend, 0)
-
-    @staticmethod
-    def _legend_counts(states) -> dict:
-        out = {'on': 0, 'sel': 0, 'blk': 0, 'lk': 0}
-        for c in PA.OWNER_CODES:
-            out[states.get(c, 'lk')] = out.get(states.get(c, 'lk'), 0) + 1
-        return out
+        # 右半区只显示地图：横向铺满，按 2:1 计算高度并上下居中。
+        def _sync_menu_map(*_a):
+            map_h = right.width / self.sil_map.MAP_ASPECT
+            self.sil_map.size = (right.width, map_h)
+            self.sil_map.pos = (right.x, right.center_y - map_h / 2.0)
+        right.bind(pos=_sync_menu_map, size=_sync_menu_map)
+        _sync_menu_map()
 
     def _menu_btn(self, text: str, tone: str, cb, enabled: bool = True) -> Button:
         bg = {'primary': (0.078, 0.188, 0.173, 1),
@@ -1331,20 +1291,6 @@ class MainMenu(FloatLayout):
         pop = make_modal(body, size_hint=(0.5, 0.62), skin='lose',
                          close_on_outside=True)
         pop.open()
-
-    def _slot_pick(self, k: int) -> None:
-        """主菜单槽位行点击 / 键盘选中后回车：执行该槽主行为。
-
-        - 空槽 → 直接开新游戏；
-        - 已有档 → 弹覆盖确认框。
-        """
-        self._pick_slot(k)
-        name = ('slot1', 'slot2', 'slot3')[k]
-        path = os.path.join(save_manager.SAVE_DIR, f'{name}.json')
-        if os.path.exists(path):
-            self._confirm_overwrite(path)
-        else:
-            self._start_new_on_slot(path)
 
     def _reset_settings(self) -> None:
         set_grid(1, self.sil_map)                 # 内部已 preferences.update(grid_mode=1)

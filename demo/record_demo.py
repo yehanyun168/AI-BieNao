@@ -40,9 +40,7 @@ Config.set('graphics', 'position', 'custom')
 Config.set('graphics', 'left', '0')
 Config.set('graphics', 'top', '0')
 
-from kivy.app import App                             # noqa: E402
 from kivy.clock import Clock                         # noqa: E402
-from kivy.core.window import Window                  # noqa: E402
 
 import main as M                                     # noqa: E402
 import engine                                        # noqa: E402

@@ -32,6 +32,28 @@ class TargetSkillClickGuardTests(unittest.TestCase):
         self.assertTrue(self.game.drop_mode)
         self.assertEqual(self.game.drop_skill, 'push_song')
 
+    def test_entering_target_drop_mode_pauses_the_running_game(self):
+        self.assertFalse(self.game.paused)
+
+        with patch('ui_input.sfx.play'), patch('ui_session.sfx.play'), \
+                patch('ui_session.bgm.pause'):
+            self.game.on_skill_card_click('push_song')
+
+        self.assertTrue(self.game.drop_mode)
+        self.assertTrue(self.game.paused)
+
+    def test_resuming_cancels_selected_target_skill(self):
+        with patch('ui_input.sfx.play'), patch('ui_session.sfx.play'), \
+                patch('ui_session.bgm.pause'):
+            self.game.on_skill_card_click('push_song')
+
+        with patch('ui_session.sfx.play'), patch('ui_session.bgm.resume'):
+            self.game.toggle_pause()
+
+        self.assertFalse(self.game.paused)
+        self.assertFalse(self.game.drop_mode)
+        self.assertIsNone(self.game.drop_skill)
+
 
 if __name__ == '__main__':
     unittest.main()

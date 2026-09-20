@@ -94,8 +94,13 @@ def _natural_w(label) -> float:
 
 def _build(panel, scale: float) -> None:
     """按真机路径排一次：refresh_scale（main._apply_scale 的全树遍历会调到它）。"""
-    panel.size_hint = (None, 1)
-    panel.height = 900
+    if isinstance(panel, P.LogConsole):
+        # 真机中控制台 size_hint_x=1，会吃满游戏宽度；测试用固定桌面宽模拟父布局。
+        panel.size_hint = (None, None)
+        panel.width = 1200
+    else:
+        panel.size_hint = (None, 1)
+        panel.height = 900
     panel.pos = (0, 0)
     panel.refresh_scale(scale)
     _settle(panel)
@@ -161,7 +166,7 @@ def _assert_row(row, tag: str) -> None:
                 f'{tag}: {txt!r} 自然宽 {natural:.0f} > 控件宽 {c.width:.0f}')
 
 
-def test_log_drawer_footer_fits():
+def test_log_console_footer_fits():
     def extra(d, tag):
         _assert_row(d._hd_top, tag + '/标题栏')
         # 未读芯片与关闭按钮必须各占各的位置（旧版都锚 right:1 → 互相重叠，
@@ -176,7 +181,7 @@ def test_log_drawer_footer_fits():
             raise AssertionError(
                 f'{tag}: 说明 {d.lbl_note.text!r} 自然宽 {natural:.0f}px > '
                 f'标题栏 {d.lbl_note.width:.0f}px（会折行被裁）')
-    _run_panels(P.LogDrawer, '日志抽屉', extra)
+    _run_panels(P.LogConsole, '日志控制台', extra)
 
 
 def test_inspector_footer_fits():
@@ -200,7 +205,7 @@ def main() -> int:
     print('=' * 66)
     print('浮层面板页脚/标题栏宽度守卫（中英 × 五档缩放 0.68~1.45）')
     print('=' * 66)
-    check('日志抽屉页脚不溢出、按钮不压字', test_log_drawer_footer_fits)
+    check('日志控制台页脚不溢出、按钮不压字', test_log_console_footer_fits)
     check('检视卡页脚不溢出、按钮不压字', test_inspector_footer_fits)
     check('检视卡自适应基准宽随面板缩放', test_inspector_fit_width_scales_with_panel)
     print()

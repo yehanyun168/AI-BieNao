@@ -14,7 +14,7 @@ import sfx
 from typing import Optional
 
 from pixel_ui import PixelLabel as Label   # 关闭字体 hinting，保持像素锐利
-from i18n import t
+from i18n import t, get_lang
 import engine
 from data import SKILLS, SKILL_ORDER
 import ui_v4 as U
@@ -22,7 +22,7 @@ import ui_shared as ST
 from ui_shared import COLORS, Panel, PAUSE_ICON, attach_centered_icon
 from ui_v4 import (PxChip, RailButton, RegionTab, SegSwitch, LegendChip,
                    SkillBarCard, Steps, StrokePanel, Spark, mk_label, ST_FILL,
-                   ST_EDGE, MIN_TOUCH, fit_width)
+                   ST_EDGE, fit_width)
 from world_map import WorldMap
 
 # 色盲辅助形状符号（设计稿 ○●▲✖）：四态不单靠颜色区分
@@ -43,17 +43,22 @@ _SPARK_HEX = {'yellow': '#dcdcaa', 'pink': '#f97583', 'red': '#ff7b72',
               'text': '#4ec9b0', 'cyan': '#4ec9b0'}
 
 class CountdownPanel(StrokePanel):
-    """以暗色背景填充显示本周期剩余时间。"""
+    """无外框时间面板；背景填充从左向右显示本周期已用时间。"""
 
     def __init__(self, **kwargs):
-        self._countdown_value = 1.0
+        self._countdown_value = 0.0
         self._countdown_rect = None
         super().__init__(**kwargs)
 
     def _redraw_border(self, *_args) -> None:
-        super()._redraw_border(*_args)
-        x, y, w, h = self.x + 2, self.y + 2, self.width - 4, self.height - 4
+        self.canvas.before.clear()
+        x, y, w, h = self.x, self.y, self.width, self.height
+        self._bd_line = None
+        self._sh_rect = None
+        self._sh_cover = None
         with self.canvas.before:
+            Color(*self._bg_rgba)
+            self._bg_rect = Rectangle(pos=(x, y), size=(max(w, 0), max(h, 0)))
             Color(0.12, 0.31, 0.28, 0.45)
             self._countdown_rect = Rectangle(
                 pos=(x, y), size=(max(w, 0) * self._countdown_value, max(h, 0)))
@@ -62,8 +67,8 @@ class CountdownPanel(StrokePanel):
         self._countdown_value = max(0.0, min(1.0, value))
         if self._countdown_rect is not None:
             self._countdown_rect.size = (
-                max(self.width - 4, 0) * self._countdown_value,
-                max(self.height - 4, 0),
+                max(self.width, 0) * self._countdown_value,
+                max(self.height, 0),
             )
 
 
@@ -220,7 +225,7 @@ class RailBar(HudBox):
 
     def _fire(self, key: str) -> None:
         if self._on_pick:
-            # 点击音（2026-09-14 修）：右侧指令栏 6 枚菜单按钮原本**完全零
+            # 点击音（2026-09-14 修）：左侧指令栏菜单按钮原本**完全零
             # 音效接线** —— RailButton 只 bind on_release 转发，玩家点「技能
             # /科技/成就/帮助/设置/日志」全程静默（反馈问题「菜单按钮无音效」
             # 的根因）。
@@ -399,6 +404,8 @@ class LayerHud(HudBox):
 # HudMixin —— GameUI 的布局 / 区域 / 图层（经 mixin 拼入 GameUI）
 # ============================================================
 class HudMixin:
+    TOPBAR_BOTTOM_GAP = 4
+
     # ========================================================
     # 布局
     # ========================================================
@@ -413,14 +420,15 @@ class HudMixin:
     # ---- 顶部状态条（设计稿 .bar）----
     def _make_topbar(self) -> Widget:
         bar = BoxLayout(orientation='horizontal', spacing=14,
-                        padding=(12, 6), size_hint_y=None, height=self.TOP_H)
+                        padding=(12, 0, 0, 0), size_hint=(1, None),
+                        height=self.TOP_H,
+                        pos_hint={'x': 0, 'top': 1})
         holder = Panel(bg=COLORS['panel'], border_color=COLORS['border_2'])
-        bar.size_hint = (1, 1)
-        bar.pos_hint = {'x': 0, 'y': 0}
         holder.add_widget(bar)
         holder.size_hint_y = None
-        holder.height = self.TOP_H
-        self._register(holder, height=self.TOP_H)
+        holder.height = self.TOP_H + self.TOPBAR_BOTTOM_GAP
+        self._register(bar, height=self.TOP_H)
+        self._register(holder, height=self.TOP_H + self.TOPBAR_BOTTOM_GAP)
 
         # ---- 左组：统计（设计稿 .stat；下方各挂一根 12 周期趋势火花线）----
         self._stat_sparks: dict = {}
@@ -439,7 +447,6 @@ class HudMixin:
         self.tick_box = self._make_tick_box()
         self._refresh_speed_indicator()
         bar.add_widget(self.tick_box)
-        bar.add_widget(self._sep())
 
         return holder
 
@@ -448,7 +455,7 @@ class HudMixin:
         box = CountdownPanel(bg=tuple(COLORS['panel_2']),
                              border=tuple(COLORS['cyan']), spacing=0,
                              padding=(10, 2), orientation='horizontal',
-                             size_hint=(None, None), height=MIN_TOUCH)
+                             size_hint=(None, 1))
         self._speed_bar_states = [False] * len(ST.SPEED_STEPS)
         self._speed_bar_colors = []
         self._speed_bar_rects = []
@@ -507,7 +514,6 @@ class HudMixin:
         self.lbl_tick_cap.bind(width=lambda *_: _sync())
         self.lbl_tick_val.bind(width=lambda *_: _sync())
         self.btn_speed_up.bind(width=lambda *_: _sync())
-        self._register(box, height=MIN_TOUCH)
         box.bind(pos=self._refresh_speed_indicator,
                  size=self._refresh_speed_indicator)
         _sync()
@@ -515,7 +521,7 @@ class HudMixin:
         return box
 
     def _refresh_speed_indicator(self, *_args) -> None:
-        """在时间框正上方绘制四块固定宽度的速度档位指示条。"""
+        """在时间框上沿内侧绘制四块固定宽度的速度档位指示条。"""
         box = getattr(self, 'tick_box', None)
         if box is None:
             return
@@ -526,26 +532,13 @@ class HudMixin:
         block_h, gap = 4 * scale, 3 * scale
         block_w = max((box.width - gap * (count - 1)) / count, 1)
         start_x = box.x
-        y = box.top + 3 * scale
+        y = box.top - block_h
         for i, (color, rect) in enumerate(zip(
                 self._speed_bar_colors, self._speed_bar_rects)):
             color.rgba = (COLORS['cyan'] if self._speed_bar_states[i]
                           else COLORS['border_2'])
             rect.pos = (start_x + i * (block_w + gap), y)
             rect.size = (block_w, block_h)
-
-    @staticmethod
-    def _sep() -> Widget:
-        """顶栏竖分隔（设计稿 .bar .sep：1px / 22px 高）"""
-        s = Widget(size_hint_x=None, width=8)
-        with s.canvas.before:
-            Color(*COLORS['border'])
-            s._line = Line(points=[], width=1)
-        s.bind(pos=lambda i, v: setattr(
-            i._line, 'points', [i.x + 4, i.y + 8, i.x + 4, i.y + 30]),
-            size=lambda i, v: setattr(
-                i._line, 'points', [i.center_x, i.y + 8, i.center_x, i.y + 30]))
-        return s
 
     def _stat(self, bar: BoxLayout, key: str, color_name: str,
               spark_key: Optional[str] = None) -> Label:
@@ -656,9 +649,9 @@ class HudMixin:
         # 指令栏（左侧居中）—— 图标统一走 U.SYM（避开字体缺失的豆腐块字符）
         self.rail = RailBar([
             ('drop',  U.SYM['drop'], t('rail_drop')),
+            ('tasks', U.SYM['tasks'], t('rail_tasks')),
             ('tech',  U.SYM['tech'], t('rail_tech')),
             ('skills', U.SYM['skills'], t('rail_skills')),
-            ('log',   U.SYM['log'], t('rail_log')),
             ('ach',   U.SYM['ach'], t('rail_ach')),
             ('help',  U.SYM['help'], t('rail_help')),
         ])
@@ -846,8 +839,26 @@ class HudMixin:
         return fills
 
     def _apply_layer(self) -> None:
-        self.map_widget.set_layer_fills(self._layer_fills())
-        self.map_widget.set_heat(self._heat_data())
+        fills = self._layer_fills()
+        heat = self._heat_data()
+        fill_signature = None if fills is None else tuple(sorted(fills.items()))
+        heat_signature = tuple(sorted(heat.items()))
+        # unlock 图例还取决于四态计数和是否选中国家；其余图层的显示
+        # 已完整包含在 fills / heat 中。语言也必须参与签名，保证切换后重绘。
+        unlock_signature = ()
+        if self.active_layer == 'unlock':
+            unlock_signature = (
+                tuple((c.config.code, self._state_of(c))
+                      for c in engine.player_countries),
+                bool(engine.player and engine.player.selected_country),
+            )
+        signature = (self.active_layer, get_lang(), fill_signature,
+                     heat_signature, unlock_signature)
+        if getattr(self, '_layer_render_signature', None) == signature:
+            return
+        self._layer_render_signature = signature
+        self.map_widget.set_layer_fills(fills)
+        self.map_widget.set_heat(heat)
         self._sync_legend()
 
     def _heat_data(self):
