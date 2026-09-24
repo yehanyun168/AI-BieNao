@@ -732,10 +732,10 @@ class HudMixin:
         self.skill_state_label = Label(
             text='', font_size=U.FS_CAP, color=COLORS['text'], markup=True,
             halign='center', valign='middle', size_hint=(None, None),
-            size=(650, 32))
+            size=(650, 52))
         self.skill_state_label.text_size = self.skill_state_label.size
         self.skill_state_hud.add_widget(self.skill_state_label)
-        self.skill_state_hud.content_size(660, 34)
+        self.skill_state_hud.content_size(660, 54)
         self.skill_state_hud.opacity = 0
         stage.add_widget(self.skill_state_hud)
 
@@ -743,7 +743,7 @@ class HudMixin:
         # 鼠标悬停技能卡时显示确定性说明，不展示未来精确收益。
         # 默认 opacity=0，不悬停时屏幕上完全不存在，不影响任何既有布局。
         self.skill_pv_hud = HudBox(anchor='bc')
-        self.skill_pv_hud._bot_inset = 50
+        self.skill_pv_hud._bot_inset = 70
         self.skill_pv_row = BoxLayout(orientation='horizontal', spacing=4,
                                       size_hint=(None, None), height=20)
         self.skill_pv_chips = [PxChip('', tone='plain') for _ in range(5)]

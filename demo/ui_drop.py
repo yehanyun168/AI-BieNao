@@ -360,6 +360,7 @@ class DropMixin:
             self.stats.mark_skill(sid, 0.0)
             self._notify(f"{self._skill_name(sid)}")
             self._fx_cast(sid, [])
+            self.refresh_all()
         else:
             sfx.play('error')             # 算力不足/条件不满足 —— 与 _fx_reject 视觉配对
             self._notify(self._skill_fail_text(reason))

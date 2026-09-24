@@ -207,10 +207,10 @@ class InputMixin:
         return " · ".join(parts)
 
     @staticmethod
-    def _compact_skill_items(items: list) -> str:
-        shown = items[:3]
-        if len(items) > 3:
-            shown.append(t('sk_more').format(n=len(items) - 3))
+    def _compact_skill_items(items: list, limit: int = 3) -> str:
+        shown = items[:limit]
+        if len(items) > limit:
+            shown.append(t('sk_more').format(n=len(items) - limit))
         return ' · '.join(shown)
 
     def _skill_state_text(self) -> str:
@@ -220,9 +220,11 @@ class InputMixin:
             return ''
         sections = []
         queued = [self._skill_name(cast.skill_id) for cast in p.skill_queue]
+        has_both = bool(queued and p.active_skill_effects)
+        limit = 2 if has_both else 3
         if queued:
             sections.append(t('sk_queue_next').format(
-                items=self._compact_skill_items(queued)))
+                items=self._compact_skill_items(queued, limit)))
         active = []
         for effect in p.active_skill_effects:
             key = ('sk_active_left_one' if effect.remaining_ticks == 1
@@ -231,8 +233,8 @@ class InputMixin:
                           f"{t(key).format(n=effect.remaining_ticks)}")
         if active:
             sections.append(t('sk_active_now').format(
-                items=self._compact_skill_items(active)))
-        return '   |   '.join(sections)
+                items=self._compact_skill_items(active, limit)))
+        return '\n'.join(sections)
 
     def on_skill_card_click(self, sid: str) -> None:
         """点技能带卡片：下载类 → 进投放模式；偷算力类 → 直接释放"""
@@ -249,9 +251,9 @@ class InputMixin:
         sfx.play('select')
         if self._skill_needs_target(sid):
             self.start_drop(sid, None)
+            self.refresh_all()
         else:
             self._cast_skill_direct(sid)
-            self.refresh_all()
 
     def on_unlock_t0(self, slot_id: str) -> None:
         if engine.unlock_t0(slot_id):

@@ -1017,6 +1017,65 @@ class SkillUiTests(unittest.TestCase):
         self.assertNotIn(names[3], text)
         self.assertIn('1 more', text)
 
+    def test_max_queue_and_active_status_fits_two_lines_at_target_sizes(self):
+        player = engine.init_game(seed=41)
+        player.compute = 1000
+        player.seen_tutorial = True
+        queued_ids = ['push_song', 'algo_top', 'hit_maker']
+        active_ids = ['stealth', 'anon_cdn', 'arbitrage']
+        player.skill_queue = [SkillCast(sid) for sid in queued_ids]
+        player.active_skill_effects = [
+            ActiveSkill(sid, (), remaining_ticks=1) for sid in active_ids
+        ]
+        game = self._make_game()
+
+        for lang in ('zh', 'en'):
+            with self.subTest(lang=lang):
+                i18n.set_lang(lang)
+                game.refresh_all()
+                game.skill_state_label.texture_update()
+                lines = game.skill_state_label.text.splitlines()
+                self.assertEqual(len(lines), 2)
+                self.assertIn(game._skill_name(queued_ids[0]), lines[0])
+                self.assertIn(game._skill_name(queued_ids[1]), lines[0])
+                self.assertNotIn(game._skill_name(queued_ids[2]), lines[0])
+                self.assertIn(i18n.t('sk_more').format(n=1), lines[0])
+                self.assertIn(game._skill_name(active_ids[0]), lines[1])
+                self.assertIn(game._skill_name(active_ids[1]), lines[1])
+                self.assertNotIn(game._skill_name(active_ids[2]), lines[1])
+                self.assertIn(i18n.t('sk_more').format(n=1), lines[1])
+                tw, th = game.skill_state_label.texture_size
+                self.assertLessEqual(tw, game.skill_state_label.width)
+                self.assertLessEqual(th, game.skill_state_label.height)
+
+        for width, height in ((1280, 720), (1680, 980)):
+            with self.subTest(size=(width, height)):
+                game.map_stage.pos = (0, 0)
+                game.map_stage.size = (width, height)
+                game.skill_state_hud._layout_hud()
+                game.skill_pv_hud._layout_hud()
+                self.assertAlmostEqual(game.skill_state_hud.center_x,
+                                       game.map_stage.center_x)
+                self.assertAlmostEqual(game.skill_pv_hud.center_x,
+                                       game.map_stage.center_x)
+                self.assertLessEqual(game.skill_state_hud.top + 4,
+                                     game.skill_pv_hud.y)
+
+    def test_direct_cast_refreshes_queue_hud_immediately(self):
+        player = engine.init_game(seed=41)
+        player.compute = 1000
+        player.seen_tutorial = True
+        player.unlocked_skills.add('stealth')
+        game = self._make_game()
+        self.assertEqual(game.skill_state_hud.opacity, 0)
+
+        game._cast_skill_direct('stealth')
+
+        self.assertEqual([cast.skill_id for cast in player.skill_queue],
+                         ['stealth'])
+        self.assertEqual(game.skill_state_hud.opacity, 1)
+        self.assertIn(game._skill_name('stealth'), game.skill_state_label.text)
+
     def test_reconstruction_pause_refresh_and_restart_use_engine_state(self):
         self._init_queue()
         with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as root:
