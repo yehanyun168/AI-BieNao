@@ -726,11 +726,24 @@ class HudMixin:
         self.reason_hud.opacity = 0
         stage.add_widget(self.reason_hud)
 
-        # P1-2 技能预览条（底边居中，图例之上）：
-        # 鼠标悬停技能卡时显示「现在投出去会怎样」—— 纯展示，不改点击手感。
+        # 技能队列 / 持续效果：只展示 engine 中已经成立的真实状态。
+        self.skill_state_hud = HudBox(anchor='bc')
+        self.skill_state_hud._bot_inset = 0
+        self.skill_state_label = Label(
+            text='', font_size=U.FS_CAP, color=COLORS['text'], markup=True,
+            halign='center', valign='middle', size_hint=(None, None),
+            size=(650, 32))
+        self.skill_state_label.text_size = self.skill_state_label.size
+        self.skill_state_hud.add_widget(self.skill_state_label)
+        self.skill_state_hud.content_size(660, 34)
+        self.skill_state_hud.opacity = 0
+        stage.add_widget(self.skill_state_hud)
+
+        # 技能静态说明条（底边居中，状态条之上）：
+        # 鼠标悬停技能卡时显示确定性说明，不展示未来精确收益。
         # 默认 opacity=0，不悬停时屏幕上完全不存在，不影响任何既有布局。
         self.skill_pv_hud = HudBox(anchor='bc')
-        self.skill_pv_hud._bot_inset = 34
+        self.skill_pv_hud._bot_inset = 50
         self.skill_pv_row = BoxLayout(orientation='horizontal', spacing=4,
                                       size_hint=(None, None), height=20)
         self.skill_pv_chips = [PxChip('', tone='plain') for _ in range(5)]

@@ -8,13 +8,17 @@ import tempfile
 import unittest
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+
+from kivy.core.window import Window
 
 import engine
 import balance
 import commissions
 import save_manager
 import skill_state
+import i18n
+import main
 from balance import TUNE, apply_difficulty
 from data import SKILLS
 from skill_state import (
@@ -924,6 +928,159 @@ class SkillSaveTests(unittest.TestCase):
             {'not': 'a commission'},
         ]
         self._assert_load_bad_unchanged(bad)
+
+
+class SkillUiTests(unittest.TestCase):
+    def setUp(self):
+        self.old_lang = i18n.get_lang()
+        self.addCleanup(i18n.set_lang, self.old_lang)
+        balance.apply_difficulty('normal')
+        self.addCleanup(balance.apply_difficulty, 'normal')
+        self.games = []
+        self.addCleanup(self._cleanup_games)
+
+    def _make_game(self):
+        with patch.object(main.GameUI, '_reschedule_tick'), \
+                patch.object(main.GameUI, '_reschedule_countdown'), \
+                patch('cursor_fx.install', return_value=True):
+            game = main.GameUI()
+        self.games.append(game)
+        return game
+
+    def _cleanup_games(self):
+        for game in reversed(self.games):
+            game.stop_ticking()
+            keyboard = getattr(game, '_keyboard', None)
+            game._keyboard_closed()
+            if keyboard is not None:
+                keyboard.release()
+            game.commission_bar._unbind_window()
+            Window.unbind(on_resize=game._on_window_resize,
+                          mouse_pos=game._on_skill_hover)
+
+    def _init_queue(self):
+        player = engine.init_game(seed=41)
+        player.compute = 1000
+        player.seen_tutorial = True
+        player.unlocked_skills.update({'algo_top', 'stealth'})
+        self.assertTrue(engine.use_skill('algo_top'))
+        self.assertTrue(engine.use_skill('stealth'))
+        return player
+
+    def test_queue_and_active_status_are_localized_and_follow_engine(self):
+        expected = {
+            'zh': ('下周期结算', '算法霸榜', '深度伪装', '持续中', '剩余1周期'),
+            'en': ('Next cycle', 'Algo Boost', 'Deep Disguise', 'Active', '1 cycle left'),
+        }
+        for lang, phrases in expected.items():
+            with self.subTest(lang=lang):
+                i18n.set_lang(lang)
+                player = self._init_queue()
+                game = self._make_game()
+                game.refresh_all()
+                queued = game.skill_state_label.text
+                self.assertEqual(game.skill_state_hud.opacity, 1)
+                for phrase in phrases[:3]:
+                    self.assertIn(phrase, queued)
+                self.assertLess(queued.index(phrases[1]), queued.index(phrases[2]))
+
+                game.game_tick(0)
+
+                self.assertEqual(player.skill_queue, [])
+                self.assertEqual(
+                    [(a.skill_id, a.remaining_ticks)
+                     for a in player.active_skill_effects],
+                    [('stealth', 1)],
+                )
+                active = game.skill_state_label.text
+                self.assertNotIn(phrases[0], active)
+                self.assertIn(phrases[3], active)
+                self.assertIn(phrases[2], active)
+                self.assertIn(phrases[4], active)
+
+    def test_status_compacts_each_section_without_reordering(self):
+        i18n.set_lang('en')
+        player = engine.init_game(seed=41)
+        player.compute = 1000
+        player.seen_tutorial = True
+        ids = ['push_song', 'algo_top', 'stealth', 'hit_maker']
+        player.unlocked_skills.update(ids)
+        for sid in ids:
+            self.assertTrue(engine.use_skill(sid))
+        game = self._make_game()
+
+        text = game._skill_state_text()
+
+        names = [game._skill_name(sid) for sid in ids]
+        self.assertLess(text.index(names[0]), text.index(names[1]))
+        self.assertLess(text.index(names[1]), text.index(names[2]))
+        self.assertNotIn(names[3], text)
+        self.assertIn('1 more', text)
+
+    def test_reconstruction_pause_refresh_and_restart_use_engine_state(self):
+        self._init_queue()
+        with tempfile.TemporaryDirectory(dir=Path(__file__).parent) as root:
+            path = os.path.join(root, 'queue.json')
+            save_manager.save(path)
+            engine.init_game(seed=99)
+            self.assertEqual(save_manager.load_ex(path), (True, save_manager.LOAD_OK))
+
+            game = self._make_game()
+            before = list(engine.player.skill_queue)
+            self.assertIn(i18n.t('sk_queue_next').split('{')[0],
+                          game.skill_state_label.text)
+            for paused in (True, False):
+                game.paused = paused
+                game.refresh_all()
+                self.assertEqual(engine.player.skill_queue, before)
+
+            with patch.object(game, '_reschedule_tick'):
+                game.restart_game()
+            self.assertEqual(engine.player.skill_queue, [])
+            self.assertEqual(engine.player.active_skill_effects, [])
+            self.assertEqual(game.skill_state_hud.opacity, 0)
+
+    def test_preview_surfaces_are_static_and_never_call_engine_preview_apis(self):
+        i18n.set_lang('en')
+        player = engine.init_game(seed=41)
+        player.compute = 1000
+        player.seen_tutorial = True
+        player.unlocked_skills.update({'algo_top', 'stealth'})
+        game = self._make_game()
+        preview_skill = Mock(side_effect=AssertionError('preview_skill called'))
+        preview_cycle = Mock(side_effect=AssertionError('preview_next_cycle called'))
+
+        with patch.object(engine, 'preview_skill', preview_skill), \
+                patch.object(engine, 'preview_next_cycle', preview_cycle):
+            game._render_skill_preview('stealth')
+            foot = game._skill_preview_foot('stealth')
+            game.start_drop('algo_top', ['CN'])
+            game._show_drop_preview()
+            game.refresh_all()
+
+        preview_skill.assert_not_called()
+        preview_cycle.assert_not_called()
+        hover = ' '.join(chip.text for chip in game.skill_pv_chips)
+        self.assertIn('Deep Disguise', hover)
+        self.assertIn(f"{i18n.t('cost')} 0", hover)
+        self.assertIn('Cooldown 8', hover)
+        self.assertIn(i18n.t('sk_preview_static'), hover)
+        self.assertIn(i18n.t('sk_preview_static'), foot)
+        self.assertEqual(game._drop_preview.lbl_est.text, '--')
+        self.assertNotRegex(hover + foot, r'\d+(?:\.\d+)?\s*(?:M|B)?\s*[→+]')
+
+    def test_failed_direct_cast_reports_specific_reason(self):
+        i18n.set_lang('en')
+        player = engine.init_game(seed=41)
+        player.compute = 1000
+        player.seen_tutorial = True
+        player.unlocked_skills.add('stealth')
+        player.skill_cooldowns['stealth'] = 2
+        game = self._make_game()
+
+        game._cast_skill_direct('stealth')
+
+        self.assertIn(i18n.t('sk_fail_cooldown'), player.events_history[0])
 
 
 if __name__ == "__main__":

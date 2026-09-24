@@ -505,7 +505,6 @@ class GameUI(CommissionMixin, HudMixin, PagesMixin, DropMixin, PopupsMixin,
         self.scale = self._compute_scale()
         self.active_region = None
         self.active_layer = 'unlock'
-        self.selected_skill = None            # 已确认投放的技能
         self.focus_country = None             # 检视卡当前国家
         self.stats = S.UiStats()
         self._last_growth = 0.0

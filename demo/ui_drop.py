@@ -228,11 +228,6 @@ class DropMixin:
             self.map_stage.add_widget(self._drop_preview)
         skill = SKILLS[self.drop_skill]
         p = engine.player
-        #
-        # P1-2：预估改走 engine.preview_skill —— 与 tick_one_round 结算
-        # **同源同式**，不再用「现值 × 倍率」那套假估算（假估算会让玩家
-        # 以为点了就能拿 +50%，实际 downloads_mult 只作用于本周期增量）。
-        pv = engine.preview_skill(self.drop_skill, list(self.drop_targets))
         effects = []
         if skill.downloads_mult > 1.0:
             effects.append((f"{t('stats_downloads')} ×{skill.downloads_mult:.2f}"
@@ -243,24 +238,14 @@ class DropMixin:
         if skill.compute_mult > 1.0:
             effects.append((f"steal ×{skill.compute_mult:.1f}", 'sys'))
         effects.append((f"{t('sk_sort_cd')} {skill.cooldown}", 'cost'))
-        # 口径说明：预览只含确定性部分，随机事件/反制不计入（不假装精确）
-        effects.append((t(pv['caveat']), 'lock'))
-        # 各国预估用 preview_skill 的真实增量（阶段1，与结算同源）
-        gmap = pv.get('growth_by_country', {})
+        effects.append((t('sk_preview_static'), 'lock'))
+        # 未来精确收益受队列组合和事件影响，不生成国家数值估算。
         ests = []
-        for code in self.drop_targets[:3]:
-            cs = self._country_state(code)
-            if cs:
-                before = cs.downloads_m
-                ests.append((code, before, before + gmap.get(code, 0.0)))
         warn = ''
-        if not pv['ok']:
-            warn = f"! {self._preview_reason_text(pv)}"
-        elif pv['suspicion_delta'] > 0.05:
-            warn = (f"! {t('stats_suspicion')} {pv['suspicion_before']:.0f}%"
-                    f" → {pv['suspicion_after']:.0f}%")
-            warn += (f" · {t('sk_pv_over')}" if pv['crisis_crossed']
-                     else f" · {t('sk_pv_to_crisis').format(n=f'{pv['suspicion_to_crisis']:.0f}')}")
+        reason = engine.skill_cast_reason(
+            self.drop_skill, list(self.drop_targets) or None)
+        if reason != 'ok':
+            warn = f"! {self._skill_fail_text(reason)}"
         self._drop_preview.update(
             self.drop_skill, self._skill_name(self.drop_skill),
             self.drop_targets, skill.cost, p.compute, effects, ests, warn)
@@ -349,31 +334,35 @@ class DropMixin:
         skill_id = self.drop_skill
         targets = list(self.drop_targets)
         try:
-            ok = engine.use_skill(skill_id, targets)
+            reason = engine.skill_cast_reason(skill_id, targets)
+            ok = reason == 'ok' and engine.use_skill(skill_id, targets)
             # 「确认投放」用 deploy，与全局技能的 cast 区分开 —— 之前两者共用
             # cast，玩家从声音上分不出「我刚才是确认了投放还是直接放了个技能」。
             # ⚠️ 成功与失败只响一声：失败时才补 error，避免 deploy+error 叠响。
             sfx.play('deploy' if ok else 'error')
             if ok:
                 self.stats.mark_skill(skill_id, 0.0)
-                self.selected_skill = skill_id
                 self._notify(f"{self._skill_name(skill_id)} → {'+'.join(targets)}")
                 self._fx_cast(skill_id, targets)
+            else:
+                self._notify(self._skill_fail_text(reason))
+                self._fx_reject(skill_id)
         finally:
             # 无论投放成功与否，都回到正常游戏内（不退出会话）
             self._cancel_drop()
 
     def _cast_skill_direct(self, sid: str) -> None:
         """全局技能（偷算力类）直接释放"""
-        if engine.use_skill(sid, None):
+        targets = None
+        reason = engine.skill_cast_reason(sid, targets)
+        if reason == 'ok' and engine.use_skill(sid, targets):
             sfx.play('cast')
             self.stats.mark_skill(sid, 0.0)
-            self.selected_skill = sid
             self._notify(f"{self._skill_name(sid)}")
             self._fx_cast(sid, [])
         else:
             sfx.play('error')             # 算力不足/条件不满足 —— 与 _fx_reject 视觉配对
-            self._notify(t('no_compute'))
+            self._notify(self._skill_fail_text(reason))
             self._fx_reject(sid)
 
     # ---- 动效反馈（玩家反馈 5：让"这一下生效了"看得见）----
