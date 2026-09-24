@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 import engine
 import balance
+import commissions
 import save_manager
 import skill_state
 from balance import TUNE, apply_difficulty
@@ -692,6 +693,7 @@ class SkillSaveTests(unittest.TestCase):
         tune_before = copy.deepcopy(balance.TUNE)
         difficulty_before = balance.ACTIVE_DIFFICULTY
         origin_before = balance.ACTIVE_ORIGIN
+        next_uid_before = commissions._next_uid
         rng_before = random.getstate()
 
         self.assertEqual(
@@ -712,6 +714,7 @@ class SkillSaveTests(unittest.TestCase):
         self.assertEqual(balance.TUNE, tune_before)
         self.assertEqual(balance.ACTIVE_DIFFICULTY, difficulty_before)
         self.assertEqual(balance.ACTIVE_ORIGIN, origin_before)
+        self.assertEqual(commissions._next_uid, next_uid_before)
         self.assertEqual(random.getstate(), rng_before)
         with open(path, 'rb') as stream:
             self.assertEqual(stream.read(), original_bytes)
@@ -782,6 +785,45 @@ class SkillSaveTests(unittest.TestCase):
              for a in engine.player.active_skill_effects],
             [('stealth', 1)],
         )
+
+    def test_save_rejects_invalid_live_state_without_replacing_good_file(self):
+        path = self._path()
+        save_manager.save(path)
+        with open(path, 'rb') as stream:
+            good_bytes = stream.read()
+
+        cases = (
+            ('nan_cooldown', [], {'stealth': float('nan')}, 100.0),
+            ('fake_cast', [object()], {}, 100.0),
+            ('infinite_cooldown', [SkillCast('stealth')],
+             {'stealth': float('inf')}, 100.0),
+            ('non_skill_nan', [], {}, float('nan')),
+        )
+        for name, queue, cooldowns, compute in cases:
+            with self.subTest(name=name):
+                engine.player.skill_queue = queue
+                engine.player.active_skill_effects = []
+                engine.player.skill_cooldowns = cooldowns
+                engine.player.compute = compute
+
+                with self.assertRaises(ValueError):
+                    save_manager.save(path)
+
+                with open(path, 'rb') as stream:
+                    self.assertEqual(stream.read(), good_bytes)
+                self.assertFalse(os.path.exists(path + '.tmp'))
+
+    def test_save_allows_huge_finite_positive_cooldown(self):
+        huge = 10 ** 1000
+        engine.player.skill_queue = [SkillCast('stealth')]
+        engine.player.skill_cooldowns = {'stealth': huge}
+        path = self._path()
+
+        save_manager.save(path)
+
+        with open(path, encoding='utf-8') as stream:
+            saved = json.load(stream)
+        self.assertEqual(saved['player']['skill_cooldowns']['stealth'], huge)
 
     def test_bad_v6_skill_shapes_are_rejected_without_mutation(self):
         _, valid = self._valid_v6()
@@ -869,7 +911,18 @@ class SkillSaveTests(unittest.TestCase):
 
     def test_apply_failure_restores_exact_preload_global_state(self):
         _, bad = self._valid_v6()
-        bad['player']['commissions'] = [{'not': 'a commission'}]
+        previous_next_uid = commissions._next_uid
+        self.addCleanup(setattr, commissions, '_next_uid', previous_next_uid)
+        commissions._next_uid = 23
+        valid_high_uid = commissions.CommissionState(
+            uid=9001, template_id='C2', goal='downloads', icon='[D]',
+            name_zh='拉新冲刺', name_en='Growth Sprint', window=8,
+            reward_mult=1.0,
+        )
+        bad['player']['commissions'] = [
+            commissions.to_dict(valid_high_uid),
+            {'not': 'a commission'},
+        ]
         self._assert_load_bad_unchanged(bad)
 
 

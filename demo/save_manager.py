@@ -150,6 +150,9 @@ def save(path: str = None) -> str:
     _ensure_dir()
     path = path or os.path.join(SAVE_DIR, DEFAULT_SLOT)
     p = engine.player
+    validate_live_skill_state(
+        p.skill_queue, p.active_skill_effects, p.skill_cooldowns
+    )
 
     data = {
         'version': SAVE_VERSION,
@@ -221,7 +224,7 @@ def save(path: str = None) -> str:
     tmp = path + '.tmp'
     try:
         with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(data, f, ensure_ascii=False, indent=2, allow_nan=False)
             f.flush()
             os.fsync(f.fileno())      # 强制落盘，防断电丢页缓存
         os.replace(tmp, path)         # 同目录替换，Windows 上也是原子的
@@ -605,6 +608,7 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
     tune_data = dict(balance.TUNE)
     active_difficulty = balance.ACTIVE_DIFFICULTY
     active_origin = balance.ACTIVE_ORIGIN
+    next_commission_uid = commissions._next_uid
     rng_state = random.getstate()
     try:
         _apply_save(data, parsed_skill_state)
@@ -623,6 +627,7 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
         balance.TUNE.update(tune_data)
         balance.ACTIVE_DIFFICULTY = active_difficulty
         balance.ACTIVE_ORIGIN = active_origin
+        commissions._next_uid = next_commission_uid
         random.setstate(rng_state)
         _log_load_fail(LOAD_BAD_SCHEMA, path, e)
         return False, LOAD_BAD_SCHEMA
