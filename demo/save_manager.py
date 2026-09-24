@@ -414,8 +414,8 @@ def _v5_to_v6(d: dict) -> dict:
     migrated = copy.deepcopy(d)
     ps = migrated.get('player')
     if isinstance(ps, dict):
-        ps.setdefault('skill_queue', [])
-        ps.setdefault('active_skill_effects', [])
+        ps['skill_queue'] = []
+        ps['active_skill_effects'] = []
     migrated['version'] = 6
     return migrated
 

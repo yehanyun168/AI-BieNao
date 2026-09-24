@@ -737,6 +737,20 @@ class SkillSaveTests(unittest.TestCase):
         with open(path, 'rb') as stream:
             self.assertEqual(stream.read(), original_bytes)
 
+    def test_v5_migration_discards_noncontract_skill_fields(self):
+        legacy = self._handwritten_v5()
+        legacy['player']['skill_queue'] = [
+            {'skill_id': 'missing', 'targets': 'not-a-list'},
+        ]
+        legacy['player']['active_skill_effects'] = 'not-a-list'
+        legacy_before = copy.deepcopy(legacy)
+
+        migrated = save_manager._v5_to_v6(legacy)
+
+        self.assertEqual(legacy, legacy_before)
+        self.assertEqual(migrated['player']['skill_queue'], [])
+        self.assertEqual(migrated['player']['active_skill_effects'], [])
+
     def test_v6_roundtrip_preserves_fifo_targets_cooldowns_and_uses(self):
         engine.player.skill_queue = [
             SkillCast('push_song'), SkillCast('open_bait', ('CN', 'US')),
