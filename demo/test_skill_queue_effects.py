@@ -27,6 +27,7 @@ from skill_state import (
     SkillCast,
     validate_skill_table,
 )
+from test_skill_save_review import FinalReviewSkillSaveMixin
 
 
 class SkillTimingTests(unittest.TestCase):
@@ -657,7 +658,7 @@ class ComboSimulationTests(unittest.TestCase):
         self.assertEqual(result['combo_pair_activations'], 1)
 
 
-class SkillSaveTests(unittest.TestCase):
+class SkillSaveTests(FinalReviewSkillSaveMixin, unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -803,6 +804,7 @@ class SkillSaveTests(unittest.TestCase):
         self.assertEqual(migrated['player']['active_skill_effects'], [])
 
     def test_v6_roundtrip_preserves_fifo_targets_cooldowns_and_uses(self):
+        engine.player.unlocked_skills.update({'open_bait', 'algo_top'})
         engine.player.skill_queue = [
             SkillCast('push_song'), SkillCast('open_bait', ('CN', 'US')),
         ]
@@ -861,18 +863,6 @@ class SkillSaveTests(unittest.TestCase):
                     self.assertEqual(stream.read(), good_bytes)
                 self.assertFalse(os.path.exists(path + '.tmp'))
 
-    def test_save_allows_huge_finite_positive_cooldown(self):
-        huge = 10 ** 1000
-        engine.player.skill_queue = [SkillCast('stealth')]
-        engine.player.skill_cooldowns = {'stealth': huge}
-        path = self._path()
-
-        save_manager.save(path)
-
-        with open(path, encoding='utf-8') as stream:
-            saved = json.load(stream)
-        self.assertEqual(saved['player']['skill_cooldowns']['stealth'], huge)
-
     def test_bad_v6_skill_shapes_are_rejected_without_mutation(self):
         _, valid = self._valid_v6()
         variants = {}
@@ -930,6 +920,14 @@ class SkillSaveTests(unittest.TestCase):
                     [{'skill_id': 'stealth', 'targets': []}], [], cooldowns)
         variant('queue_cooldown_short',
                 [{'skill_id': 'stealth', 'targets': []}], [], {'stealth': 1})
+        variant('queue_cooldown_partial',
+                [{'skill_id': 'stealth', 'targets': []}], [], {'stealth': 2})
+        variant('queue_cooldown_huge',
+                [{'skill_id': 'stealth', 'targets': []}], [],
+                {'stealth': 10 ** 1000})
+        variant('active_cooldown_unreachable', [], [{
+            'skill_id': 'stealth', 'targets': [], 'remaining_ticks': 1,
+        }], {'stealth': 1})
         variant('active_exceeds_cooldown', [], [{
             'skill_id': 'anon_cdn', 'targets': [], 'remaining_ticks': 2,
         }], {'anon_cdn': 1})
@@ -943,6 +941,7 @@ class SkillSaveTests(unittest.TestCase):
         saturated['player']['skill_queue'] = [
             {'skill_id': 'open_bait', 'targets': ['CN']},
         ]
+        saturated['player']['unlocked_skills'].append('open_bait')
         saturated['player']['skill_cooldowns'] = {'open_bait': 9}
         cn = next(c for c in saturated['countries'] if c['code'] == 'CN')
         cn['downloads_m'] = 1e12

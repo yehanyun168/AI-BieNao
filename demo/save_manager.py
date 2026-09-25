@@ -481,6 +481,17 @@ def _parse_skill_state(
             skill_id, parse_targets(item['targets']), item['remaining_ticks']
         ))
 
+    persisted_ids = {item.skill_id for item in queue + active}
+    if persisted_ids:
+        unlocked_raw = ps['unlocked_skills']
+        if type(unlocked_raw) is not list:
+            raise TypeError('invalid saved unlocked skills')
+        if any(type(skill_id) is not str or not skill_id
+               or skill_id not in SKILLS for skill_id in unlocked_raw):
+            raise ValueError('invalid saved unlocked skill')
+        if not persisted_ids.issubset(unlocked_raw):
+            raise ValueError('queued or active skill is locked')
+
     validate_live_skill_state(queue, active, cooldowns)
     return queue, active
 

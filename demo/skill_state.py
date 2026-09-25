@@ -125,13 +125,15 @@ def validate_live_skill_state(queue, active, cooldowns):
         for skill_id, cooldown in cooldowns.items():
             if skill_id not in SKILLS or not _finite_positive(cooldown):
                 raise ValueError('invalid cooldown')
+            if cooldown > SKILLS[skill_id].cooldown:
+                raise ValueError('cooldown exceeds configured maximum')
         for skill_id in all_ids:
             if skill_id not in cooldowns:
                 raise ValueError('missing cooldown')
 
         for cast in queue:
-            if cooldowns[cast.skill_id] < SKILLS[cast.skill_id].duration:
-                raise ValueError('queued cooldown shorter than duration')
+            if cooldowns[cast.skill_id] != SKILLS[cast.skill_id].cooldown:
+                raise ValueError('queued cooldown is not freshly reserved')
 
         for item in list(queue) + list(active):
             targets = item.targets
@@ -149,9 +151,11 @@ def validate_live_skill_state(queue, active, cooldowns):
             if (
                 type(remaining) is not int
                 or not 1 <= remaining < duration
-                or remaining > cooldown
             ):
                 raise ValueError('invalid active duration')
+            expected = SKILLS[effect.skill_id].cooldown - duration + remaining
+            if cooldown != expected:
+                raise ValueError('active cooldown does not match duration')
     except (AttributeError, TypeError, ValueError) as exc:
         logger.error('invalid live skill state: %s', exc)
         raise ValueError('invalid live skill state') from None
