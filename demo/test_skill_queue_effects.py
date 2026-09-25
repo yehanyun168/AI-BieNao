@@ -14,6 +14,7 @@ from kivy.core.window import Window
 
 import engine
 import balance
+import balance_sim
 import commissions
 import save_manager
 import skill_state
@@ -611,6 +612,49 @@ class SkillCycleTests(unittest.TestCase):
         self.player.game_over = True
         report = engine.tick_one_round()
         self.assertEqual(report['skills_activated'], [])
+
+
+class ComboSimulationTests(unittest.TestCase):
+    def setUp(self):
+        balance.apply_difficulty('normal')
+        engine.init_game(seed=61)
+        self.addCleanup(balance.apply_difficulty, 'normal')
+
+    def test_combo_strategy_queues_push_song_then_algo_top(self):
+        player = engine.player
+        player.compute = 1000
+        player.unlocked_skills.update({'push_song', 'algo_top'})
+
+        with patch.object(engine, 'unlock_t0'), patch.object(
+            engine, 'upgrade_branch'
+        ):
+            balance_sim.auto_play(strategy='combo')
+
+        self.assertEqual(
+            [cast.skill_id for cast in player.skill_queue],
+            ['push_song', 'algo_top'],
+        )
+
+    def test_simulate_counts_pair_from_real_settlement_not_strategy_label(self):
+        queued = False
+
+        def queue_pair_once(strategy='default', **_kwargs):
+            nonlocal queued
+            if queued:
+                return
+            queued = True
+            player = engine.player
+            player.compute = 1000
+            player.unlocked_skills.update({'push_song', 'algo_top'})
+            self.assertTrue(engine.use_skill('push_song'))
+            self.assertTrue(engine.use_skill('algo_top'))
+
+        with patch.object(balance_sim, 'auto_play', side_effect=queue_pair_once):
+            result = balance_sim.simulate(
+                seed=61, max_ticks=3, strategy='default', inspect=False
+            )
+
+        self.assertEqual(result['combo_pair_activations'], 1)
 
 
 class SkillSaveTests(unittest.TestCase):
