@@ -7,6 +7,33 @@ from skill_state import ActiveSkill, SkillCast
 
 
 class FinalReviewSkillSaveMixin:
+    def test_save_rejects_locked_live_skills_without_replacing_good_file(self):
+        path = self._path()
+        save_manager.save(path)
+        with open(path, 'rb') as stream:
+            good_bytes = stream.read()
+
+        cases = (
+            ('queued_locked', [SkillCast('algo_top')], [],
+             {'algo_top': 5}, {'push_song', 'stealth'}),
+            ('active_locked', [], [ActiveSkill('anon_cdn', (), 2)],
+             {'anon_cdn': 5}, {'push_song', 'stealth'}),
+            ('unlocks_not_set', [], [], {}, ['push_song', 'stealth']),
+        )
+        for name, queue, active, cooldowns, unlocked in cases:
+            with self.subTest(name=name):
+                engine.player.skill_queue = queue
+                engine.player.active_skill_effects = active
+                engine.player.skill_cooldowns = cooldowns
+                engine.player.unlocked_skills = unlocked
+
+                with self.assertRaises(ValueError):
+                    save_manager.save(path)
+
+                with open(path, 'rb') as stream:
+                    self.assertEqual(stream.read(), good_bytes)
+                self.assertFalse(os.path.exists(path + '.tmp'))
+
     def test_save_rejects_unreachable_skill_cooldowns(self):
         path = self._path()
         save_manager.save(path)

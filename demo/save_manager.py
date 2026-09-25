@@ -153,6 +153,14 @@ def save(path: str = None) -> str:
     validate_live_skill_state(
         p.skill_queue, p.active_skill_effects, p.skill_cooldowns
     )
+    unlocked_skills = p.unlocked_skills
+    if type(unlocked_skills) is not set:
+        raise ValueError('invalid live unlocked skills')
+    persisted_skill_ids = {
+        item.skill_id for item in p.skill_queue + p.active_skill_effects
+    }
+    if not persisted_skill_ids.issubset(unlocked_skills):
+        raise ValueError('queued or active live skill is locked')
 
     data = {
         'version': SAVE_VERSION,
