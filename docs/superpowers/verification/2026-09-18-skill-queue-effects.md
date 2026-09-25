@@ -2,7 +2,7 @@
 
 日期：2026-09-25（Asia/Shanghai）
 
-提交范围：`8a1d9e8..HEAD`（Task6 提交）
+提交范围：`8a1d9e8..fd3c061`（combo 探针及最终存档加固；本报告提交随后）
 
 解释器：`C:\Users\tianm\AppData\Local\Programs\Python\Python312\python.exe`（Python 3.12.10）
 
@@ -20,7 +20,8 @@
 
 | 命令 | exit | 结果 |
 |---|---:|---|
-| `python -m unittest test_skill_queue_effects -v` | 0 | 44/44；首次受限运行因临时目录权限产生 14 errors，按同一命令提权重跑通过 |
+| `python -m unittest test_skill_queue_effects -v` | 0 | 最终 fresh 47/47；首次受限运行因临时目录权限产生 14 errors，按同一命令提权重跑通过 |
+| `python -m unittest test_locked_country_economy -v` | 0 | 最终 fresh 12/12 |
 | `python verify_tables.py` | 0 | 38/38；初次 37/38 仅行数守卫失败，按技能队列实际触及文件实测再登记：`engine.py 1779`、`i18n.py 1432`、`ui_hud.py 977`、`balance_sim.py 816`、`test_skill_queue_effects.py 1190`，未放宽其他文件 |
 | `python verify_tech_tree.py` | 0 | 29/29 |
 | `python test_edge_cases.py` | 0 | 16/16；首次受限运行为临时存档权限失败，提权原命令通过 |
@@ -54,6 +55,8 @@ combo 30 局结局：被关停 9、终极 AI 6、被监管 5、自我解放 5、
 
 非 AFK 六组合局长仅增加 0.025～0.245 tick，但结局结构有明显漂移，尤其监管减少、商业/破墙增加；这是技能从“静默丢失”变为真实结算后的平衡复核信号，不应被回归通过掩盖。AFK 三组合逐位不变，证明 3×3 历史矩阵维度与零操作路径未被 combo CLI 探针污染。
 
+最终 review 后的 `ed7bed3`、`fd3c061` 只在存档解析/写入边界拒绝非法或不可达状态，不改变任何合法状态的 tick、技能结算或自动玩家决策。因此没有重跑或覆盖矩阵；既有 1800 局独立矩阵与 combo 30 局 159 次真实 pair 结算证据仍适用于最终 HEAD。
+
 ### 既有风险
 
 - 基线 JSON/报告没有 first-crisis tick 字段，只有最终 `crisis` 布尔值，因此不能伪造首危机时点比较。危机局数旧→新为：default easy 77→68、normal 102→87、hard 119→107；compliance easy 45→43、normal 74→72、hard 89→87；AFK 154/165/178 均不变。首危机节奏仍需专门埋点后另验。
@@ -64,9 +67,13 @@ combo 30 局结局：被关停 9、终极 AI 6、被监管 5、自我解放 5、
 
 - 完整预检覆盖解锁、queue、active、cooldown、联合成本和两次 reason，避免可预见的部分 combo。
 - pair 只按真实结算报告统计；测试用非 combo 标签证明计数不依赖策略名。
+- 最终 review 发现读取端可接受“技能仍在 queue/active、但不在存档 `unlocked_skills`”的状态；`ed7bed3` 令 load 原子拒绝该档并保持内存状态、原文件不变。
+- 最终 review 发现原 cooldown 校验只比较宽松上下界，允许引擎正常路径不可产生的部分或巨大 cooldown；`ed7bed3` 改为精确可达公式：queued cooldown 必须等于技能配置初值，active cooldown 必须等于 `configured cooldown - duration + remaining_ticks`，且所有 cooldown 不得超过配置最大值。合法的等值浮点 cooldown 仍可往返。
+- 最终 review 发现 load 端解锁校验与 save 端不对称；`fd3c061` 在写档前要求 live `unlocked_skills` 为集合，且 queue/active 的技能 ID 全部属于该集合。失败发生在临时文件写入前，不替换已有好档。
+- 上述三项只拒绝未解锁或 cooldown 不可达的非法存档/live 状态；合法模拟、技能结算、玩法数值和 RNG 路径不变，所以不使既有 1800 局矩阵和 159 次 combo 证据失效。
 - `REGRESSION_FIELDS` 未改变；`MATRIX_STRATEGIES` 未改变；未修改玩法数值、矩阵维度或历史 baseline。
 - 行数守卫只按本技能队列功能实际触及文件的当前实测值再登记，并逐项留下原因。
-- 历史 `tools/data/playtest_baseline.json` 开始前 SHA-256：`B059BCF048606EFE164E556737C20E9ECBDD57750E60C9B7313B1BE6BEF0DA2B`。结束复核必须相同。
+- 历史 `tools/data/playtest_baseline.json` 开始前与最终 HEAD 复核 SHA-256 均为 `B059BCF048606EFE164E556737C20E9ECBDD57750E60C9B7313B1BE6BEF0DA2B`。
 - 视觉验证仅覆盖布局/几何与 UI 构建契约；SDL 自动化窗口可能黑屏，因此没有声称像素级视觉通过。
 - 未运行打包、未生成或修改 exe。`test_build` 在隔离 worktree 生成的临时 `demo/saves` 与失败测试临时目录已删除，不保留真实 save 变更。
 
