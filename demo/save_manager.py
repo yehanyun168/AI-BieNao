@@ -24,6 +24,7 @@ P1-9 写入 / 版本迁移约定：
     difficulty=标准）照常可读，玩家数据零丢失。将来再改存档结构：
     SAVE_VERSION += 1，按 _MIGRATIONS 补一级纯函数迁移即可，老档不会全废。
 """
+import copy
 import json
 import math
 import os
@@ -32,11 +33,12 @@ import sys
 from datetime import datetime
 from typing import List, Tuple
 
-from data import STARTER_SKILLS, SKILL_UNLOCK
+from data import STARTER_SKILLS, SKILLS, SKILL_UNLOCK
 from i18n import t
 import balance
 import commissions
 import origins   # T16 觉醒出身（读档兜底 + 白板默认）
+from skill_state import ActiveSkill, SkillCast, validate_live_skill_state
 
 # P2-3：SAVE_VERSION 1 → 2。新增 player.seed / player.difficulty 两个
 # 可选字段 —— 字段是纯增量，但版本号一起 +1，让存档自描述「带不带
@@ -49,7 +51,8 @@ import origins   # T16 觉醒出身（读档兜底 + 白板默认）
 # 老玩家下次继续游戏时补播一次新开场，此后不再重复。
 # v4（协作方改动）：新增游戏开局年月，日期随周期推进并可跨存档延续。
 # v5：清理旧档未解锁国家的下载脏值，并重置受影响的活动下载委托。
-SAVE_VERSION = 5
+# v6：持久化已排队技能与跨周期活动技能。
+SAVE_VERSION = 6
 
 
 from paths import _user_data_dir, migrate_legacy_data
@@ -147,6 +150,17 @@ def save(path: str = None) -> str:
     _ensure_dir()
     path = path or os.path.join(SAVE_DIR, DEFAULT_SLOT)
     p = engine.player
+    validate_live_skill_state(
+        p.skill_queue, p.active_skill_effects, p.skill_cooldowns
+    )
+    unlocked_skills = p.unlocked_skills
+    if type(unlocked_skills) is not set:
+        raise ValueError('invalid live unlocked skills')
+    persisted_skill_ids = {
+        item.skill_id for item in p.skill_queue + p.active_skill_effects
+    }
+    if not persisted_skill_ids.issubset(unlocked_skills):
+        raise ValueError('queued or active live skill is locked')
 
     data = {
         'version': SAVE_VERSION,
@@ -179,6 +193,18 @@ def save(path: str = None) -> str:
             'last_commission_tick': getattr(p, 'last_commission_tick', 0),
             'compute_earned_total': getattr(p, 'compute_earned_total', 0.0),
             'skill_uses': dict(getattr(p, 'skill_uses', {})),
+            'skill_queue': [
+                {'skill_id': cast.skill_id, 'targets': list(cast.targets)}
+                for cast in p.skill_queue
+            ],
+            'active_skill_effects': [
+                {
+                    'skill_id': effect.skill_id,
+                    'targets': list(effect.targets),
+                    'remaining_ticks': effect.remaining_ticks,
+                }
+                for effect in p.active_skill_effects
+            ],
             # —— P2-3 重玩性：种子 + 难度档（读档不重置难度）——
             'seed': getattr(p, 'seed', None),
             'difficulty': getattr(p, 'difficulty', balance.DEFAULT_DIFFICULTY),
@@ -206,7 +232,7 @@ def save(path: str = None) -> str:
     tmp = path + '.tmp'
     try:
         with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+            json.dump(data, f, ensure_ascii=False, indent=2, allow_nan=False)
             f.flush()
             os.fsync(f.fileno())      # 强制落盘，防断电丢页缓存
         os.replace(tmp, path)         # 同目录替换，Windows 上也是原子的
@@ -220,7 +246,10 @@ def save(path: str = None) -> str:
     return path
 
 
-def _apply_save(data: dict) -> None:
+def _apply_save(
+    data: dict,
+    skill_state: Tuple[List[SkillCast], List[ActiveSkill]],
+) -> None:
     """把已校验过的存档 dict 写回 engine 全局状态。
 
     只做字段搬运，不做任何异常捕获 —— 捕获统一在 load_ex() 里，
@@ -275,6 +304,7 @@ def _apply_save(data: dict) -> None:
     p.last_commission_tick = ps.get('last_commission_tick', 0)
     p.compute_earned_total = ps.get('compute_earned_total', 0.0)
     p.skill_uses = dict(ps.get('skill_uses', {}))
+    p.skill_queue, p.active_skill_effects = skill_state
     # —— P2-3 重玩性：恢复种子与难度档（读档不重置难度）——
     #    种子非空时按种子重建随机流：同一存档读两次，后续随机事件逐位
     #    一致（「重开同档可复现」）；老档 / 坏值难度兜底回标准档。
@@ -390,6 +420,90 @@ def _v4_to_v5(d: dict) -> dict:
 _MIGRATIONS[4] = _v4_to_v5
 
 
+def _v5_to_v6(d: dict) -> dict:
+    """v5 → v6：纯复制后补空技能状态，不伪造历史效果。"""
+    migrated = copy.deepcopy(d)
+    ps = migrated.get('player')
+    if isinstance(ps, dict):
+        ps['skill_queue'] = []
+        ps['active_skill_effects'] = []
+    migrated['version'] = 6
+    return migrated
+
+
+_MIGRATIONS[5] = _v5_to_v6
+
+
+def _parse_skill_state(
+    ps: dict,
+    countries: list,
+) -> Tuple[List[SkillCast], List[ActiveSkill]]:
+    """Strictly parse persisted v6 skill state without mutating live state."""
+    queue_raw = ps['skill_queue']
+    active_raw = ps['active_skill_effects']
+    cooldowns = ps['skill_cooldowns']
+    if (type(queue_raw) is not list or type(active_raw) is not list
+            or type(cooldowns) is not dict):
+        raise TypeError('invalid skill state container')
+
+    saved_countries = {}
+    for country in countries:
+        if type(country) is not dict:
+            raise TypeError('invalid country item')
+        code = country['code']
+        unlocked = country['unlocked']
+        if type(code) is not str or not code or type(unlocked) is not bool:
+            raise TypeError('invalid saved country')
+        saved_countries[code] = unlocked
+
+    def parse_targets(raw):
+        if type(raw) is not list:
+            raise TypeError('invalid saved skill targets')
+        if any(type(code) is not str or not code for code in raw):
+            raise TypeError('invalid saved skill target')
+        if len(raw) != len(set(raw)):
+            raise ValueError('duplicate saved skill target')
+        if any(code not in saved_countries or not saved_countries[code]
+               for code in raw):
+            raise ValueError('unknown or locked saved skill target')
+        return tuple(raw)
+
+    queue = []
+    for item in queue_raw:
+        if type(item) is not dict or set(item) != {'skill_id', 'targets'}:
+            raise TypeError('invalid queued skill item')
+        skill_id = item['skill_id']
+        if type(skill_id) is not str or skill_id not in SKILLS:
+            raise ValueError('unknown queued skill')
+        queue.append(SkillCast(skill_id, parse_targets(item['targets'])))
+
+    active = []
+    for item in active_raw:
+        if (type(item) is not dict
+                or set(item) != {'skill_id', 'targets', 'remaining_ticks'}):
+            raise TypeError('invalid active skill item')
+        skill_id = item['skill_id']
+        if type(skill_id) is not str or skill_id not in SKILLS:
+            raise ValueError('unknown active skill')
+        active.append(ActiveSkill(
+            skill_id, parse_targets(item['targets']), item['remaining_ticks']
+        ))
+
+    persisted_ids = {item.skill_id for item in queue + active}
+    if persisted_ids:
+        unlocked_raw = ps['unlocked_skills']
+        if type(unlocked_raw) is not list:
+            raise TypeError('invalid saved unlocked skills')
+        if any(type(skill_id) is not str or not skill_id
+               or skill_id not in SKILLS for skill_id in unlocked_raw):
+            raise ValueError('invalid saved unlocked skill')
+        if not persisted_ids.issubset(unlocked_raw):
+            raise ValueError('queued or active skill is locked')
+
+    validate_live_skill_state(queue, active, cooldowns)
+    return queue, active
+
+
 def _migrate(data: dict, from_version: int) -> dict:
     """版本迁移骨架（P1-9）：把 ``from_version`` 的存档升级到 SAVE_VERSION。
 
@@ -425,8 +539,8 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
     """读档，返回 ``(ok, reason)``。
 
     reason 取值见模块顶部的 LOAD_* 常量。任何坏档都不抛异常：
-    解析、版本校验、字段搬运三段全部包在窄异常里，失败即回滚 engine
-    到干净初始态并落 crash.log。
+    解析、版本校验、字段搬运三段全部包在窄异常里；应用失败精确恢复
+    加载前的对象与全局状态，并落 crash.log。
 
     Args:
         path: 存档路径；None 表示默认槽位。
@@ -477,7 +591,7 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
             _log_load_fail(LOAD_BAD_VERSION, path, e)
             return False, LOAD_BAD_VERSION
 
-    # 4) 字段搬运：原生 v5 脏值只在内存中修复并记诊断，不改原文件。
+    # 4) 完整解析后才允许写 live state。v5/v6 锁国脏值只在内存修复。
     try:
         dirty_codes = []
         valid_codes = {c.code for c in engine.COUNTRIES}
@@ -488,21 +602,52 @@ def load_ex(path: str = None) -> Tuple[bool, str]:
                         or not isinstance(amount, (int, float))
                         or not math.isfinite(amount)):
                     raise TypeError('invalid unlocked downloads_m')
-            elif v == SAVE_VERSION and (not isinstance(amount, (int, float))
-                                        or isinstance(amount, bool)
-                                        or amount != 0.0):
+            elif v >= 5 and (not isinstance(amount, (int, float))
+                             or isinstance(amount, bool)
+                             or amount != 0.0):
                 code = cs['code']
                 if not isinstance(code, str) or code not in valid_codes:
                     raise TypeError('invalid locked country code')
                 dirty_codes.append(code)
                 cs['downloads_m'] = 0.0
-        _apply_save(data)
+        parsed_skill_state = _parse_skill_state(data['player'],
+                                                data['countries'])
     except (KeyError, TypeError, ValueError, AttributeError, OverflowError) as e:
-        # _apply_save 里已经 init_game() 过，可能留下半写状态 → 回滚成干净新档
-        try:
-            engine.init_game()
-        except (KeyError, TypeError, ValueError, AttributeError):
-            pass  # 回滚都失败也绝不掩盖本次的失败原因
+        _log_load_fail(LOAD_BAD_SCHEMA, path, e)
+        return False, LOAD_BAD_SCHEMA
+
+    old_player = engine.player
+    old_countries = engine.player_countries
+    old_counterplay_cooldown = engine._counterplay_cooldown
+    old_counterplay_pending = engine._counterplay_pending
+    old_recent_templates = engine._recent_commission_templates
+    counterplay_cooldown_data = dict(old_counterplay_cooldown)
+    counterplay_pending_data = dict(old_counterplay_pending)
+    recent_templates_data = list(old_recent_templates)
+    tune_data = dict(balance.TUNE)
+    active_difficulty = balance.ACTIVE_DIFFICULTY
+    active_origin = balance.ACTIVE_ORIGIN
+    next_commission_uid = commissions._next_uid
+    rng_state = random.getstate()
+    try:
+        _apply_save(data, parsed_skill_state)
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError) as e:
+        engine.player = old_player
+        engine.player_countries = old_countries
+        old_counterplay_cooldown.clear()
+        old_counterplay_cooldown.update(counterplay_cooldown_data)
+        engine._counterplay_cooldown = old_counterplay_cooldown
+        old_counterplay_pending.clear()
+        old_counterplay_pending.update(counterplay_pending_data)
+        engine._counterplay_pending = old_counterplay_pending
+        old_recent_templates[:] = recent_templates_data
+        engine._recent_commission_templates = old_recent_templates
+        balance.TUNE.clear()
+        balance.TUNE.update(tune_data)
+        balance.ACTIVE_DIFFICULTY = active_difficulty
+        balance.ACTIVE_ORIGIN = active_origin
+        commissions._next_uid = next_commission_uid
+        random.setstate(rng_state)
         _log_load_fail(LOAD_BAD_SCHEMA, path, e)
         return False, LOAD_BAD_SCHEMA
     if dirty_codes:

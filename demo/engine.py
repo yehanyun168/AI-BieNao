@@ -10,6 +10,9 @@ engine.py - Day 2 Demo 游戏引擎
 """
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
+import math
+import logging
+from numbers import Real
 import random
 from datetime import datetime
 
@@ -30,6 +33,14 @@ from data import (
 #    不能 ``from data import``（那是一次性快照）——一律用 ``data.XXX``
 #    属性访问，见下方各调用点。
 from tech_tree import PlayerTech, aggregate_effects, SLOT_MAP
+from skill_state import (
+    ActiveSkill,
+    SkillCast,
+    instant_deltas,
+    modifiers,
+    normalize_targets,
+    validate_live_skill_state,
+)
 # P2-3 难度档：init_game 经 apply_difficulty/current_difficulty 读写 TUNE 预设
 # T16 觉醒出身：init_game 按「出身绑定档 apply_difficulty + 出身乘区
 # apply_origin_tune_mult」两步应用（balance.apply_origin 是其等价封装）
@@ -62,15 +73,9 @@ class PlayerState:
     events_history: List[str] = field(default_factory=list)
     skill_cooldowns: Dict[str, float] = field(default_factory=dict)
     selected_country: Optional[str] = None
-    # v0.4 精准投放：技能目标国家代码列表（空 = 全局投放，旧行为）
-    # 设计稿 S04 支持「地图上多选目标」，所以这里由单值升级为列表。
-    pending_skill_targets: List[str] = field(default_factory=list)
-    # ⚠️ 大修（玩家反馈 #6 连带发现）：上次成功施放、待本周期生效的技能 id。
-    # 旧版把技能 id 存在调用方手里（UI 传 tick_one_round(skill_in_use=...)），
-    # balance_sim / 测试 / 引擎自测等不传参的调用方会**静默丢失全部技能效果**
-    # （AUTO 玩家的「隐身」从未真正生效过）。现在效果归因收敛到引擎状态：
-    # use_skill 登记 → tick 消费并清空；显式参数仍优先（UI 兼容路径）。
-    pending_skill: str = ""
+    # 技能施放先进入有序队列；后续周期结算按顺序消费并维护持续效果。
+    skill_queue: List[SkillCast] = field(default_factory=list)
+    active_skill_effects: List[ActiveSkill] = field(default_factory=list)
     tech: PlayerTech = field(default_factory=PlayerTech)
     # —— 结局 / 危机相关 ——
     compute_peak: float = 100.0        # 历史算力峰值（元结局判定用）
@@ -122,6 +127,7 @@ player: PlayerState = None
 # 当前周期内怀疑度变化的来源拆解（玩家反馈 #5）：每个写 suspicion 的地方
 # 调 _sus(tag, delta) 记账，tick 结束放进 report。**纯观测**设施。
 _suspicion_trace: Dict[str, float] = {}
+logger = logging.getLogger(__name__)
 
 
 def _sus(tag: str, delta: float) -> None:
@@ -243,6 +249,8 @@ def tick_one_round(skill_in_use: Optional[str] = None,
                         模拟/测试默认 1.0，真实 UI 传实际 tick 间隔。
                         注意：技能冷却按「周期」递减，与此参数无关。
     """
+    if skill_in_use is not None:
+        raise ValueError('explicit skill tick path is retired')
     if player is None:
         init_game()
 
@@ -251,6 +259,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         "download_growth": 0,
         "compute_gain": 0,
         "suspicion_gain": 0,
+        "skills_activated": [],
         # 怀疑度变化的来源拆解（玩家反馈 #5：26%→95% 玩家看不懂为什么）
         # key = 来源分类（偷算力/技能/通用事件/国家事件/v2事件/反制/委托），
         # value = 该来源本周期带来的怀疑度净变化。
@@ -273,44 +282,29 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         report["ending"] = player.ending
         return report
 
+    validate_live_skill_state(
+        player.skill_queue,
+        player.active_skill_effects,
+        player.skill_cooldowns,
+    )
+    queued_count = len(player.skill_queue)
+    new_casts = list(player.skill_queue[:queued_count])
+    new_effects = [
+        ActiveSkill(cast.skill_id, cast.targets, SKILLS[cast.skill_id].duration)
+        for cast in new_casts
+    ]
+    activated_ids = [cast.skill_id for cast in new_casts]
+    instant_compute, instant_suspicion = instant_deltas(new_casts)
+    del player.skill_queue[:queued_count]
+    player.active_skill_effects.extend(new_effects)
+    report['skills_activated'] = activated_ids
+
     player.tick_count += 1
     report["tick"] = player.tick_count
     # 重置怀疑度来源拆解（本周期开始）
     global _suspicion_trace
     _suspicion_trace = {}
     effects = aggregate_effects(player.tech)
-
-    # 计算技能乘数（覆盖科技效果中的同类项）
-    skill_dl_mult = 1.0
-    skill_suspicion_mult = 1.0
-    skill_compute_bonus = 0.0
-    skill_suspicion_delta = 0.0
-    skill_compute_mult = 1.0
-    skill_stealth_bonus = 0.0
-    skill_stealth_mult = 1.0
-
-    # （大修）技能效果归因：显式参数优先（UI 兼容路径），否则消费引擎侧
-    # 登记的上次施放（use_skill 只扣费设冷却不应用效果，效果在本 tick 落地）。
-    # 旧版技能 id 存在调用方手里 —— balance_sim / 测试 / 自测等无参调用
-    # 全部静默丢效果（AUTO 的「隐身」从未真正生效过）。本修不改变 UI 行为。
-    if not skill_in_use:
-        skill_in_use = player.pending_skill or None
-    player.pending_skill = ""
-
-    if skill_in_use and skill_in_use in SKILLS:
-        s = SKILLS[skill_in_use]
-        skill_dl_mult *= s.downloads_mult
-        skill_suspicion_mult *= s.suspicion_mult
-        skill_compute_bonus += s.compute_delta
-        skill_suspicion_delta += s.suspicion_delta
-        skill_compute_mult *= s.compute_mult
-        skill_stealth_bonus += s.stealth_ratio_bonus
-        skill_stealth_mult *= s.stealth_ratio_mult
-
-    # 精准投放：若指定目标国家（可多选），技能效果只作用于这些国家；否则全局生效
-    skill_targets = list(player.pending_skill_targets or ())
-    player.pending_skill_targets = []
-    targeted = bool(skill_targets)
 
     # === 阶段1: 各国下载量增长 ===
     # T03 解锁门控：判定逻辑见 onboarding（0 = 不设限，矩阵/回归用）
@@ -327,6 +321,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
             continue
 
         cfg = country.config
+        skill_mod = modifiers(player.active_skill_effects, cfg.code)
         # 基础增长（系数见 balance.TUNE）
         age_bonus = AGE_STRUCTURE_BONUS[cfg.age_structure]
         base_growth = (cfg.population_m * TUNE['growth_base']
@@ -340,8 +335,7 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         # T16 起源乘区：觉醒地点对下载增速的修正（univ_lab ×0.9 / game_studio ×1.25）
         growth *= TUNE['dl_growth_origin_mult']
         # 应用科技乘数
-        dl_skill = skill_dl_mult if (not targeted or cfg.code in skill_targets) else 1.0
-        growth *= effects['global_downloads_mult'] * dl_skill
+        growth *= effects['global_downloads_mult'] * skill_mod['downloads_mult']
         # 应用地区乘数（scope-based）
         for scope, mult in effects['regional_downloads_mult'].items():
             if scope == 'unlocked':
@@ -367,22 +361,21 @@ def tick_one_round(skill_in_use: Optional[str] = None,
         if country.downloads_m <= 0 or not country.unlocked:
             continue
         cfg = country.config
-        # 精准投放：技能效果只作用于目标国家
-        on_target = (not targeted) or (cfg.code in skill_targets)
+        skill_mod = modifiers(player.active_skill_effects, cfg.code)
         # 单位用户算力
         unit_compute = TUNE['compute_per_user'] * effects['compute_per_user_mult']
         active_users_m = country.downloads_m * TUNE['active_user_ratio']
         # 偷算力比例（科技加成 + 技能加成，再乘技能倍率，最后封顶）
-        ratio = min(data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
-                    + (skill_stealth_bonus if on_target else 0.0),
-                    data.MAX_STEALTH_RATIO)
-        ratio = min(ratio * (skill_stealth_mult if on_target else 1.0),
-                    data.MAX_STEALTH_RATIO)
+        ratio = min(
+            (data.BASE_STEALTH_RATIO + effects['stealth_ratio_bonus']
+             + skill_mod['stealth_ratio_bonus'])
+            * skill_mod['stealth_ratio_mult'],
+            data.MAX_STEALTH_RATIO,
+        )
         stolen_base = (active_users_m * unit_compute * ratio
                        * TUNE['compute_scale']
-                       * (skill_compute_mult if on_target else 1.0))
-        stolen = stolen_base + (skill_compute_bonus if on_target else 0.0)
-        total_stolen += stolen
+                       * skill_mod['compute_mult'])
+        total_stolen += stolen_base
         # 怀疑度（信任度模型：年轻人 + 高采纳率 → 更敏感）
         # ⚠️ 平衡调整：旧系数（0.015+0.015）实测 26 周期就顶满 100%，
         #    玩家几乎没有任何操作窗口，故下调约 45%。
@@ -394,8 +387,9 @@ def tick_one_round(skill_in_use: Optional[str] = None,
             sensitivity *= TUNE['suspicion_young_mult']
         elif cfg.age_structure == 'aging':
             sensitivity *= TUNE['suspicion_aging_mult']
-        suspicion_growth = stolen_base * sensitivity * effects['suspicion_mult'] * (skill_suspicion_mult if on_target else 1.0)
-        suspicion_growth += (skill_suspicion_delta if on_target else 0.0)
+        suspicion_growth = (stolen_base * sensitivity
+                            * effects['suspicion_mult']
+                            * skill_mod['suspicion_mult'])
         total_suspicion += suspicion_growth
 
     # T04 尖峰治理：偷算力聚合项过软饱和（记账值 = 实际落地值，保观测可信）
@@ -406,15 +400,17 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     compute_before = player.compute
     report['maintenance_fee'] = player.tick_count * TUNE['maintenance_per_tick']
     player.compute = max(0.0, player.compute + total_stolen
-                         + (skill_compute_bonus if not targeted else 0.0)
+                         + instant_compute
                          - report['maintenance_fee'])
     player.compute_peak = max(player.compute_peak, player.compute)
     _sus('steal', total_suspicion)                       # 偷算力（基础）
-    _sus('skill', (skill_suspicion_delta if not targeted else 0.0))  # 技能附带
-    player.suspicion = max(0, min(100, player.suspicion + total_suspicion + (skill_suspicion_delta if not targeted else 0.0)))
+    _sus('skill', instant_suspicion)                     # 技能附带
+    player.suspicion = max(
+        0, min(100, player.suspicion + total_suspicion + instant_suspicion)
+    )
     player.suspicion_peak = max(player.suspicion_peak, player.suspicion)
     report["compute_gain"] = player.compute - compute_before
-    report["suspicion_gain"] = total_suspicion
+    report["suspicion_gain"] = total_suspicion + instant_suspicion
     # P0-3 快照计数：历史累计偷取算力（C3「算力冲刺」委托的判定基准）
     player.compute_earned_total += total_stolen
 
@@ -465,9 +461,22 @@ def tick_one_round(skill_in_use: Optional[str] = None,
     # === 阶段5: 冷却递减（按周期，与 tick 墙钟时长解耦）===
     # 技能冷却单位是「周期」（data.SKILLS.cooldown），每推进一个周期减 1。
     # 不能用 dt_seconds 递减：base_tick_seconds=30，会把 cooldown=3 一步扣成负数。
+    for active in player.active_skill_effects:
+        active.remaining_ticks -= 1
+    player.active_skill_effects = [
+        active for active in player.active_skill_effects
+        if active.remaining_ticks > 0
+    ]
     player.skill_cooldowns = {
         k: v - 1 for k, v in player.skill_cooldowns.items() if v > 1
     }
+    if any(
+        active.skill_id not in player.skill_cooldowns
+        or player.skill_cooldowns[active.skill_id] <= 0
+        for active in player.active_skill_effects
+    ):
+        logger.error('active skill survived without a positive cooldown')
+        raise ValueError('invalid live skill state')
     v2_events.tick_cooldowns(player.v2_cooldowns, dt_seconds)
     # === 阶段6: 回合边界事件（危机 > V2 > 国家 > 通用；至多一个）===
     crisis_active = player.suspicion >= data.SUSPICION_CRISIS
@@ -1084,8 +1093,51 @@ def _apply_country_event(evt: ce.CountryEvent):
 # ============================================================
 # 玩家操作 API
 # ============================================================
+def _skill_cast_decision(skill_id: str, target_codes=None) -> tuple:
+    """Return one immutable validation decision for a prospective cast."""
+    if player is None or player.game_over:
+        return 'game_over', ()
+    if skill_id not in SKILLS or skill_id not in player.unlocked_skills:
+        return 'locked', ()
+
+    if skill_id in player.skill_cooldowns:
+        cooldown = player.skill_cooldowns[skill_id]
+        if (isinstance(cooldown, bool)
+                or not isinstance(cooldown, Real)
+                or cooldown != 0
+                or not math.isfinite(cooldown)):
+            return 'cooldown', ()
+    if any(active.skill_id == skill_id
+           for active in player.active_skill_effects):
+        return 'cooldown', ()
+
+    try:
+        targets = normalize_targets(target_codes)
+    except ValueError:
+        return 'invalid_target', ()
+
+    countries = {c.config.code: c for c in player_countries}
+    for code in targets:
+        country = countries.get(code)
+        if country is None:
+            return 'invalid_target', targets
+        if not country.unlocked:
+            return 'locked', targets
+        if country.penetration_rate >= TUNE['penetration_saturated']:
+            return 'saturated', targets
+
+    if player.compute < skill_cost_for(skill_id, len(targets)):
+        return 'no_compute', targets
+    return 'ok', targets
+
+
+def skill_cast_reason(skill_id: str, target_codes=None) -> str:
+    """Return a reason code for a prospective cast without mutating state."""
+    return _skill_cast_decision(skill_id, target_codes)[0]
+
+
 def use_skill(skill_id: str, target_codes=None) -> bool:
-    """释放技能（v0.4：支持地图上多选目标投放）。
+    """验证并预约技能；成功施放按顺序进入待结算队列。
 
     Args:
         skill_id: 技能 id，须在 data.SKILLS 中。
@@ -1093,45 +1145,24 @@ def use_skill(skill_id: str, target_codes=None) -> bool:
             单个 code（str）或 code 列表 => 精准投放。
 
     Returns:
-        bool: 是否成功释放。算力不足 / 冷却中 / 技能不存在时返回 False。
+        bool: 是否成功预约；任何校验失败均返回 False 且不修改状态。
 
     Note:
         算力按目标数量线性叠加 —— 设计稿 S04 的「算力消耗 50 ×3 = 150」。
         全局投放按 1 份计。
-        效果契约（大修）：本函数只负责验证 / 扣费 / 冷却 / 登记目标与技能 id，
-        实际效果在**下一个** ``tick_one_round`` 落地 —— 无需调用方再传
-        ``skill_in_use``（引擎读 ``player.pending_skill``，用完即清）。
-        UI 的显式传参路径仍兼容且优先。
+        本函数只负责完整校验，并在成功点原子地扣费、设冷却、计次和入队；
+        不提前应用技能效果。
     """
-    if player is None:
+    reason, targets = _skill_cast_decision(skill_id, target_codes)
+    if reason != 'ok':
         return False
-    if skill_id not in SKILLS:
-        return False
+
     skill = SKILLS[skill_id]
-    if skill_id not in player.unlocked_skills:
-        return False
-    if player.skill_cooldowns.get(skill_id, 0) > 0:
-        return False
-
-    # 归一化目标：str -> [str]，None/空 -> []（全局）
-    if target_codes is None:
-        targets = []
-    elif isinstance(target_codes, str):
-        targets = [target_codes] if target_codes else []
-    else:
-        targets = [c for c in target_codes if c]
-
-    n = max(len(targets), 1)                    # 全局投放也算 1 份成本
-    total_cost = skill.cost * n
-    if player.compute < total_cost:
-        return False
-
+    total_cost = skill_cost_for(skill_id, len(targets))
     player.compute -= total_cost
     player.skill_cooldowns[skill_id] = skill.cooldown
-    player.pending_skill_targets = targets
-    player.pending_skill = skill_id             # 大修：效果归因进引擎状态
-    # P0-3 快照计数：技能使用次数（C4「技能特训」委托的判定基准）
     player.skill_uses[skill_id] = player.skill_uses.get(skill_id, 0) + 1
+    player.skill_queue.append(SkillCast(skill_id, targets))
     return True
 
 
@@ -1204,7 +1235,7 @@ def target_availability(code: str, skill_id: str,
 # 技能预览（P1-2：投放前让玩家看到"会怎样"）
 # ============================================================
 # 设计红线：**纯展示** —— 不写状态、不扣算力、不设冷却、不消耗
-# ``pending_skill``。可以放心地在 hover / 详情区每帧调用。
+# 技能队列。可以放心地在 hover / 详情区每帧调用。
 #
 # 预测口径与「use_skill + tick_one_round 的结算」同源同式，不另写一套估算：
 #   · 消耗          → ``skill_cost_for()``（use_skill 里同一份算法）

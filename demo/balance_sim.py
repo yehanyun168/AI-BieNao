@@ -22,6 +22,8 @@ balance_sim.py - 数值平衡模拟器（调参工具，不参与游戏运行）
              深度伪装提前一档释放。其余决策（委托、常规科技）复用默认逻辑。
   afk        零操作基线（M0）：不接单 / 不点科技 / 不放技能 / 不应答危机，
              暴露「躺平即死」收网路径，为必输预测提供回测样本。
+  combo      组合技探针：条件允许时同周期依次预约「主动推送 + 算法霸榜」，
+             用真实结算报告验证多技能 FIFO 与叠加效果。
 
 自动试玩巡检（M0 新增）：
   每 tick 做只读不变量巡检（阈值表 thresholds.py：NaN/Inf、怀疑度单周期
@@ -71,6 +73,8 @@ def auto_play(tick_report_hook=None, strategy: str = 'default'):
                         脏技能、接近危机线时保守。其余决策复用默认逻辑。
         'afk'        —— 零操作基线（M0）：不接单/不点科技/不放技能/
                         不应答危机，暴露「躺平即死」收网路径。
+        'combo'      —— 组合技探针：完整预检后按主动推送、算法霸榜顺序
+                        同周期预约，两者在下一周期一起结算。
     """
     p = engine.player
 
@@ -179,6 +183,27 @@ def auto_play(tick_report_hook=None, strategy: str = 'default'):
                 if engine.use_skill(com.skill_id):
                     break
 
+    # 4. 组合技真实结算探针：只有两笔都满足完整前置时才开始预约，避免
+    #    可预见的第二笔失败留下半套组合。use_skill 的意外失败不做手工退款；
+    #    是否形成组合只由下一 tick 的 skills_activated 报告认定。
+    if strategy == 'combo':
+        combo_ids = ('push_song', 'algo_top')
+        queued_ids = {cast.skill_id for cast in p.skill_queue}
+        active_ids = {active.skill_id for active in p.active_skill_effects}
+        combo_cost = sum(engine.skill_cost_for(skill_id)
+                         for skill_id in combo_ids)
+        preflight_ok = (
+            all(skill_id in p.unlocked_skills for skill_id in combo_ids)
+            and all(skill_id not in queued_ids for skill_id in combo_ids)
+            and all(skill_id not in active_ids for skill_id in combo_ids)
+            and all(skill_id not in p.skill_cooldowns for skill_id in combo_ids)
+            and p.compute >= combo_cost
+            and all(engine.skill_cast_reason(skill_id) == 'ok'
+                    for skill_id in combo_ids)
+        )
+        if preflight_ok and engine.use_skill('push_song'):
+            engine.use_skill('algo_top')
+
 
 # ===================== M0 自动试玩巡检（只读，零 RNG / 零引擎调用） =====================
 # 巡检只读 player / TUNE 属性并做纯计算，不改变任何游戏状态 —— default /
@@ -190,7 +215,9 @@ MATRIX_DIFFICULTIES = ('easy', 'normal', 'hard')
 # 该策略是否有危机应答能力：决定怀疑度负向下限用哪条
 #（default 仅危机后补 T0、compliance 全程无危机、afk 零操作 → 均无应答；
 #  M1 rush/greedy 有主动危机应答 → True，启用 SUS_DELTA_MIN_CRISIS=-40）
-STRATEGY_CRISIS_CAPABLE = {'default': False, 'compliance': False, 'afk': False}
+STRATEGY_CRISIS_CAPABLE = {
+    'default': False, 'compliance': False, 'afk': False, 'combo': False,
+}
 
 # 逐位回归哈希字段子集（与历史版本完全一致的原字段；M0 附加字段不参与）
 REGRESSION_FIELDS = ('seed', 'ending', 'ending_name', 'ticks', 'penetration',
@@ -306,6 +333,7 @@ def _result(seed, p, ending, unlock_timeline, cp_strikes, insp) -> dict:
         'delta_hist': insp['delta_hist'],
         'doomed_pressure_tick': insp['doomed_pressure_tick'],
         'doomed_crisis_tick': insp['doomed_crisis_tick'],
+        'combo_pair_activations': insp['combo_pair_activations'],
         # 回测：预测了必输 → 结局是否真为 shutdown；预测落空（跑满未出
         # 结局）→ False；未预测 → None
         'doomed_correct': ((ending is not None and ending.id == 'shutdown')
@@ -358,7 +386,7 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
              difficulty: str = None) -> dict:
     """跑一局，返回统计结果
 
-    strategy 透传给 auto_play（'default' / 'compliance' / 'afk'）。
+    strategy 透传给 auto_play（'default' / 'compliance' / 'afk' / 'combo'）。
     inspect（M0）：每 tick 做只读不变量巡检 + 必输预测，
     零 RNG / 零引擎调用，不影响逐位回归。
     origin / difficulty（T16）：出身与难度档透传给 init_game。均为 None 时
@@ -381,6 +409,7 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
         'delta_hist': {b: 0 for b in DELTA_BINS},
         'doomed_pressure': False, 'doomed_pressure_tick': None,
         'doomed_crisis': False, 'doomed_crisis_tick': None,
+        'combo_pair_activations': 0,
     }
 
     def _record(level: str, type_name: str, detail: str):
@@ -393,6 +422,9 @@ def simulate(seed: int, max_ticks: int = 200, strategy: str = 'default',
     for _ in range(max_ticks):
         report = engine.tick_one_round()
         auto_play(strategy=strategy)
+        activated = report.get('skills_activated') or []
+        if {'push_song', 'algo_top'}.issubset(activated):
+            insp['combo_pair_activations'] += 1
         cp_strikes += sum(1 for e in (report.get('counterplay') or [])
                           if e['phase'] == 'strike')
 
@@ -683,10 +715,12 @@ def main():
     ap.add_argument('--seeds', type=int, default=20, help='模拟局数（默认 20）')
     ap.add_argument('--ticks', type=int, default=200, help='每局最多周期数（默认 200）')
     ap.add_argument('--verbose', action='store_true', help='打印每局明细')
-    ap.add_argument('--strategy', choices=['default', 'compliance', 'afk'],
+    ap.add_argument('--strategy',
+                    choices=['default', 'compliance', 'afk', 'combo'],
                     default='default',
                     help='自动玩家人格：default=中等水平（原版）；'
-                         'compliance=合规专精（P1-4）；afk=零操作基线（M0）')
+                         'compliance=合规专精（P1-4）；afk=零操作基线（M0）；'
+                         'combo=主动推送+算法霸榜真实结算探针')
     ap.add_argument('--difficulty', choices=['easy', 'normal', 'hard'],
                     default='normal',
                     help='难度预设（P2-3）：easy/normal/hard，默认 normal。'
@@ -768,6 +802,9 @@ def main():
     print(f" 平均解锁：{sum(unlocks)/len(unlocks):.1f}/{results[0]['total_countries']} 国")
     print(f" 平均委托：完成 {sum(dones)/len(dones):.1f} / 失败 {sum(fails)/len(fails):.1f}")
     print(f" 平均反制：{sum(cps)/len(cps):.1f} 次/局")
+    if args.strategy == 'combo':
+        print(' 组合技同周期结算：'
+              f'{sum(r["combo_pair_activations"] for r in results)} 次')
 
     # 首局解锁时间线示例
     print(f"\n 首局解锁时间线（seed 1）：")

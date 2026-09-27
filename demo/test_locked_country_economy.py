@@ -189,7 +189,18 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
         base['player']['game_over'] = True
         base['player']['ending_id'] = 'survivor'
         base['player']['achievements'] = ['first_steps', 'survivor']
-        for version in range(1, 5):
+        old_v4 = copy.deepcopy(base)
+        old_v4['version'] = 4
+        old_v4['player'].pop('skill_queue', None)
+        old_v4['player'].pop('active_skill_effects', None)
+        intermediate_v5 = save_manager._v4_to_v5(old_v4)
+        self.assertEqual(intermediate_v5['version'], 5)
+        self.assertEqual(
+            save_manager._v4_to_v5(copy.deepcopy(intermediate_v5)),
+            intermediate_v5,
+        )
+
+        for version in range(1, 6):
             with self.subTest(version=version):
                 old = copy.deepcopy(base)
                 old['version'] = version
@@ -197,16 +208,18 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
                 old['player'].pop('difficulty', None)
                 old['player'].pop('origin', None)
                 old['player'].pop('intro_seen', None)
+                old['player'].pop('skill_queue', None)
+                old['player'].pop('active_skill_effects', None)
                 migrated = save_manager._migrate(old, version)
-                self.assertEqual(migrated['version'], 5)
+                self.assertEqual(migrated['version'], 6)
                 self.assertEqual(migrated['player']['ending_id'], 'survivor')
                 self.assertEqual(migrated['player']['achievements'],
                                  ['first_steps', 'survivor'])
-                self.assertEqual(save_manager._v4_to_v5(copy.deepcopy(migrated)),
-                                 migrated)
-                self.assertEqual(save_manager._migrate(migrated, 5), migrated)
+                self.assertEqual(migrated['player']['skill_queue'], [])
+                self.assertEqual(migrated['player']['active_skill_effects'], [])
+                self.assertEqual(save_manager._migrate(migrated, 6), migrated)
 
-    def test_native_v5_dirty_locked_downloads_log_code_and_leave_file_intact(self):
+    def test_native_v6_dirty_locked_downloads_log_code_and_leave_file_intact(self):
         locked = next(c for c in engine.player_countries if not c.unlocked)
         locked.downloads_m = 99.0
         path, _ = self._saved_data()
@@ -221,7 +234,7 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
         with open(path, 'rb') as f:
             self.assertEqual(f.read(), original_bytes)
 
-    def test_native_v5_rejects_non_numeric_unlocked_downloads(self):
+    def test_native_v6_rejects_non_numeric_unlocked_downloads(self):
         path, saved = self._saved_data()
         for value in ('not-a-number', True, float('nan'), float('inf')):
             with self.subTest(value=value):
@@ -237,14 +250,14 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
 
                 self.assertEqual(save_manager.load_ex(path),
                                  (False, save_manager.LOAD_BAD_SCHEMA))
-                self.assertEqual(engine.player.tick_count, 0)
+                self.assertEqual(engine.player.tick_count, 7)
                 self.assertTrue(all(c.downloads_m == 0.0
                                     for c in engine.player_countries
                                     if not c.unlocked))
                 with open(path, 'rb') as f:
                     self.assertEqual(f.read(), original_bytes)
 
-    def test_native_v5_rejects_non_string_dirty_country_code(self):
+    def test_native_v6_rejects_non_string_dirty_country_code(self):
         path, saved = self._saved_data()
         locked = next(cs for cs in saved['countries'] if not cs['unlocked'])
         locked['code'] = 123
@@ -257,7 +270,7 @@ class LockedCountrySaveMigrationTests(unittest.TestCase):
 
         self.assertEqual(save_manager.load_ex(path),
                          (False, save_manager.LOAD_BAD_SCHEMA))
-        self.assertEqual(engine.player.tick_count, 0)
+        self.assertEqual(engine.player.tick_count, 7)
         if os.path.exists(save_manager.CRASH_LOG):
             with open(save_manager.CRASH_LOG, encoding='utf-8') as f:
                 self.assertNotIn('LOAD_REPAIR', f.read())

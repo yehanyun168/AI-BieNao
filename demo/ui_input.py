@@ -90,7 +90,7 @@ class InputMixin:
     # ========================================================
 
     # ========================================================
-    # P1-2 技能预览（悬停技能卡 → 预览条显示"会怎样"）
+    # 技能静态说明（悬停技能卡 → 说明条）
     # ========================================================
     def _bind_skill_hover(self) -> None:
         """绑定鼠标位置实现「悬停技能卡 → 底部预览条」。
@@ -159,24 +159,20 @@ class InputMixin:
         code = engine.player.selected_country or ''
         return [code] if code else []
 
-    def _preview_reason_text(self, pv: dict) -> str:
-        """把 preview_skill 的 reason 码翻成文案（复用既有 i18n 键）。"""
-        r = pv.get('reason', '')
-        if r == engine.PREVIEW_COOLDOWN:
-            return f"{t('sk_state_cd')} {pv.get('cooldown_left', 0)}"
-        if r == engine.TARGET_NO_COMPUTE:
-            return t('sk_state_no_compute')
-        if r == engine.PREVIEW_GAME_OVER:
-            return t('sk_pv_game_over')
-        if r == engine.TARGET_SATURATED:
-            return t('reason_saturated')
-        if r == engine.TARGET_BLOCKED:
-            return t('reason_blocked').format(
-                n=f"{(1.0 - pv.get('discount', 1.0)) * 100:.0f}")
-        return t('sk_state_lock')
+    def _skill_fail_text(self, reason: str) -> str:
+        """把引擎施放判定原因翻成可信、具体的 UI 文案。"""
+        keys = {
+            'cooldown': 'sk_fail_cooldown',
+            'invalid_target': 'sk_fail_target',
+            'saturated': 'reason_saturated',
+            'no_compute': 'sk_state_no_compute',
+            'locked': 'sk_state_lock',
+            'game_over': 'sk_pv_game_over',
+        }
+        return t(keys.get(reason, 'sk_fail_target'))
 
     def _render_skill_preview(self, sid: str) -> None:
-        """把 preview_skill 的结果画进底部预览条（5 枚 PxChip）。"""
+        """把确定性技能说明画进底部说明条（不预测未来结算数值）。"""
         hud = getattr(self, 'skill_pv_hud', None)
         chips = getattr(self, 'skill_pv_chips', None)
         if hud is None or chips is None:
@@ -184,45 +180,61 @@ class InputMixin:
         if not sid:
             hud.opacity = 0
             return
-        pv = engine.preview_skill(sid, self._preview_targets(sid))
+        targets = self._preview_targets(sid)
+        reason = engine.skill_cast_reason(sid, targets or None)
+        cost = engine.skill_cost_for(sid, len(targets))
+        skill = SKILLS[sid]
         chips[0].set_tone('plain', self._skill_name(sid))
-        if not pv['ok']:
-            # 不可用时给原因，不给假数值（预测骗人比没有预览更伤信任）
-            chips[1].set_tone('dn', self._preview_reason_text(pv))
-            chips[2].set_tone('lock', '')
-            chips[3].set_tone('lock', '')
-            chips[4].set_tone('lock', '')
-        else:
-            chips[1].set_tone('up', t('sk_pv_dl').format(
-                d=f"{pv['downloads_delta']:+.1f}M"))
-            chips[2].set_tone('dn', t('sk_pv_sus').format(
-                a=f"{pv['suspicion_before']:.0f}",
-                b=f"{pv['suspicion_after']:.0f}"))
-            chips[3].set_tone('cost', t('sk_pv_cp').format(
-                a=f"{pv['compute_before']:.0f}",
-                b=f"{pv['compute_after']:.0f}"))
-            if pv['crisis_crossed']:
-                chips[4].set_tone('dn', t('sk_pv_over'))
-            else:
-                chips[4].set_tone('cost', t('sk_pv_to_crisis').format(
-                    n=f"{pv['suspicion_to_crisis']:.0f}"))
+        chips[1].set_tone('plain', self._skill_desc(sid))
+        chips[2].set_tone('cost', f"{t('cost')} {cost:.0f}")
+        chips[3].set_tone('cost', f"{t('sk_sort_cd')} {skill.cooldown}")
+        static = t('sk_preview_static')
+        if reason != 'ok':
+            static = f"{static} · {self._skill_fail_text(reason)}"
+        chips[4].set_tone('dn' if reason != 'ok' else 'lock', static)
         hud.opacity = 1
 
     def _skill_preview_foot(self, sid: str) -> str:
-        """技能页卡片底部一行预览（与预览条同源，同一份 preview_skill）。"""
-        pv = engine.preview_skill(sid, self._preview_targets(sid))
-        if not pv['ok']:
-            return self._preview_reason_text(pv)
-        parts = [t('sk_pv_sus').format(a=f"{pv['suspicion_before']:.0f}",
-                                       b=f"{pv['suspicion_after']:.0f}"),
-                 t('sk_pv_cp').format(a=f"{pv['compute_before']:.0f}",
-                                      b=f"{pv['compute_after']:.0f}")]
-        if pv['crisis_crossed']:
-            parts.append(t('sk_pv_over'))
-        else:
-            parts.append(t('sk_pv_to_crisis').format(
-                n=f"{pv['suspicion_to_crisis']:.0f}"))
+        """技能页卡片底部的确定性说明。"""
+        targets = self._preview_targets(sid)
+        reason = engine.skill_cast_reason(sid, targets or None)
+        parts = [self._skill_desc(sid),
+                 f"{t('cost')} {engine.skill_cost_for(sid, len(targets)):.0f}",
+                 f"{t('sk_sort_cd')} {SKILLS[sid].cooldown}",
+                 t('sk_preview_static')]
+        if reason != 'ok':
+            parts.append(self._skill_fail_text(reason))
         return " · ".join(parts)
+
+    @staticmethod
+    def _compact_skill_items(items: list, limit: int = 3) -> str:
+        shown = items[:limit]
+        if len(items) > limit:
+            shown.append(t('sk_more').format(n=len(items) - limit))
+        return ' · '.join(shown)
+
+    def _skill_state_text(self) -> str:
+        """从引擎队列和持续效果生成状态 HUD；不缓存第二份技能状态。"""
+        p = engine.player
+        if p is None:
+            return ''
+        sections = []
+        queued = [self._skill_name(cast.skill_id) for cast in p.skill_queue]
+        has_both = bool(queued and p.active_skill_effects)
+        limit = 2 if has_both else 3
+        if queued:
+            sections.append(t('sk_queue_next').format(
+                items=self._compact_skill_items(queued, limit)))
+        active = []
+        for effect in p.active_skill_effects:
+            key = ('sk_active_left_one' if effect.remaining_ticks == 1
+                   else 'sk_active_left')
+            active.append(f"{self._skill_name(effect.skill_id)} "
+                          f"{t(key).format(n=effect.remaining_ticks)}")
+        if active:
+            sections.append(t('sk_active_now').format(
+                items=self._compact_skill_items(active, limit)))
+        return '\n'.join(sections)
 
     def on_skill_card_click(self, sid: str) -> None:
         """点技能带卡片：下载类 → 进投放模式；偷算力类 → 直接释放"""
@@ -239,9 +251,9 @@ class InputMixin:
         sfx.play('select')
         if self._skill_needs_target(sid):
             self.start_drop(sid, None)
+            self.refresh_all()
         else:
             self._cast_skill_direct(sid)
-            self.refresh_all()
 
     def on_unlock_t0(self, slot_id: str) -> None:
         if engine.unlock_t0(slot_id):
@@ -328,20 +340,14 @@ class InputMixin:
         !️ 本函数**不写 label.text**：文本统一由 _animate_stat 负责，
         避免与滚动动效互相覆盖（两边写同一个 Label 会闪）。
 
-        玩家反馈 #7（确认怀疑度增长时机 + 下周期预测）：在趋势箭头之后，
-        再追加一个「下个周期预测变化量」段（青色 ``+Δ``）。预测由
-        ``engine.preview_next_cycle`` 给出（与 tick 阶段 1/2/5/5.1 同源、
-        确定性部分；随机事件按设计不计入）。单位与 refresh_all 显示同构：
-        算力=原始算力、下载=亿/B（/1000）、怀疑度=百分点。对局已结束则
-        显示「—」（没有下一周期可言）。
+        这里只呈现已经发生的历史趋势。未来结算受队列组合与事件影响，
+        不追加看似精确的预测数字。
         """
         p = engine.player
         if p is None:
             return
         if not hasattr(self, '_stat_suffix'):
             self._stat_suffix = {}
-        # 一次性预测下一周期（确定性基线，不含技能效果）
-        pv = engine.preview_next_cycle()
         # spark_key → (i18n 标签键, 后缀单位, 小数位)
         specs = {
             'compute':   ('stats_compute',   '',  0),
@@ -361,18 +367,6 @@ class InputMixin:
             else:
                 arrow, mcol, dtext = '↓', U.MK['red'], f"{abs(delta):.{digits}f}{unit}"
             suffix = f"  [color={mcol}]{arrow}{dtext}[/color]"
-            # 玩家反馈 #7：追加「下个周期预测变化量」（青色，与历史趋势箭头区分）
-            if getattr(p, 'game_over', False):
-                suffix += f"  [color={U.MK['dim']}]—[/color]"
-            else:
-                if sk == 'compute':
-                    pdtxt = f"{pv['compute_delta']:.0f}"
-                elif sk == 'downloads':
-                    # pv 给的是百万(M)，显示用亿/B（/1000），与 refresh_all 同构
-                    pdtxt = f"{pv['downloads_delta'] / 1000.0:.2f}{t('unit_b')}"
-                else:  # suspicion：增量很小，保留 1 位小数才看得出增长
-                    pdtxt = f"{pv['suspicion_delta']:.1f}%"
-                suffix += f"  [color={U.MK['cyan']}]+{pdtxt}[/color]"
             # 只写缓存：真正的 label.text 由紧随其后的 _animate_stat 写入
             # （它会带上这个后缀）。这样两边永不互相覆盖，滚动动效也不会
             # 把箭头抹掉。
@@ -404,6 +398,10 @@ class InputMixin:
             except Exception:
                 pass  # 迷你火花图缺数据/控件重建中 → 跳过本帧，下个周期再试
         self._refresh_spark_deltas()
+
+        skill_state = self._skill_state_text()
+        self.skill_state_label.text = skill_state
+        self.skill_state_hud.opacity = 1 if skill_state else 0
 
         self._animate_stat(self.stats_compute, 'stats_compute', 'yellow',
                            float(p.compute), digits=0)
@@ -572,10 +570,8 @@ class InputMixin:
         if engine.player.game_over:
             self.stop_ticking()
             return
-        report = engine.tick_one_round(skill_in_use=self.selected_skill,
-                                       auto_choice=False,
+        report = engine.tick_one_round(auto_choice=False,
                                        dt_seconds=self._tick_interval())
-        self.selected_skill = None
         self._last_growth = report.get("download_growth", 0.0)
         self.stats.sample(engine.player_countries, engine.player, self._last_growth)
 

@@ -327,9 +327,9 @@ def main() -> int:
                 return False, f"compute={p2.compute} < 80 时 take_cut 不应可释放"
             if (p2.skill_cooldowns != cooldowns_before
                     or p2.skill_uses != uses_before
-                    or p2.pending_skill):
+                    or p2.skill_queue):
                 return False, (f"失败施放污染了状态：cooldowns={p2.skill_cooldowns} "
-                               f"uses={p2.skill_uses} pending={p2.pending_skill!r}")
+                               f"uses={p2.skill_uses} queue={p2.skill_queue!r}")
         return True, (f"500→{p.compute:.2f}（=预期公式）；0→{p2.compute:.4f} ≥ 0；"
                       f"低算力 take_cut 拒绝且零状态写入")
 
